@@ -1,0 +1,110 @@
+@import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap");
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: none; }
+html, body { height: 100%; }
+body {
+  background: #0c0a16;
+  color: #efe7d2;
+  font-family: "Pixelify Sans", system-ui, sans-serif;
+}
+img { image-rendering: pixelated; image-rendering: crisp-edges; }
+textarea { font-family: "Pixelify Sans", sans-serif; }
+
+/* animations from the design */
+@keyframes sf-star { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
+@keyframes sf-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes sf-glow { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+@keyframes sf-fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes sf-pop { 0% { transform: scale(.7); opacity: 0; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes sf-drift { from { background-position: 0 0; } to { background-position: -240px 0; } }
+.sf-screen { animation: sf-fade .32s ease both; }
+.sf-scroll::-webkit-scrollbar { width: 0; }
+
+/* desktop decorative field around the game window */
+.sf-field {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(120% 80% at 50% -10%, #2a2336 0%, #15121f 55%, #0c0a16 100%);
+}
+.sf-field::before {
+  content: "";
+  position: fixed; inset: 0; pointer-events: none; opacity: .5;
+  background-image:
+    radial-gradient(2px 2px at 18% 30%, rgba(205,190,240,.5), transparent),
+    radial-gradient(2px 2px at 72% 62%, rgba(255,240,192,.4), transparent),
+    radial-gradient(1px 1px at 46% 82%, rgba(205,190,240,.4), transparent),
+    radial-gradient(1px 1px at 88% 18%, rgba(255,240,192,.4), transparent);
+  background-size: 240px 240px;
+  animation: sf-drift 40s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-field::before, .sf-screen { animation: none; }
+}
+
+/* ---- game window framing ---- */
+.sf-frame {
+  position: relative;
+  width: 390px;
+  height: 820px;
+  max-height: calc(100vh - 48px);
+  border-radius: 46px;
+  padding: 11px;
+  background: linear-gradient(150deg, #2a2336, #15121f);
+  box-shadow: 0 0 0 2px #3a3550, 0 30px 80px rgba(0, 0, 0, 0.7);
+  flex-shrink: 0;
+}
+.sf-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 36px;
+  overflow: hidden;
+  background: #1c1530;
+}
+/* tiled wooden wall + warm glow + vignette behind in-app screens */
+.sf-wall {
+  position: absolute;
+  inset: 0;
+  background-image: url("/assets/textures/wood-plank.png");
+  background-repeat: repeat;
+  background-size: 150px 150px;
+  image-rendering: pixelated;
+}
+.sf-wall-glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 75% at 50% 6%, rgba(255, 214, 150, 0.16), transparent 55%),
+    radial-gradient(140% 120% at 50% 60%, transparent 52%, rgba(28, 16, 10, 0.5) 100%),
+    linear-gradient(180deg, rgba(20, 12, 6, 0.3) 0%, transparent 16%, transparent 78%, rgba(20, 12, 6, 0.42) 100%);
+}
+.sf-scroll {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 74px;
+  overflow-y: auto;
+  z-index: 10;
+}
+.sf-scroll.full {
+  bottom: 0;
+}
+
+/* phone-sized screens: drop the bezel, go full-bleed */
+@media (max-width: 460px) {
+  .sf-field { padding: 0; }
+  .sf-frame {
+    width: 100vw;
+    height: 100vh;
+    max-height: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .sf-inner { border-radius: 0; }
+}
