@@ -108,3 +108,8 @@ textarea { font-family: "Pixelify Sans", sans-serif; }
   }
   .sf-inner { border-radius: 0; }
 }
+
+/* gentle tree sway */
+@keyframes sf-treesway { 0%,100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
+.sf-treesway { animation: sf-treesway 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .sf-treesway { animation: none; } }

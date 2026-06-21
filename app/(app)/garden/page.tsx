@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/store/game";
+import TreeStages from "@/components/garden/TreeStages";
 import { levelInfo } from "@/lib/utils/xp";
 import { play } from "@/lib/sound/sound";
 import { QUESTS } from "@/lib/mock-data/quests";
@@ -130,7 +131,7 @@ export default function Garden() {
         </div>
 
         {/* tree scene */}
-        <TreeScene level={lvl.levelNum} invCount={state.ownedItems.length} onInventory={() => go("inventory")} />
+        <TreeScene level={lvl.levelNum} pct={lvl.pct} invCount={state.ownedItems.length} onInventory={() => go("inventory")} />
 
         {/* XP panel */}
         <div
@@ -508,9 +509,7 @@ export default function Garden() {
 }
 
 /* ---------------- TREE SCENE (clean, watermark-free pixel scene) ---------------- */
-function TreeScene({ level, invCount, onInventory }: { level: number; invCount: number; onInventory: () => void }) {
-  // the single oak sprite scales with level so a fresh tree reads as young
-  const treeW = [86, 124, 158, 184, 200][Math.min(level, 5) - 1] || 124;
+function TreeScene({ level, pct, invCount, onInventory }: { level: number; pct: number; invCount: number; onInventory: () => void }) {
   return (
     <div
       style={{
@@ -538,9 +537,8 @@ function TreeScene({ level, invCount, onInventory }: { level: number; invCount: 
       <div style={{ position: "absolute", left: "8%", right: "8%", bottom: 26, height: 22, borderRadius: "50%", background: "radial-gradient(closest-side, rgba(20,30,10,.5), transparent)" }} />
 
       {/* tree */}
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/assets/sprites/tree.png" alt="дерево" style={{ width: treeW, height: "auto", filter: "drop-shadow(0 6px 6px rgba(0,0,0,.4))", transition: "width .5s ease" }} />
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 16, display: "flex", justifyContent: "center", alignItems: "flex-end" }}>
+        <TreeStages stage={level} pct={pct} />
       </div>
 
       {/* inventory button */}

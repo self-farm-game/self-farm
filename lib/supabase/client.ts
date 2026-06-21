@@ -1,24 +1,25 @@
-// Supabase client stub.
+// Supabase browser client (singleton).
 //
-// The prototype runs entirely on mock data + localStorage (see lib/store/game.tsx),
-// so Supabase is NOT required to run the app. This file is the seam where real
-// persistence will plug in. When you're ready:
-//
-//   1. npm i @supabase/supabase-js
-//   2. fill NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local
-//   3. run the SQL in lib/supabase/schema.sql against your project
-//   4. uncomment the createClient call below and swap the store's
-//      localStorage reads/writes for Supabase queries (table-by-table).
+// If the two NEXT_PUBLIC env vars are missing, the app falls back to
+// localStorage-only mode automatically — so it still runs on Vercel before you
+// configure Supabase. Fill .env.local (and Vercel env vars) to enable cloud save.
 
-// import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = Boolean(url && anon);
 
-export function getSupabase() {
+let client: SupabaseClient | null = null;
+
+export function getSupabase(): SupabaseClient | null {
   if (!isSupabaseConfigured) return null;
-  // return createClient(url!, anon!);
-  return null; // remove once @supabase/supabase-js is installed
+  if (typeof window === "undefined") return null; // browser only
+  if (!client) {
+    client = createClient(url as string, anon as string, {
+      auth: { persistSession: true, autoRefreshToken: true },
+    });
+  }
+  return client;
 }

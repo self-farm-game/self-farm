@@ -26,34 +26,43 @@ git push -u origin main
 
 Every push to `main` redeploys; pull requests get preview URLs.
 
-## Part 2 — Add Supabase (when ready)
+## Part 2 — Turn on cloud save with Supabase
+
+Cloud save is already wired in the code. It uses **anonymous sign-in** (no login
+screen, no registration): each visitor silently gets a Supabase auth user and
+their game state is stored in `player_saves` under Row-Level Security. Until you
+set the env vars below, the app runs on `localStorage` only.
 
 ### 1. Create the project
-https://supabase.com → **New project**. Copy the **Project URL** and **anon
-public** key (Project Settings → API).
+https://supabase.com → **New project**. Copy the **Project URL** and the
+**anon public** key (Project Settings → API).
 
-### 2. Create the tables
-Supabase → **SQL Editor** → paste `lib/supabase/schema.sql` → **Run**. Creates
-players, quests, checkin_sessions, quest_attempts, items, player_items, runes,
-player_runes and seeds starter quests.
+### 2. Enable anonymous sign-ins
+Dashboard → **Authentication → Providers → Anonymous → ON**. (Without this,
+cloud save silently stays off and the app falls back to localStorage.)
 
-### 3. Env vars
-Local `.env.local` (copy `.env.example`):
+### 3. Create the table + policies
+**SQL Editor** → paste `lib/supabase/schema.sql` → **Run**. This creates
+`player_saves` with RLS so each anonymous user only sees their own save.
+
+### 4. Set environment variables
+Local — create `.env.local` (copy `.env.example`):
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://YOURPROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 ```
-Vercel → Settings → **Environment Variables** → add the same two for Production
-and Preview → redeploy.
+Vercel → Project → **Settings → Environment Variables** → add the same two keys
+for **Production** (and Preview) → **Redeploy**.
 
-### 4. Connect
-```bash
-npm i @supabase/supabase-js
-```
-Uncomment `createClient` in `lib/supabase/client.ts`, then swap the localStorage
-reads/writes in `lib/store/game.tsx` for Supabase queries, table by table
-(players → sessions → attempts). The store already mirrors the schema.
+That's it — no extra code. On load the app signs in anonymously, loads the save
+(if any), and autosaves changes (debounced). Saves persist across reloads on the
+same browser/device. To verify: play a bit, then in Supabase → **Table Editor →
+player_saves** you should see a row with your `state` JSON.
 
-### 5. Auth + RLS (before launch)
-The schema enables RLS but ships without per-user policies. Add Supabase Auth and
-policies like `player_id = auth.uid()` before any real launch.
+### 5. Notes
+- The whole game state is stored as one `jsonb` blob (`player_saves.state`). It is
+  simple and robust for pre-beta; later you can split it into the optional
+  normalized tables (also in `schema.sql`) and add real accounts.
+- `npm i` already includes `@supabase/supabase-js`; nothing else to install.
+- Anonymous users are per-device. To move a save between devices later you would
+  add account linking (email/OAuth) — out of scope for pre-beta.

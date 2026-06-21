@@ -3,10 +3,12 @@ import React, { createContext, useContext, useEffect, useRef, useState } from "r
 import { JournalDay } from "@/lib/mock-data/content";
 import { DROP_POOL } from "@/lib/mock-data/items";
 import { setMuted as setSoundMuted } from "@/lib/sound/sound";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { ensureAuth, loadRemote, saveRemote } from "@/lib/supabase/persistence";
 
-// This local store stands in for Supabase. Every field maps to a table/column
-// in lib/supabase/schema.sql, so swapping the persistence layer later is
-// mechanical: replace the localStorage read/write with Supabase queries.
+// State is cached in localStorage AND (when Supabase is configured) saved to the
+// cloud per anonymous user. Without Supabase env vars the app runs fine on
+// localStorage alone. Every field maps to the `state` jsonb in player_saves.
 
 export interface GameState {
   onboarded: boolean;
@@ -75,17 +77,46 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GameState>(SEED);
   const [hydrated, setHydrated] = useState(false);
   const first = useRef(true);
+  const userId = useRef<string | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // hydrate from localStorage once on the client
+  // hydrate: localStorage cache first (instant), then cloud (if configured)
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setState({ ...SEED, ...JSON.parse(raw) });
-    } catch {}
-    setHydrated(true);
+    let cancelled = false;
+    (async () => {
+      let initial: GameState = SEED;
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (raw) initial = { ...SEED, ...JSON.parse(raw) };
+      } catch {}
+
+      if (isSupabaseConfigured) {
+        try {
+          const uid = await ensureAuth();
+          userId.current = uid;
+          if (uid) {
+            const remote = await loadRemote(uid);
+            if (remote) {
+              initial = { ...SEED, ...remote };
+            } else {
+              // first time on this account → create the row
+              await saveRemote(uid, initial);
+            }
+          }
+        } catch {}
+      }
+
+      if (!cancelled) {
+        setState(initial);
+        setHydrated(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // persist + mirror mute into the sound engine
+  // persist: localStorage immediately + debounced cloud save
   useEffect(() => {
     if (!hydrated) return;
     setSoundMuted(state.muted);
@@ -96,6 +127,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
     } catch {}
+
+    if (isSupabaseConfigured && userId.current) {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      const uid = userId.current;
+      const snapshot = state;
+      saveTimer.current = setTimeout(() => {
+        saveRemote(uid, snapshot);
+      }, 800);
+    }
   }, [state, hydrated]);
 
   const plantTree = () => setState((s) => ({ ...s, onboarded: true }));
@@ -105,7 +145,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.removeItem(KEY);
     } catch {}
-    setState({ ...SEED, onboarded: true });
+    const fresh = { ...SEED, onboarded: true };
+    setState(fresh);
+    if (isSupabaseConfigured && userId.current) saveRemote(userId.current, fresh);
   };
 
   const recordSession: Ctx["recordSession"] = (input) => {

@@ -15,7 +15,8 @@ Internal positioning only (never main UI copy): "не self-harm, а self-farm".
 - 5 tabs only: **Garden · Questbook · Farm Journal · Runes · Cabin**.
   Inventory ("Знахідки") is a Garden sub-screen, NOT a tab.
 - Do not punish missed days. Reward returning. The tree never withers from
-  inactivity — it grows from returning and trying, not from being happy.
+  inactivity — it grows from returning and trying, not from being happy. Growth is staged
+  (acorn → grand oak, 6 stages) via components/garden/TreeStages.tsx (SVG).
 - Keep medical/diagnostic language out of the UI. Use the game vernacular:
   блиск, стрічки, дзижчання, шум, напруга, пусте поле, баклажанне поле,
   коріння, руни, маленький рух.
@@ -41,9 +42,14 @@ shared design) + a little Tailwind config kept for future use.
   scene is drawn in CSS (the original stock background was watermarked, removed).
 
 ## Data persistence
-Mock-first. `useGame()` exposes state + actions (plantTree, recordSession,
-toggleMute, reset, nextBombom). `recordSession` awards XP, may drop an item,
-and prepends a Farm Journal entry under "Сьогодні".
+`useGame()` exposes state + actions (plantTree, recordSession, toggleMute, reset,
+nextBombom). `recordSession` awards XP, may drop an item, and prepends a Farm
+Journal entry under "Сьогодні".
+- State is cached in `localStorage` AND, when Supabase env vars are present,
+  synced to the cloud per **anonymous** auth user (debounced ~800ms) via
+  `lib/supabase/persistence.ts` → table `player_saves` (jsonb `state`, RLS).
+- No Supabase env vars → app runs localStorage-only (still deployable).
+- The whole GameState is one jsonb blob for now; normalize later if needed.
 
 ## When extending
 - New quests/items/runes → add to `lib/mock-data/*` (and seed in schema.sql).

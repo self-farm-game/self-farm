@@ -37,3 +37,20 @@
 - Compute runes from sessions/attempts; unlock + celebrate.
 - Supabase persistence + Auth + RLS (docs/hosting-vercel-supabase.md).
 - Optional: editable player/tree name in Cabin.
+
+## Persistence (Supabase cloud save)
+- `lib/store/game.tsx` hydrates from localStorage first, then (if Supabase env
+  vars are set) signs in anonymously and loads `player_saves`. Changes autosave:
+  localStorage immediately + debounced cloud upsert (~800ms).
+- `lib/supabase/client.ts` — singleton browser client; null if env missing.
+- `lib/supabase/persistence.ts` — `ensureAuth()` (anonymous), `loadRemote`,
+  `saveRemote`. Table `player_saves(user_id pk, state jsonb, updated_at)` with
+  RLS `auth.uid() = user_id`. Enable Authentication → Providers → Anonymous.
+- Without env vars everything still works on localStorage only.
+
+## Tree growth (staged)
+- `components/garden/TreeStages.tsx` draws a pixel oak in 6 stages (acorn,
+  sprout, sapling, young oak, oak, grand oak) tied to `levelInfo().levelNum`,
+  with slight continuous scaling by `pct` and a wind sway. XP thresholds in
+  `lib/utils/xp.ts`. The old single `tree.png` is no longer used in the scene
+  (kept in /public/assets/sprites if you want it back).

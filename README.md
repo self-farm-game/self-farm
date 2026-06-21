@@ -9,13 +9,15 @@ Built with Next.js (App Router) + TypeScript.
 
 ## Pre-beta (current build)
 This is a **pre-beta** meant for hosting a test link on Vercel.
-- **No database, no auth, no registration** yet.
-- Every visitor **starts from zero**: acorn (level 1), 0 XP, empty journal,
-  empty inventory, no runes, streak 0, day 1.
-- Progress is saved **locally in each visitor's browser** (`localStorage`), so it
-  is per-device and resets if they clear storage or use the in-app **reset**
-  (Cabin → ♻️). When you're ready for shared accounts, wire up Supabase
-  (`docs/hosting-vercel-supabase.md`).
+- **No login screen / no registration.**
+- Every visitor **starts from zero**: acorn (stage 1), 0 XP, empty journal,
+  empty inventory, no runes, streak 0, day 1. The tree grows in 6 visible stages
+  (acorn → sprout → sapling → young oak → oak → grand oak).
+- **Saving:** by default state is cached in the browser (`localStorage`). If you
+  add Supabase env vars + enable anonymous sign-ins, the same state also **syncs
+  to the cloud** per anonymous user (no login UI), so it survives across reloads.
+  Without those env vars the app still runs, localStorage-only. In-app **reset**
+  is in Cabin → ♻️. Setup: `docs/hosting-vercel-supabase.md`.
 
 ## Run locally
 ```bash
