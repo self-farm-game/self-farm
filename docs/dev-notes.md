@@ -54,3 +54,19 @@
   with slight continuous scaling by `pct` and a wind sway. XP thresholds in
   `lib/utils/xp.ts`. The old single `tree.png` is no longer used in the scene
   (kept in /public/assets/sprites if you want it back).
+
+## Auth (optional email/password) + fast load
+- Default is anonymous (registration-free). `lib/store/game.tsx` exposes
+  `auth {ready,email,isAnonymous}` and `signUp / signIn / signOut`.
+  - signUp = `linkEmail` (updateUser) → upgrades the anonymous user, keeps id +
+    progress. Requires Supabase "Confirm email" OFF for instant pre-beta.
+  - signIn = `signInWithPassword` then loads that account's save (switches account).
+  - signOut = sign out + new anonymous session.
+  - UI lives in Cabin (module-level AuthSection/AuthForm). Hidden when Supabase
+    isn't configured.
+- **Load optimization:** the store now hydrates INSTANTLY from localStorage and
+  sets `hydrated=true` with no network on the critical path; Supabase auth +
+  reconcile run in the background. If the device already had a local save it is
+  trusted and pushed up; a fresh device pulls remote. This removed the long
+  startup wait that came from awaiting anonymous sign-in before first paint.
+- Sprite weight cut: bombom.png ~632KB→~126KB; tree.png (unused in scene) shrunk.

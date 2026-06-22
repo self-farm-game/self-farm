@@ -77,7 +77,6 @@ export const BOMBOM_LINES = [
 export const CABIN_ROWS = [
   { icon: "🌐", label: "Мова", val: "Українська" },
   { icon: "🔔", label: "Нагадування", val: "м'які" },
-  { icon: "👤", label: "Акаунт", val: "" },
   { icon: "📤", label: "Експорт даних", val: "" },
   { icon: "🌱", label: "Про Self-Farm", val: "" },
 ];

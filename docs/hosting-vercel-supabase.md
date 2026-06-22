@@ -66,3 +66,32 @@ player_saves** you should see a row with your `state` JSON.
 - `npm i` already includes `@supabase/supabase-js`; nothing else to install.
 - Anonymous users are per-device. To move a save between devices later you would
   add account linking (email/OAuth) — out of scope for pre-beta.
+
+## Part 3 — Optional email/password accounts
+
+Cloud save works anonymously by default. Players can optionally create an
+account (Cabin → "Збережи свій сад") so their garden follows them across
+devices. It's layered on top of the anonymous user, so **progress is preserved**
+when they sign up (same Supabase user id, just upgraded with email+password).
+
+### Make sign-up instant for pre-beta
+By default Supabase requires email confirmation, which would block the
+anonymous→permanent upgrade until the user clicks a link. For a test build,
+turn it off:
+
+- Dashboard → **Authentication → Sign In / Providers → Email** →
+  turn **OFF "Confirm email"** → Save.
+
+(Leave the **Email** provider itself enabled.) With confirmation off, "Створити"
+in Cabin links the account immediately and the player keeps their tree.
+
+### How it behaves
+- **Створити** (while anonymous): links email+password to the current anonymous
+  user → same id, progress kept, now reachable from other devices.
+- **Увійти** (another device/browser): signs into that account and loads its
+  cloud save, replacing the local anonymous one.
+- **Вийти**: returns to a fresh anonymous player on this device.
+
+No email/login UI appears for players who don't want it — anonymous play is
+still the default. When you later want real email confirmation + password
+reset, re-enable "Confirm email" and add a reset flow.

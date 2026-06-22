@@ -61,3 +61,50 @@ export async function saveRemote(userId: string, state: unknown): Promise<void> 
     console.warn("[self-farm] saveRemote threw", e);
   }
 }
+
+// ---- email + password auth (optional; layered over anonymous) -------------
+
+export interface AuthUser {
+  id: string;
+  email: string | null;
+  isAnonymous: boolean;
+}
+
+export async function authInfo(): Promise<AuthUser | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  try {
+    const { data } = await sb.auth.getSession();
+    const u = data.session?.user;
+    if (!u) return null;
+    return { id: u.id, email: u.email ?? null, isAnonymous: (u as any).is_anonymous ?? !u.email };
+  } catch {
+    return null;
+  }
+}
+
+// Link email+password to the CURRENT (anonymous) user — keeps the same id, so
+// all progress is preserved. Requires "Confirm email" OFF for instant pre-beta.
+export async function linkEmail(email: string, password: string): Promise<{ error: string | null; email?: string }> {
+  const sb = getSupabase();
+  if (!sb) return { error: "Supabase не підключено" };
+  const { data, error } = await sb.auth.updateUser({ email, password });
+  if (error) return { error: error.message };
+  return { error: null, email: data.user?.email ?? email };
+}
+
+export async function signInEmail(email: string, password: string): Promise<{ error: string | null; userId?: string | null; email?: string }> {
+  const sb = getSupabase();
+  if (!sb) return { error: "Supabase не підключено" };
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) return { error: error.message };
+  return { error: null, userId: data.user?.id ?? null, email: data.user?.email ?? email };
+}
+
+export async function signOutUser(): Promise<void> {
+  const sb = getSupabase();
+  if (!sb) return;
+  try {
+    await sb.auth.signOut();
+  } catch {}
+}

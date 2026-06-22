@@ -49,6 +49,9 @@ Journal entry under "Сьогодні".
   synced to the cloud per **anonymous** auth user (debounced ~800ms) via
   `lib/supabase/persistence.ts` → table `player_saves` (jsonb `state`, RLS).
 - No Supabase env vars → app runs localStorage-only (still deployable).
+- Optional email/password accounts (Cabin) layer over anonymous via account
+  linking (progress preserved). Anonymous play stays the default.
+- Startup is instant: hydrate from localStorage first, sync cloud in background.
 - The whole GameState is one jsonb blob for now; normalize later if needed.
 
 ## When extending

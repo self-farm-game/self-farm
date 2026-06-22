@@ -17,7 +17,9 @@ This is a **pre-beta** meant for hosting a test link on Vercel.
   add Supabase env vars + enable anonymous sign-ins, the same state also **syncs
   to the cloud** per anonymous user (no login UI), so it survives across reloads.
   Without those env vars the app still runs, localStorage-only. In-app **reset**
-  is in Cabin → ♻️. Setup: `docs/hosting-vercel-supabase.md`.
+  is in Cabin → ♻️. Players can also optionally create an **email/password
+  account** (Cabin → "Збережи свій сад") to sync across devices; anonymous play
+  stays the default. Setup: `docs/hosting-vercel-supabase.md`.
 
 ## Run locally
 ```bash

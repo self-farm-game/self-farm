@@ -4,7 +4,15 @@ import { JournalDay } from "@/lib/mock-data/content";
 import { DROP_POOL } from "@/lib/mock-data/items";
 import { setMuted as setSoundMuted } from "@/lib/sound/sound";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
-import { ensureAuth, loadRemote, saveRemote } from "@/lib/supabase/persistence";
+import {
+  ensureAuth,
+  loadRemote,
+  saveRemote,
+  authInfo,
+  linkEmail,
+  signInEmail,
+  signOutUser,
+} from "@/lib/supabase/persistence";
 
 // State is cached in localStorage AND (when Supabase is configured) saved to the
 // cloud per anonymous user. Without Supabase env vars the app runs fine on
@@ -45,13 +53,23 @@ export interface SessionResult {
   item: { icon: string; name: string; desc: string } | null;
 }
 
+export interface AuthState {
+  ready: boolean;
+  email: string | null;
+  isAnonymous: boolean;
+}
+
 interface Ctx {
   state: GameState;
   hydrated: boolean;
+  auth: AuthState;
   plantTree: () => void;
   nextBombom: () => void;
   toggleMute: () => void;
   reset: () => void;
+  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signOut: () => Promise<void>;
   // records a completed care session and returns the reward
   recordSession: (input: {
     states: string[];
@@ -76,44 +94,59 @@ function rollDrop() {
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GameState>(SEED);
   const [hydrated, setHydrated] = useState(false);
+  const [auth, setAuth] = useState<AuthState>({ ready: false, email: null, isAnonymous: true });
   const first = useRef(true);
   const userId = useRef<string | null>(null);
+  const stateRef = useRef<GameState>(SEED);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  stateRef.current = state;
 
-  // hydrate: localStorage cache first (instant), then cloud (if configured)
+  // hydrate: render INSTANTLY from localStorage; sync the cloud in the background
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      let initial: GameState = SEED;
-      try {
-        const raw = localStorage.getItem(KEY);
-        if (raw) initial = { ...SEED, ...JSON.parse(raw) };
-      } catch {}
-
-      if (isSupabaseConfigured) {
-        try {
-          const uid = await ensureAuth();
-          userId.current = uid;
-          if (uid) {
-            const remote = await loadRemote(uid);
-            if (remote) {
-              initial = { ...SEED, ...remote };
-            } else {
-              // first time on this account → create the row
-              await saveRemote(uid, initial);
-            }
-          }
-        } catch {}
+    let hadLocal = false;
+    let initial: GameState = SEED;
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        initial = { ...SEED, ...JSON.parse(raw) };
+        hadLocal = true;
       }
+    } catch {}
 
-      if (!cancelled) {
-        setState(initial);
-        setHydrated(true);
+    // 1) show the UI immediately — no network on the critical path
+    setState(initial);
+    setHydrated(true);
+
+    if (!isSupabaseConfigured) {
+      setAuth({ ready: true, email: null, isAnonymous: true });
+      return;
+    }
+
+    // 2) background: auth + reconcile with the cloud
+    (async () => {
+      try {
+        const uid = await ensureAuth();
+        userId.current = uid;
+        const info = await authInfo();
+        setAuth({
+          ready: true,
+          email: info?.email ?? null,
+          isAnonymous: info?.isAnonymous ?? true,
+        });
+        if (!uid) return;
+        if (hadLocal) {
+          // device already has a save → trust it, push it up
+          await saveRemote(uid, initial);
+        } else {
+          // fresh device → pull whatever the cloud has
+          const remote = await loadRemote(uid);
+          if (remote) setState({ ...SEED, ...remote });
+          else await saveRemote(uid, initial);
+        }
+      } catch {
+        setAuth((a) => ({ ...a, ready: true }));
       }
     })();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   // persist: localStorage immediately + debounced cloud save
@@ -186,9 +219,50 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return reward;
   };
 
+  // ---- auth actions (optional email/password, layered over anonymous) ----
+
+  const signUp = async (email: string, password: string) => {
+    if (!isSupabaseConfigured) return { error: "Хмара не підключена" };
+    const res = await linkEmail(email.trim(), password);
+    if (res.error) return { error: res.error };
+    setAuth((a) => ({ ...a, email: res.email ?? email.trim(), isAnonymous: false }));
+    if (userId.current) await saveRemote(userId.current, stateRef.current); // keep progress synced
+    return { error: null };
+  };
+
+  const signIn = async (email: string, password: string) => {
+    if (!isSupabaseConfigured) return { error: "Хмара не підключена" };
+    const res = await signInEmail(email.trim(), password);
+    if (res.error) return { error: res.error };
+    userId.current = res.userId ?? null;
+    const remote = res.userId ? await loadRemote(res.userId) : null;
+    const next: GameState = remote ? { ...SEED, ...remote } : { ...SEED, onboarded: true };
+    setState(next);
+    try {
+      localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {}
+    if (!remote && res.userId) await saveRemote(res.userId, next);
+    setAuth({ ready: true, email: res.email ?? email.trim(), isAnonymous: false });
+    return { error: null };
+  };
+
+  const signOut = async () => {
+    await signOutUser();
+    // become a fresh anonymous player again
+    const uid = await ensureAuth();
+    userId.current = uid;
+    const remote = uid ? await loadRemote(uid) : null;
+    const next: GameState = remote ? { ...SEED, ...remote } : { ...SEED, onboarded: true };
+    setState(next);
+    try {
+      localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {}
+    setAuth({ ready: true, email: null, isAnonymous: true });
+  };
+
   return (
     <GameContext.Provider
-      value={{ state, hydrated, plantTree, nextBombom, toggleMute, reset, recordSession }}
+      value={{ state, hydrated, auth, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signOut, recordSession }}
     >
       {children}
     </GameContext.Provider>
