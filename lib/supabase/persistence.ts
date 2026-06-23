@@ -108,3 +108,35 @@ export async function signOutUser(): Promise<void> {
     await sb.auth.signOut();
   } catch {}
 }
+
+// ---- mandatory registration (real accounts; no anonymous play) ------------
+
+export async function getSessionUser(): Promise<{ id: string; email: string | null } | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  try {
+    const { data } = await sb.auth.getSession();
+    const u = data.session?.user;
+    if (!u) return null;
+    if ((u as any).is_anonymous) return null; // require a real account
+    return { id: u.id, email: u.email ?? null };
+  } catch {
+    return null;
+  }
+}
+
+export async function registerEmail(
+  email: string,
+  password: string,
+): Promise<{ error: string | null; userId?: string | null; email?: string; hasSession?: boolean }> {
+  const sb = getSupabase();
+  if (!sb) return { error: "Бекенд не підключено" };
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if (error) return { error: error.message };
+  return {
+    error: null,
+    userId: data.user?.id ?? null,
+    email: data.user?.email ?? email,
+    hasSession: !!data.session,
+  };
+}

@@ -13,13 +13,11 @@ This is a **pre-beta** meant for hosting a test link on Vercel.
 - Every visitor **starts from zero**: acorn (stage 1), 0 XP, empty journal,
   empty inventory, no runes, streak 0, day 1. The tree grows in 6 visible stages
   (acorn → sprout → sapling → young oak → oak → grand oak).
-- **Saving:** by default state is cached in the browser (`localStorage`). If you
-  add Supabase env vars + enable anonymous sign-ins, the same state also **syncs
-  to the cloud** per anonymous user (no login UI), so it survives across reloads.
-  Without those env vars the app still runs, localStorage-only. In-app **reset**
-  is in Cabin → ♻️. Players can also optionally create an **email/password
-  account** (Cabin → "Збережи свій сад") to sync across devices; anonymous play
-  stays the default. Setup: `docs/hosting-vercel-supabase.md`.
+- **Accounts are required.** Players register / log in with email + password
+  (auth gate before the game). Saves sync to Supabase (`player_saves`, RLS) and
+  follow the account across devices. If the Supabase env vars are absent, the app
+  runs local-only without a gate (dev convenience). Setup + the one toggle to
+  flip ("Confirm email" OFF): `docs/hosting-vercel-supabase.md`.
 
 ## Run locally
 ```bash

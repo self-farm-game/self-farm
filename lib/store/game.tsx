@@ -5,11 +5,10 @@ import { DROP_POOL } from "@/lib/mock-data/items";
 import { setMuted as setSoundMuted } from "@/lib/sound/sound";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import {
-  ensureAuth,
   loadRemote,
   saveRemote,
-  authInfo,
-  linkEmail,
+  getSessionUser,
+  registerEmail,
   signInEmail,
   signOutUser,
 } from "@/lib/supabase/persistence";
@@ -101,55 +100,59 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   stateRef.current = state;
 
-  // hydrate: render INSTANTLY from localStorage; sync the cloud in the background
+  // per-user localStorage cache key (so accounts don't bleed on one browser)
+  const localKey = () => (isSupabaseConfigured && userId.current ? `${KEY}:${userId.current}` : KEY);
+
+  // load: decide signed-in vs gate; render fast from per-user cache
   useEffect(() => {
-    let hadLocal = false;
-    let initial: GameState = SEED;
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) {
-        initial = { ...SEED, ...JSON.parse(raw) };
-        hadLocal = true;
-      }
-    } catch {}
-
-    // 1) show the UI immediately — no network on the critical path
-    setState(initial);
-    setHydrated(true);
-
+    // No backend configured → local-only play (no gate), so dev/preview works.
     if (!isSupabaseConfigured) {
-      setAuth({ ready: true, email: null, isAnonymous: true });
+      let initial: GameState = SEED;
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (raw) initial = { ...SEED, ...JSON.parse(raw) };
+      } catch {}
+      setState(initial);
+      setHydrated(true);
+      setAuth({ ready: true, email: null, isAnonymous: false });
       return;
     }
 
-    // 2) background: auth + reconcile with the cloud
     (async () => {
-      try {
-        const uid = await ensureAuth();
-        userId.current = uid;
-        const info = await authInfo();
-        setAuth({
-          ready: true,
-          email: info?.email ?? null,
-          isAnonymous: info?.isAnonymous ?? true,
-        });
-        if (!uid) return;
-        if (hadLocal) {
-          // device already has a save → trust it, push it up
-          await saveRemote(uid, initial);
-        } else {
-          // fresh device → pull whatever the cloud has
-          const remote = await loadRemote(uid);
-          if (remote) setState({ ...SEED, ...remote });
-          else await saveRemote(uid, initial);
-        }
-      } catch {
-        setAuth((a) => ({ ...a, ready: true }));
+      const user = await getSessionUser(); // reads local token (fast, no real network)
+      if (!user) {
+        // not signed in → show the auth gate
+        setHydrated(true);
+        setAuth({ ready: true, email: null, isAnonymous: true });
+        return;
       }
+      userId.current = user.id;
+
+      // instant: per-user cache
+      let initial: GameState = SEED;
+      let hadLocal = false;
+      try {
+        const raw = localStorage.getItem(`${KEY}:${user.id}`);
+        if (raw) {
+          initial = { ...SEED, ...JSON.parse(raw) };
+          hadLocal = true;
+        }
+      } catch {}
+      setState(initial);
+      setHydrated(true);
+      setAuth({ ready: true, email: user.email, isAnonymous: false });
+
+      // background reconcile with the cloud
+      try {
+        const remote = await loadRemote(user.id);
+        if (remote && !hadLocal) setState({ ...SEED, ...remote });
+        else if (!remote) await saveRemote(user.id, initial);
+        else await saveRemote(user.id, initial);
+      } catch {}
     })();
   }, []);
 
-  // persist: localStorage immediately + debounced cloud save
+  // persist: per-user localStorage immediately + debounced cloud save
   useEffect(() => {
     if (!hydrated) return;
     setSoundMuted(state.muted);
@@ -158,7 +161,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      localStorage.setItem(KEY, JSON.stringify(state));
+      localStorage.setItem(localKey(), JSON.stringify(state));
     } catch {}
 
     if (isSupabaseConfigured && userId.current) {
@@ -222,24 +225,34 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // ---- auth actions (optional email/password, layered over anonymous) ----
 
   const signUp = async (email: string, password: string) => {
-    if (!isSupabaseConfigured) return { error: "Хмара не підключена" };
-    const res = await linkEmail(email.trim(), password);
+    if (!isSupabaseConfigured) return { error: "Бекенд не підключено" };
+    const res = await registerEmail(email.trim(), password);
     if (res.error) return { error: res.error };
-    setAuth((a) => ({ ...a, email: res.email ?? email.trim(), isAnonymous: false }));
-    if (userId.current) await saveRemote(userId.current, stateRef.current); // keep progress synced
+    if (!res.userId || !res.hasSession) {
+      // email confirmation is ON — account made but no session yet
+      return { error: "Акаунт створено. Підтверди пошту листом, тоді увійди." };
+    }
+    userId.current = res.userId;
+    const fresh: GameState = { ...SEED }; // brand new account → onboarding starts
+    setState(fresh);
+    try {
+      localStorage.setItem(`${KEY}:${res.userId}`, JSON.stringify(fresh));
+    } catch {}
+    await saveRemote(res.userId, fresh);
+    setAuth({ ready: true, email: res.email ?? email.trim(), isAnonymous: false });
     return { error: null };
   };
 
   const signIn = async (email: string, password: string) => {
-    if (!isSupabaseConfigured) return { error: "Хмара не підключена" };
+    if (!isSupabaseConfigured) return { error: "Бекенд не підключено" };
     const res = await signInEmail(email.trim(), password);
     if (res.error) return { error: res.error };
     userId.current = res.userId ?? null;
     const remote = res.userId ? await loadRemote(res.userId) : null;
-    const next: GameState = remote ? { ...SEED, ...remote } : { ...SEED, onboarded: true };
+    const next: GameState = remote ? { ...SEED, ...remote } : { ...SEED };
     setState(next);
     try {
-      localStorage.setItem(KEY, JSON.stringify(next));
+      if (res.userId) localStorage.setItem(`${KEY}:${res.userId}`, JSON.stringify(next));
     } catch {}
     if (!remote && res.userId) await saveRemote(res.userId, next);
     setAuth({ ready: true, email: res.email ?? email.trim(), isAnonymous: false });
@@ -248,16 +261,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await signOutUser();
-    // become a fresh anonymous player again
-    const uid = await ensureAuth();
-    userId.current = uid;
-    const remote = uid ? await loadRemote(uid) : null;
-    const next: GameState = remote ? { ...SEED, ...remote } : { ...SEED, onboarded: true };
-    setState(next);
-    try {
-      localStorage.setItem(KEY, JSON.stringify(next));
-    } catch {}
-    setAuth({ ready: true, email: null, isAnonymous: true });
+    userId.current = null;
+    setState(SEED);
+    setAuth({ ready: true, email: null, isAnonymous: true }); // show the gate again
   };
 
   return (

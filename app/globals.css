@@ -1,14 +1,12 @@
-@import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap");
-
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: none; }
 html, body { height: 100%; }
 body {
   background: #0c0a16;
   color: #efe7d2;
-  font-family: "Pixelify Sans", system-ui, sans-serif;
+  font-family: var(--font-pixel), "Pixelify Sans", system-ui, sans-serif;
 }
 img { image-rendering: pixelated; image-rendering: crisp-edges; }
-textarea { font-family: "Pixelify Sans", sans-serif; }
+textarea, input, button { font-family: inherit; }
 
 /* animations from the design */
 @keyframes sf-star { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
@@ -113,3 +111,50 @@ textarea { font-family: "Pixelify Sans", sans-serif; }
 @keyframes sf-treesway { 0%,100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
 .sf-treesway { animation: sf-treesway 6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .sf-treesway { animation: none; } }
+
+/* ===== shell layout (mobile default + desktop sidebar) ===== */
+.sf-shell { position: absolute; inset: 0; display: flex; }
+.sf-main { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+
+/* mobile top status bar */
+.sf-topbar {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px 0;
+}
+
+/* content column wrapper */
+.sf-page { width: 100%; }
+
+/* desktop sidebar (hidden on mobile) */
+.sf-side { display: none; }
+
+/* ===== desktop (landscape window with sidebar) ===== */
+@media (min-width: 1024px) {
+  .sf-frame {
+    width: min(1080px, 94vw);
+    height: min(720px, 92vh);
+    max-height: 92vh;
+    border-radius: 28px;
+  }
+  .sf-inner { border-radius: 20px; }
+
+  .sf-side {
+    display: flex;
+    flex-direction: column;
+    width: 236px;
+    flex-shrink: 0;
+    padding: 18px 14px;
+    z-index: 25;
+    background: linear-gradient(180deg, #5d3f24, #3a2410);
+    box-shadow: inset -3px 0 0 rgba(0, 0, 0, 0.3), inset 0 2px 0 rgba(255, 220, 160, 0.15);
+    overflow-y: auto;
+  }
+  .sf-side::-webkit-scrollbar { width: 0; }
+
+  .sf-topbar { display: none; }
+  .sf-bottomnav { display: none !important; }
+
+  .sf-scroll { bottom: 0; }
+  .sf-page { max-width: 480px; margin: 0 auto; }
+}

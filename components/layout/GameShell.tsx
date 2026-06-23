@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useGame } from "@/lib/store/game";
 import BottomNav from "./BottomNav";
+import SideNav from "./SideNav";
+import AuthGate from "@/components/auth/AuthGate";
 
 function WoodPill({ children }: { children: React.ReactNode }) {
   return (
@@ -29,7 +31,7 @@ function WoodPill({ children }: { children: React.ReactNode }) {
 
 export default function GameShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { state } = useGame();
+  const { state, auth } = useGame();
   const [now, setNow] = useState("");
   useEffect(() => {
     const f = () => setNow(new Date().toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }));
@@ -40,38 +42,41 @@ export default function GameShell({ children }: { children: React.ReactNode }) {
   // onboarding and the initial redirect render full-bleed with their own bg
   const bare = pathname === "/onboarding" || pathname === "/";
 
+  // auth gating: until ready show a tiny loader; if not signed in show the gate
+  const loading = !auth.ready;
+  const gated = auth.ready && auth.isAnonymous;
+
   return (
     <div className="sf-field">
       <div className="sf-frame">
         <div className="sf-inner">
-          {bare ? (
+          {loading ? (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#0c0a16", color: "#8a7fb0", fontSize: 13, letterSpacing: 2 }}>
+              Self-Farm…
+            </div>
+          ) : gated ? (
+            <AuthGate />
+          ) : bare ? (
             <div style={{ position: "absolute", inset: 0 }}>{children}</div>
           ) : (
-            <div style={{ position: "absolute", inset: 0 }}>
-              <div className="sf-wall" />
-              <div className="sf-wall-glow" />
+            <div className="sf-shell">
+              <SideNav />
+              <div className="sf-main">
+                <div className="sf-wall" />
+                <div className="sf-wall-glow" />
 
-              {/* top status bar */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  zIndex: 20,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "12px 14px 0",
-                }}
-              >
-                <WoodPill>{now || "··:··"}</WoodPill>
-                <WoodPill>ДЕНЬ {state.day}</WoodPill>
-                <WoodPill>🔥 {state.streak}</WoodPill>
+                {/* mobile-only top status bar */}
+                <div className="sf-topbar">
+                  <WoodPill>{now || "··:··"}</WoodPill>
+                  <WoodPill>ДЕНЬ {state.day}</WoodPill>
+                  <WoodPill>🔥 {state.streak}</WoodPill>
+                </div>
+
+                <div className="sf-scroll">
+                  <div className="sf-page">{children}</div>
+                </div>
+                <BottomNav />
               </div>
-
-              <div className="sf-scroll">{children}</div>
-              <BottomNav />
             </div>
           )}
         </div>

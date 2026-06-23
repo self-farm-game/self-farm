@@ -36,3 +36,12 @@ requirements' responsive rule.
 ## Signature
 The pixel oak in the empty field + Бомбом's white speech bubble. Spend boldness
 there; keep everything else quiet.
+
+## Layout (mobile vs desktop)
+- **Mobile (<1024px):** full-bleed portrait, top status pills, bottom nav.
+- **Desktop (≥1024px):** a landscape "game window" with a **left wood sidebar**
+  (`components/layout/SideNav.tsx`) — wordmark, profile, vertical nav, day/streak
+  — and a main panel showing the active screen in a centered column (`.sf-page`,
+  max ~480px) on the wooden wall. Bottom nav + mobile top bar are hidden via CSS.
+  Implemented purely with media queries in `app/globals.css` (no JS branching),
+  reusing the same screen components.

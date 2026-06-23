@@ -70,3 +70,29 @@
   trusted and pushed up; a fresh device pulls remote. This removed the long
   startup wait that came from awaiting anonymous sign-in before first paint.
 - Sprite weight cut: bombom.png ~632KB→~126KB; tree.png (unused in scene) shrunk.
+
+## UPDATE — registration is now mandatory
+- No anonymous play. `lib/supabase/persistence.ts` → `getSessionUser` (ignores
+  any leftover anonymous session), `registerEmail` (real `signUp`), `signInEmail`,
+  `signOutUser`.
+- `lib/store/game.tsx`: on load, if Supabase is configured and there is no real
+  session → `auth.isAnonymous = true`. `components/layout/GameShell.tsx` then
+  renders `components/auth/AuthGate.tsx` instead of the game (loader shown until
+  `auth.ready`). signUp/signIn open the gate; signOut closes it.
+- Per-user localStorage cache key `self-farm-state-v1:<uid>` so accounts on one
+  browser don't mix. New account → fresh state → onboarding; returning → cloud save.
+- Requires Email provider enabled + "Confirm email" OFF (instant sign-up).
+- If env vars are missing the gate is bypassed (local-only dev mode).
+
+## UPDATE — perf + desktop + persistent login
+- **Fonts self-hosted** via `next/font/google` (Pixelify Sans, latin+cyrillic) in
+  `app/layout.tsx` → no render-blocking external CSS, no FOIT. The old
+  `@import` was removed; `--font-pixel` drives `body`.
+- **Persistent login:** Supabase client uses `persistSession` + `autoRefreshToken`,
+  so a returning visitor is restored from the stored session — credentials are
+  only entered at registration / first login. The gate shows only when there is
+  no valid (non-anonymous) session.
+- **Desktop interface:** responsive sidebar layout (see design-system.md). Mobile
+  unchanged.
+- Image weights already reduced (bombom/tree). Startup hydrates instantly from
+  per-user localStorage cache; cloud reconciles in the background.

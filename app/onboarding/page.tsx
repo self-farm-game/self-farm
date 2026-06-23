@@ -54,6 +54,9 @@ export default function Onboarding() {
           justifyContent: "center",
           padding: "34px 30px 0",
           textAlign: "center",
+          width: "100%",
+          maxWidth: 460,
+          margin: "0 auto",
         }}
       >
         <div
@@ -105,7 +108,7 @@ export default function Onboarding() {
         )}
       </div>
 
-      <div style={{ position: "relative", padding: "0 28px 46px" }}>
+      <div style={{ position: "relative", padding: "0 28px 46px", width: "100%", maxWidth: 460, margin: "0 auto" }}>
         <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 22 }}>
           {ONBOARDING.map((_, i) => (
             <div

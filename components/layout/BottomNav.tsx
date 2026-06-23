@@ -10,6 +10,7 @@ export default function BottomNav() {
 
   return (
     <div
+      className="sf-bottomnav"
       style={{
         position: "absolute",
         bottom: 0,
