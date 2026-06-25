@@ -70,3 +70,39 @@ the same credentials to load the same garden.
 - Whole game state is one `jsonb` blob for now (simple + robust for pre-beta);
   split into the optional normalized tables later if needed.
 - `npm i` already includes `@supabase/supabase-js`.
+
+## Part 4 — "Continue with Google" (OAuth)
+
+The auth gate has a **Продовжити з Google** button (`signInWithOAuth`). To make it
+work you enable Google as a provider in Supabase and register an OAuth client in
+Google Cloud.
+
+### 1. Create a Google OAuth client
+Google Cloud Console → **APIs & Services → Credentials → Create Credentials →
+OAuth client ID** → type **Web application**.
+- **Authorized redirect URI:** the exact callback Supabase shows in its Google
+  provider page — it looks like
+  `https://YOURPROJECT.supabase.co/auth/v1/callback`.
+- Create → copy the **Client ID** and **Client secret**.
+(You may need to configure the OAuth consent screen first — External, add your
+email as a test user for pre-beta.)
+
+### 2. Enable Google in Supabase
+Dashboard → **Authentication → Providers → Google** → enable → paste the
+**Client ID** + **Client secret** → Save.
+
+### 3. Allow your app URLs to receive the redirect
+Dashboard → **Authentication → URL Configuration**:
+- **Site URL:** your app URL (e.g. `https://self-farm-r7zn.vercel.app`).
+- **Redirect URLs:** add the origins the app will redirect back to:
+  - `https://self-farm-r7zn.vercel.app/**`
+  - `http://localhost:3000/**` (for local dev)
+
+The app calls Google with `redirectTo = window.location.origin`, so whatever
+domain you open it on must be listed here, or the return will be rejected.
+
+### How it behaves
+Click **Продовжити з Google** → Google account picker → back to the app →
+`detectSessionInUrl` + the auth listener pick up the session → the gate opens and
+the player's cloud save loads (a brand-new Google user starts at onboarding).
+Email/password still works alongside it.

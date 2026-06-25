@@ -94,7 +94,7 @@ textarea, input, button { font-family: inherit; }
 }
 
 /* phone-sized screens: drop the bezel, go full-bleed */
-@media (max-width: 460px) {
+@media (max-width: 767px) {
   .sf-field { padding: 0; }
   .sf-frame {
     width: 100vw;
@@ -130,7 +130,7 @@ textarea, input, button { font-family: inherit; }
 .sf-side { display: none; }
 
 /* ===== desktop (landscape window with sidebar) ===== */
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   .sf-frame {
     width: min(1080px, 94vw);
     height: min(720px, 92vh);

@@ -7,10 +7,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/client";
 import {
   loadRemote,
   saveRemote,
-  getSessionUser,
   registerEmail,
   signInEmail,
   signOutUser,
+  signInWithGoogle,
+  subscribeAuth,
 } from "@/lib/supabase/persistence";
 
 // State is cached in localStorage AND (when Supabase is configured) saved to the
@@ -68,6 +69,7 @@ interface Ctx {
   reset: () => void;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   // records a completed care session and returns the reward
   recordSession: (input: {
@@ -118,38 +120,47 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    (async () => {
-      const user = await getSessionUser(); // reads local token (fast, no real network)
-      if (!user) {
-        // not signed in → show the auth gate
-        setHydrated(true);
-        setAuth({ ready: true, email: null, isAnonymous: true });
-        return;
-      }
-      userId.current = user.id;
-
-      // instant: per-user cache
-      let initial: GameState = SEED;
-      let hadLocal = false;
-      try {
-        const raw = localStorage.getItem(`${KEY}:${user.id}`);
-        if (raw) {
-          initial = { ...SEED, ...JSON.parse(raw) };
-          hadLocal = true;
+    // Apply an auth state (signed-in user or null). `fresh` = first run / account
+    // switch → (re)load that account's cache + cloud save.
+    const apply = async (user: { id: string; email: string | null } | null, fresh: boolean) => {
+      if (user) {
+        const changed = userId.current !== user.id;
+        userId.current = user.id;
+        if (fresh || changed) {
+          let initial: GameState = SEED;
+          let hadLocal = false;
+          try {
+            const raw = localStorage.getItem(`${KEY}:${user.id}`);
+            if (raw) {
+              initial = { ...SEED, ...JSON.parse(raw) };
+              hadLocal = true;
+            }
+          } catch {}
+          setState(initial);
+          try {
+            const remote = await loadRemote(user.id);
+            if (remote && !hadLocal) setState({ ...SEED, ...remote });
+            else if (!remote) await saveRemote(user.id, initial);
+            else await saveRemote(user.id, initial);
+          } catch {}
         }
-      } catch {}
-      setState(initial);
+        setAuth({ ready: true, email: user.email, isAnonymous: false });
+      } else {
+        userId.current = null;
+        setAuth({ ready: true, email: null, isAnonymous: true });
+      }
       setHydrated(true);
-      setAuth({ ready: true, email: user.email, isAnonymous: false });
+    };
 
-      // background reconcile with the cloud
-      try {
-        const remote = await loadRemote(user.id);
-        if (remote && !hadLocal) setState({ ...SEED, ...remote });
-        else if (!remote) await saveRemote(user.id, initial);
-        else await saveRemote(user.id, initial);
-      } catch {}
-    })();
+    // onAuthStateChange emits INITIAL_SESSION immediately, then SIGNED_IN /
+    // SIGNED_OUT (covers email login, Google OAuth return, restore, sign-out).
+    let done = false;
+    const unsub = subscribeAuth((user) => {
+      const firstRun = !done;
+      done = true;
+      apply(user, firstRun);
+    });
+    return () => unsub();
   }, []);
 
   // persist: per-user localStorage immediately + debounced cloud save
@@ -228,35 +239,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!isSupabaseConfigured) return { error: "Бекенд не підключено" };
     const res = await registerEmail(email.trim(), password);
     if (res.error) return { error: res.error };
-    if (!res.userId || !res.hasSession) {
+    if (!res.hasSession) {
       // email confirmation is ON — account made but no session yet
       return { error: "Акаунт створено. Підтверди пошту листом, тоді увійди." };
     }
-    userId.current = res.userId;
-    const fresh: GameState = { ...SEED }; // brand new account → onboarding starts
-    setState(fresh);
-    try {
-      localStorage.setItem(`${KEY}:${res.userId}`, JSON.stringify(fresh));
-    } catch {}
-    await saveRemote(res.userId, fresh);
-    setAuth({ ready: true, email: res.email ?? email.trim(), isAnonymous: false });
-    return { error: null };
+    return { error: null }; // SIGNED_IN listener loads state + opens the gate
   };
 
   const signIn = async (email: string, password: string) => {
     if (!isSupabaseConfigured) return { error: "Бекенд не підключено" };
     const res = await signInEmail(email.trim(), password);
     if (res.error) return { error: res.error };
-    userId.current = res.userId ?? null;
-    const remote = res.userId ? await loadRemote(res.userId) : null;
-    const next: GameState = remote ? { ...SEED, ...remote } : { ...SEED };
-    setState(next);
-    try {
-      if (res.userId) localStorage.setItem(`${KEY}:${res.userId}`, JSON.stringify(next));
-    } catch {}
-    if (!remote && res.userId) await saveRemote(res.userId, next);
-    setAuth({ ready: true, email: res.email ?? email.trim(), isAnonymous: false });
-    return { error: null };
+    return { error: null }; // listener handles state
+  };
+
+  const signInGoogle = async () => {
+    if (!isSupabaseConfigured) return { error: "Бекенд не підключено" };
+    return await signInWithGoogle(); // redirects to Google; listener handles the return
   };
 
   const signOut = async () => {
@@ -268,7 +267,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <GameContext.Provider
-      value={{ state, hydrated, auth, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signOut, recordSession }}
+      value={{ state, hydrated, auth, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
     >
       {children}
     </GameContext.Provider>

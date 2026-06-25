@@ -96,3 +96,12 @@
   unchanged.
 - Image weights already reduced (bombom/tree). Startup hydrates instantly from
   per-user localStorage cache; cloud reconciles in the background.
+
+## UPDATE — Google OAuth + tablet responsive
+- Google sign-in: `signInWithGoogle` (persistence) → `signInGoogle` (store) →
+  button in `components/auth/AuthGate.tsx`. Auth is now driven by
+  `subscribeAuth` (onAuthStateChange) so OAuth return / email login / restore /
+  sign-out all reconcile through one path. Requires Google provider + redirect
+  URLs configured in Supabase (see hosting doc Part 4).
+- Responsive: breakpoints moved to a clean split — phones <768px (full-bleed),
+  tablets+desktop ≥768px (sidebar landscape). Fixes the tablet layout.

@@ -45,3 +45,10 @@ there; keep everything else quiet.
   max ~480px) on the wooden wall. Bottom nav + mobile top bar are hidden via CSS.
   Implemented purely with media queries in `app/globals.css` (no JS branching),
   reusing the same screen components.
+
+## Responsive breakpoints (updated)
+- **≤767px (phones):** full-bleed portrait + bottom nav.
+- **≥768px (tablets AND desktop):** landscape game window with the left wood
+  sidebar; content centered (`.sf-page`, max ~480px). The old portrait "phone
+  floating on a desktop" state (which looked wrong on tablets) is gone — tablets
+  now use the same sidebar layout as desktop, sized via `min(1080px,94vw)`.

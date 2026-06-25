@@ -140,3 +140,34 @@ export async function registerEmail(
     hasSession: !!data.session,
   };
 }
+
+// ---- Google OAuth + auth state subscription -------------------------------
+
+export async function signInWithGoogle(): Promise<{ error: string | null }> {
+  const sb = getSupabase();
+  if (!sb) return { error: "Бекенд не підключено" };
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+    },
+  });
+  // on success the browser is redirected to Google; nothing else to do here
+  return { error: error?.message ?? null };
+}
+
+// Subscribe to auth changes (restore, email sign-in, Google OAuth return,
+// sign-out, token refresh). Returns an unsubscribe fn. The handler is deferred
+// to avoid Supabase's "don't call APIs inside the callback" lock.
+export function subscribeAuth(
+  handler: (user: { id: string; email: string | null } | null, event: string) => void,
+): () => void {
+  const sb = getSupabase();
+  if (!sb) return () => {};
+  const { data } = sb.auth.onAuthStateChange((event, session) => {
+    const u = session?.user;
+    const info = u && !(u as any).is_anonymous ? { id: u.id, email: u.email ?? null } : null;
+    setTimeout(() => handler(info, event), 0);
+  });
+  return () => data.subscription.unsubscribe();
+}
