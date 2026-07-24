@@ -127,3 +127,20 @@ Fix:
 - `app/page.tsx`: skips the redirect while OAuth params are in the URL.
 - `components/auth/AuthGate.tsx`: renders `auth.error`, so a failed Google
   return now states the reason instead of silently showing the gate.
+
+## FIX 2 — "PKCE code verifier not found in storage"
+Cause: the client was set to `flowType: "pkce"` AND `detectSessionInUrl: true`,
+while `completeOAuthRedirect()` also called `exchangeCodeForSession()`. Two
+consumers raced for the same one-time code/verifier; the loser threw
+"PKCE code verifier not found in storage" (it is also thrown whenever the flow
+starts on one origin and finishes on another, since the verifier lives in that
+origin's localStorage).
+
+Fix: this app is client-only (no server auth), so PKCE buys nothing here.
+- `client.ts` → `flowType: "implicit"` (token arrives in the URL hash, no
+  verifier storage involved), `detectSessionInUrl` still true.
+- `completeOAuthRedirect()` no longer exchanges anything. It reads any
+  `error_description` from the URL and then just POLLS `getSession()` (20×150ms)
+  until the session Supabase parsed from the URL appears, then cleans the URL.
+If PKCE is ever needed (real SSR auth), switch to `@supabase/ssr` so the verifier
+is stored in cookies on both server and client — not this manual approach.

@@ -196,23 +196,23 @@ export async function completeOAuthRedirect(): Promise<{ error: string | null }>
 
   const q = new URLSearchParams(window.location.search);
   const h = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  let error: string | null =
+  const error: string | null =
     q.get("error_description") || h.get("error_description") || q.get("error") || h.get("error");
 
-  try {
-    const code = q.get("code");
-    if (code) {
-      const { error: exErr } = await sb.auth.exchangeCodeForSession(window.location.href);
-      if (exErr) error = exErr.message;
-    } else if (h.get("access_token")) {
-      // implicit flow — detectSessionInUrl already handled it; make sure it settled
-      await sb.auth.getSession();
+  if (!error) {
+    // `detectSessionInUrl` consumes the token/code from the URL on client init.
+    // We only WAIT for it to settle — exchanging it ourselves as well would race
+    // and burn the one-time code ("PKCE code verifier not found in storage").
+    for (let i = 0; i < 20; i++) {
+      try {
+        const { data } = await sb.auth.getSession();
+        if (data.session) break;
+      } catch {}
+      await new Promise((r) => setTimeout(r, 150));
     }
-  } catch (e: any) {
-    error = e?.message ?? "Не вдалося завершити вхід через Google";
   }
 
-  // clean the URL so a refresh doesn't retry an already-used code
+  // clean the URL so a refresh doesn't retry a spent token
   try {
     window.history.replaceState({}, "", window.location.pathname);
   } catch {}
