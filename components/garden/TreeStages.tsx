@@ -59,13 +59,16 @@ function branch(fromX: number, fromY: number, dir: number, len: number) {
 // Each stage is framed tightly enough to be clearly visible: an acorn shown in
 // the full 160x156 canvas would be a few pixels tall and vanish behind the UI.
 // The frame widens with every stage, so growth still reads as growth.
+// IMPORTANT: every frame must END exactly on the ground line (y = 150).
+// Extending below it left empty space under the drawing, which — once the frame
+// was zoomed for small stages — made the acorn/sprout look like it was hovering.
 const VIEWBOX = [
-  "52 96 56 60",   // 1 acorn
-  "40 86 80 70",   // 2 sprout
-  "34 64 92 92",   // 3 sapling
-  "16 40 128 116", // 4 young oak
-  "4 14 152 142",  // 5 oak
-  "0 0 160 156",   // 6 grand oak
+  "52 96 56 54",   // 1 acorn
+  "40 86 80 64",   // 2 sprout
+  "34 64 92 86",   // 3 sapling
+  "16 40 128 110", // 4 young oak
+  "4 14 152 136",  // 5 oak
+  "0 0 160 150",   // 6 grand oak
 ];
 
 export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: number }) {

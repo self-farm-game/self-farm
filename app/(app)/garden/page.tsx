@@ -100,6 +100,8 @@ export default function Garden() {
   /* ---------------- HOME ---------------- */
   if (flow === "home") {
     const line = BOMBOM_LINES[state.bombomIdx % BOMBOM_LINES.length];
+    // each stage fills a bit more of the scene than the last one
+    const fit = ["42%", "52%", "64%", "78%", "90%", "100%"][Math.min(6, lvl.levelNum) - 1];
     return (
       <div className="sf-screen sf-garden">
         {/* ---- the scene: takes whatever height the UI leaves ---- */}
@@ -112,71 +114,57 @@ export default function Garden() {
           </div>
           <div className="sf-garden-grass" />
 
-          {/* the tree stands on the grass, always above the panels */}
+          {/* the tree, standing on the grass line */}
           <div className="sf-garden-tree">
-            <div className="sf-garden-shadow" />
-            <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
-          </div>
-
-        {/* ---- Бомбом standing on the grass ---- */}
-        <div
-          className="sf-garden-bombom"
-          onClick={() => {
-            nextBombom();
-            play("tap");
-          }}
-          title="тицьни, щоб почути ще"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/sprites/bombom.png" alt="БомБом" />
-        </div>
-
-        {/* ---- top overlay: level + inventory ---- */}
-        <div className="sf-garden-top">
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 10, letterSpacing: 1.6, color: "#e8f2fa", textTransform: "uppercase", textShadow: "0 1px 2px rgba(0,0,0,.55)" }}>
-              Твоє дерево-супутник
+            <div className="sf-tree-fit" style={{ height: fit }}>
+              <div className="sf-garden-shadow" />
+              <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
             </div>
-            <div style={{ fontSize: "clamp(26px,6vw,34px)", lineHeight: 1.05, color: "#fff8e6", fontWeight: 700, marginTop: 2, textShadow: "0 3px 0 rgba(0,0,0,.45)" }}>
-              {lvl.name}
-            </div>
-            <div style={{ fontSize: 13.5, color: "#eef6fb", fontStyle: "italic", marginTop: 1, textShadow: "0 1px 3px rgba(0,0,0,.6)" }}>{lvl.sub}</div>
           </div>
 
-          <div className="sf-inv-btn" onClick={() => go("inventory")}>
-            <span style={{ fontSize: 23, lineHeight: 1 }}>🎒</span>
-            <span style={{ fontSize: 8.5, letterSpacing: 0.5, color: "#e7c389", fontWeight: 700 }}>Знахідки</span>
-            <div className="sf-inv-badge">{state.ownedItems.length}</div>
-          </div>
-          </div>
-        </div>
+          {/* ---- top overlay: Бомбом, inventory, level bar ---- */}
+          <div className="sf-garden-top">
+            <div className="sf-top-row">
+              <div
+                className="sf-bombom-corner"
+                onClick={() => {
+                  nextBombom();
+                  play("tap");
+                }}
+                title="тицьни, щоб почути ще"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/assets/sprites/bombom.png" alt="БомБом" />
+                <div className="sf-bombom-bubble">
+                  <div className="sf-bombom-name">БомБом · тицьни ↻</div>
+                  <p>{line}</p>
+                </div>
+              </div>
 
-        {/* ---- bottom overlay: Бомбом line + XP + CTA ---- */}
-        <div className="sf-garden-bottom">
-          <div
-            className="sf-bombom-note"
-            onClick={() => {
-              nextBombom();
-              play("tap");
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
-              <div style={{ fontSize: 12, color: "#3a2a1c", fontWeight: 700, letterSpacing: 0.5 }}>БомБом</div>
-              <div style={{ fontSize: 9.5, color: "#9a8a74", letterSpacing: 1 }}>тицьни ↻</div>
-            </div>
-            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: "#2b2230" }}>{line}</p>
-          </div>
-
-          <div className="sf-xp-panel">
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
-              <div style={{ fontSize: 12.5, color: "#f3d9a8", fontWeight: 700, letterSpacing: 1 }}>РІВЕНЬ {lvl.levelNum}</div>
-              <div style={{ fontSize: 12.5, color: "#e7c389", fontWeight: 600 }}>
-                {lvl.inLevel} / {lvl.target} XP
+              <div className="sf-inv-btn" onClick={() => go("inventory")}>
+                <span style={{ fontSize: 22, lineHeight: 1 }}>🎒</span>
+                <span style={{ fontSize: 8.5, letterSpacing: 0.5, color: "#e7c389", fontWeight: 700 }}>Знахідки</span>
+                <div className="sf-inv-badge">{state.ownedItems.length}</div>
               </div>
             </div>
-            <HeartBar pct={Math.round(lvl.pct * 100) + "%"} />
-          </div>
 
+            <div className="sf-xp-panel">
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 7 }}>
+                <div style={{ minWidth: 0 }}>
+                  <span style={{ fontSize: 16, color: "#f3d9a8", fontWeight: 700 }}>{lvl.name}</span>
+                  <span style={{ fontSize: 11.5, color: "#c9a878", fontStyle: "italic", marginLeft: 7 }}>{lvl.sub}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "#e7c389", fontWeight: 600, whiteSpace: "nowrap" }}>
+                  {lvl.inLevel} / {lvl.target} XP
+                </div>
+              </div>
+              <HeartBar pct={Math.round(lvl.pct * 100) + "%"} />
+            </div>
+          </div>
+        </div>
+
+        {/* ---- bottom: the single action ---- */}
+        <div className="sf-garden-bottom">
           <ParchButton
             onClick={() => {
               play("confirm");

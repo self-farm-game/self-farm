@@ -84,3 +84,21 @@ Two changes so an acorn/sprout reads as clearly as a grand oak:
 Бомбом moved to the grass line (`left: 3%`) and the tree is capped at 76% width,
 so they sit side by side without hiding each other.
 
+### Garden layout v2
+- **Level bar moved to the top** (`.sf-xp-panel`, slightly translucent wood):
+  stage name + subtitle on the left, XP counter on the right, heart bar below.
+- **Бомбом lives in the top-left corner** as a small floating sprite next to a
+  translucent glass bubble (`.sf-bombom-bubble`, blurred dark fill) holding his
+  line; tapping either cycles lines. He no longer stands in the scene, so he can
+  never cover the sapling.
+- **Bottom strip holds only the single action** («Як ти зараз?») on the soil
+  texture.
+- The tree stretches between the top panel (`top: clamp(150px,26vh,210px)`) and
+  the grass, and `.sf-tree-fit` gives each stage a share of that height
+  (42% acorn → 100% grand oak), so growth reads without early stages vanishing.
+
+### Fix — the sprout appeared to hover
+Every per-stage `viewBox` used to extend to y=156 while the drawing sits on the
+ground line at y=150. Zoomed in for small stages, those 6 empty units became a
+visible gap under the plant. All frames now end exactly at y=150.
+
