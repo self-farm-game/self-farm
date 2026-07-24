@@ -150,6 +150,10 @@ export async function signInWithGoogle(): Promise<{ error: string | null }> {
     provider: "google",
     options: {
       redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+      // Always show the Google account picker. Without this, a browser that is
+      // already signed into one Google account is silently reused, so every
+      // "Continue with Google" lands on the same user.
+      queryParams: { prompt: "select_account" },
     },
   });
   // on success the browser is redirected to Google; nothing else to do here

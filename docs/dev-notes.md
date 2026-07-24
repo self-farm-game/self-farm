@@ -144,3 +144,17 @@ Fix: this app is client-only (no server auth), so PKCE buys nothing here.
   until the session Supabase parsed from the URL appears, then cleans the URL.
 If PKCE is ever needed (real SSR auth), switch to `@supabase/ssr` so the verifier
 is stored in cookies on both server and client — not this manual approach.
+
+## NOTE — Google always signed in as the same account
+Google has no separate "register" vs "login": the first OAuth sign-in creates the
+user, later ones just sign in. That is why the same button works on both tabs.
+
+If the browser already has a Google session, Google skips the account chooser and
+silently reuses it, so every attempt lands on the same user. Fixed by passing
+`queryParams: { prompt: "select_account" }` to `signInWithOAuth`, which forces the
+picker every time.
+
+Separate limit: while the Google Cloud app is in **Testing**, only emails listed
+in Audience → Test users can complete sign-in; any other account is rejected by
+Google before it ever reaches Supabase. Add testers there, or publish the app.
+
