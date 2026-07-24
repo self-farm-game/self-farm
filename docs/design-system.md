@@ -102,3 +102,5 @@ Every per-stage `viewBox` used to extend to y=156 while the drawing sits on the
 ground line at y=150. Zoomed in for small stages, those 6 empty units became a
 visible gap under the plant. All frames now end exactly at y=150.
 
+Order inside `.sf-garden-top` (top → down): level bar, then the Бомбом bubble
+and the inventory button on one row.

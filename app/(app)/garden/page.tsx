@@ -124,6 +124,19 @@ export default function Garden() {
 
           {/* ---- top overlay: Бомбом, inventory, level bar ---- */}
           <div className="sf-garden-top">
+            <div className="sf-xp-panel">
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 7 }}>
+                <div style={{ minWidth: 0 }}>
+                  <span style={{ fontSize: 16, color: "#f3d9a8", fontWeight: 700 }}>{lvl.name}</span>
+                  <span style={{ fontSize: 11.5, color: "#c9a878", fontStyle: "italic", marginLeft: 7 }}>{lvl.sub}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "#e7c389", fontWeight: 600, whiteSpace: "nowrap" }}>
+                  {lvl.inLevel} / {lvl.target} XP
+                </div>
+              </div>
+              <HeartBar pct={Math.round(lvl.pct * 100) + "%"} />
+            </div>
+
             <div className="sf-top-row">
               <div
                 className="sf-bombom-corner"
@@ -146,19 +159,6 @@ export default function Garden() {
                 <span style={{ fontSize: 8.5, letterSpacing: 0.5, color: "#e7c389", fontWeight: 700 }}>Знахідки</span>
                 <div className="sf-inv-badge">{state.ownedItems.length}</div>
               </div>
-            </div>
-
-            <div className="sf-xp-panel">
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 7 }}>
-                <div style={{ minWidth: 0 }}>
-                  <span style={{ fontSize: 16, color: "#f3d9a8", fontWeight: 700 }}>{lvl.name}</span>
-                  <span style={{ fontSize: 11.5, color: "#c9a878", fontStyle: "italic", marginLeft: 7 }}>{lvl.sub}</span>
-                </div>
-                <div style={{ fontSize: 12, color: "#e7c389", fontWeight: 600, whiteSpace: "nowrap" }}>
-                  {lvl.inLevel} / {lvl.target} XP
-                </div>
-              </div>
-              <HeartBar pct={Math.round(lvl.pct * 100) + "%"} />
             </div>
           </div>
         </div>
