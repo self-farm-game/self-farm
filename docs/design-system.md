@@ -69,3 +69,18 @@ single scene that fills the visible area:
   height instead of overflowing. `@media (max-height: 680px)` trims the tree and
   clamps Бомбом's line to two rows so short phones still never scroll.
 Other screens keep the normal scrolling column layout.
+
+### Fix — small stages were hidden behind the UI
+Two changes so an acorn/sprout reads as clearly as a grand oak:
+1. **No overlap by construction.** `.sf-garden` is a flex column: `.sf-stage`
+   (flex:1) holds sky/grass/tree/Бомбом, `.sf-garden-bottom` (flex:0 0 auto)
+   holds the panels and carries the soil texture, so the UI looks planted in the
+   ground instead of floating over it. The tree stands on the grass line at the
+   bottom of the stage and can never be covered, whatever the panel height.
+2. **Per-stage framing.** `TreeStages` picks a `viewBox` per stage (tight around
+   the acorn, widening to the full canvas for the grand oak). Early stages are
+   therefore large enough to see, while each stage still frames more world than
+   the last, so growth remains legible.
+Бомбом moved to the grass line (`left: 3%`) and the tree is capped at 76% width,
+so they sit side by side without hiding each other.
+

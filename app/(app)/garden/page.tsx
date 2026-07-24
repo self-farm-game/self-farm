@@ -102,21 +102,21 @@ export default function Garden() {
     const line = BOMBOM_LINES[state.bombomIdx % BOMBOM_LINES.length];
     return (
       <div className="sf-screen sf-garden">
-        {/* ---- background scene (full bleed) ---- */}
-        <div className="sf-garden-sky" />
-        <div className="sf-cloud sf-cloud-a" />
-        <div className="sf-cloud sf-cloud-b" />
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-          <Stars n={10} seed={11} area={50} />
-        </div>
-        <div className="sf-garden-grass" />
-        <div className="sf-garden-soil" />
+        {/* ---- the scene: takes whatever height the UI leaves ---- */}
+        <div className="sf-stage">
+          <div className="sf-garden-sky" />
+          <div className="sf-cloud sf-cloud-a" />
+          <div className="sf-cloud sf-cloud-b" />
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+            <Stars n={10} seed={11} area={50} />
+          </div>
+          <div className="sf-garden-grass" />
 
-        {/* ---- the tree itself ---- */}
-        <div className="sf-garden-tree">
-          <div className="sf-garden-shadow" />
-          <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
-        </div>
+          {/* the tree stands on the grass, always above the panels */}
+          <div className="sf-garden-tree">
+            <div className="sf-garden-shadow" />
+            <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
+          </div>
 
         {/* ---- Бомбом standing on the grass ---- */}
         <div
@@ -147,6 +147,7 @@ export default function Garden() {
             <span style={{ fontSize: 23, lineHeight: 1 }}>🎒</span>
             <span style={{ fontSize: 8.5, letterSpacing: 0.5, color: "#e7c389", fontWeight: 700 }}>Знахідки</span>
             <div className="sf-inv-badge">{state.ownedItems.length}</div>
+          </div>
           </div>
         </div>
 

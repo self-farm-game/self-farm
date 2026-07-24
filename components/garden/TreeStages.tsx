@@ -56,6 +56,18 @@ function branch(fromX: number, fromY: number, dir: number, len: number) {
   return out;
 }
 
+// Each stage is framed tightly enough to be clearly visible: an acorn shown in
+// the full 160x156 canvas would be a few pixels tall and vanish behind the UI.
+// The frame widens with every stage, so growth still reads as growth.
+const VIEWBOX = [
+  "52 96 56 60",   // 1 acorn
+  "40 86 80 70",   // 2 sprout
+  "34 64 92 92",   // 3 sapling
+  "16 40 128 116", // 4 young oak
+  "4 14 152 142",  // 5 oak
+  "0 0 160 156",   // 6 grand oak
+];
+
 export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: number }) {
   const s = Math.min(6, Math.max(1, stage));
   // small continuous growth within a stage
@@ -122,7 +134,7 @@ export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: nu
 
   return (
     <svg
-      viewBox="0 0 160 156"
+      viewBox={VIEWBOX[s - 1]}
       preserveAspectRatio="xMidYMax meet"
       style={{ width: "100%", height: "100%", overflow: "visible", filter: "drop-shadow(0 6px 5px rgba(0,0,0,.4))" }}
     >
