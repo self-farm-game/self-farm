@@ -158,3 +158,17 @@ Separate limit: while the Google Cloud app is in **Testing**, only emails listed
 in Audience → Test users can complete sign-in; any other account is rejected by
 Google before it ever reaches Supabase. Add testers there, or publish the app.
 
+## FIX 3 — Google always landed on the same account
+Symptom: different users existed in Supabase, but the app always ended up signed
+in as the first one.
+
+Cause: `completeOAuthRedirect()` only checked "is there a session?" — the
+PREVIOUSLY stored session answered yes instantly, the function then cleaned the
+URL and threw away the freshly returned tokens of the account just chosen.
+
+Fix: `detectSessionInUrl: false` (so there is exactly one consumer of the URL)
+plus explicit `setSession({ access_token, refresh_token })` parsed from the
+returned hash. The new account now always replaces the old one deterministically.
+Combined with `prompt: "select_account"`, each sign-in asks which Google account
+to use and lands on exactly that one.
+

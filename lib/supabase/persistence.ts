@@ -200,20 +200,23 @@ export async function completeOAuthRedirect(): Promise<{ error: string | null }>
 
   const q = new URLSearchParams(window.location.search);
   const h = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  const error: string | null =
+  let error: string | null =
     q.get("error_description") || h.get("error_description") || q.get("error") || h.get("error");
 
-  if (!error) {
-    // `detectSessionInUrl` consumes the token/code from the URL on client init.
-    // We only WAIT for it to settle — exchanging it ourselves as well would race
-    // and burn the one-time code ("PKCE code verifier not found in storage").
-    for (let i = 0; i < 20; i++) {
-      try {
-        const { data } = await sb.auth.getSession();
-        if (data.session) break;
-      } catch {}
-      await new Promise((r) => setTimeout(r, 150));
-    }
+  const accessToken = h.get("access_token");
+  const refreshToken = h.get("refresh_token");
+
+  if (!error && accessToken && refreshToken) {
+    // Set the returned session EXPLICITLY. Relying on a "does a session exist?"
+    // check would find the previously stored account and keep the player logged
+    // in as the old user, no matter which Google account they just picked.
+    const { error: setErr } = await sb.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (setErr) error = setErr.message;
+  } else if (!error && q.get("code")) {
+    error = "Google повернув код замість токена. Перевір налаштування провайдера.";
   }
 
   // clean the URL so a refresh doesn't retry a spent token

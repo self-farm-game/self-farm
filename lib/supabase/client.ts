@@ -21,7 +21,7 @@ export function getSupabase(): SupabaseClient | null {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
+        detectSessionInUrl: false, // we parse the OAuth return ourselves (see persistence.ts)
         flowType: "implicit",
       },
     });
