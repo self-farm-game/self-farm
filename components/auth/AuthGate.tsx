@@ -5,7 +5,7 @@ import { Stars, WoodButton } from "@/components/ui/primitives";
 import { play } from "@/lib/sound/sound";
 
 export default function AuthGate() {
-  const { signUp, signIn, signInGoogle } = useGame();
+  const { signUp, signIn, signInGoogle, auth } = useGame();
   const [mode, setMode] = useState<"up" | "in">("up");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -148,7 +148,9 @@ export default function AuthGate() {
           />
         </div>
 
-        {err && <div style={{ fontSize: 13, color: "#e8a0a0", marginTop: 12, textAlign: "center" }}>{err}</div>}
+        {(err || auth.error) && (
+          <div style={{ fontSize: 13, color: "#e8a0a0", marginTop: 12, textAlign: "center" }}>{err || auth.error}</div>
+        )}
         {msg && <div style={{ fontSize: 13, color: "#b9d99a", marginTop: 12, textAlign: "center" }}>{msg}</div>}
 
         <div style={{ marginTop: 18 }}>

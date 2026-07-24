@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/store/game";
+import { hasOAuthParams } from "@/lib/supabase/persistence";
 
 export default function Home() {
   const router = useRouter();
@@ -9,6 +10,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated) return;
+    if (hasOAuthParams()) return; // wait for the Google code→session exchange
     router.replace(state.onboarded ? "/garden" : "/onboarding");
   }, [hydrated, state.onboarded, router]);
 

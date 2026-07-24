@@ -105,3 +105,25 @@
   URLs configured in Supabase (see hosting doc Part 4).
 - Responsive: breakpoints moved to a clean split — phones <768px (full-bleed),
   tablets+desktop ≥768px (sidebar landscape). Fixes the tablet layout.
+
+## FIX — Google OAuth bounced back to the auth gate
+Symptom: sign in with Google returned to the app, then immediately showed the
+register/login screen again.
+
+Cause: Google redirects to `/` with `?code=...` (PKCE). `app/page.tsx` ran
+`router.replace()` as soon as `hydrated` flipped — stripping `?code=` before
+Supabase could exchange it — so no session was ever created and the gate
+re-rendered.
+
+Fix:
+- `lib/supabase/client.ts`: explicit `flowType: "pkce"` (+ detectSessionInUrl).
+- `lib/supabase/persistence.ts`: `hasOAuthParams()` and
+  `completeOAuthRedirect()` → awaits `exchangeCodeForSession(location.href)`,
+  then cleans the URL via `history.replaceState` (so a refresh can't reuse a
+  spent code). Also reads `error_description` from Google.
+- `lib/store/game.tsx`: when OAuth params are present, the auth subscription is
+  started only AFTER the exchange resolves; the failure reason is kept in
+  `auth.error`.
+- `app/page.tsx`: skips the redirect while OAuth params are in the URL.
+- `components/auth/AuthGate.tsx`: renders `auth.error`, so a failed Google
+  return now states the reason instead of silently showing the gate.

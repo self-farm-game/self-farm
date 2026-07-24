@@ -171,3 +171,51 @@ export function subscribeAuth(
   });
   return () => data.subscription.unsubscribe();
 }
+
+// ---- OAuth redirect completion --------------------------------------------
+// Google returns to the app with `?code=...` (PKCE) or `#access_token=...`
+// (implicit). That must be exchanged for a session BEFORE the app navigates,
+// otherwise the params are stripped and the user lands back on the auth gate.
+
+export function hasOAuthParams(): boolean {
+  if (typeof window === "undefined") return false;
+  const q = new URLSearchParams(window.location.search);
+  const h = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return (
+    q.has("code") ||
+    q.has("error") ||
+    q.has("error_description") ||
+    h.has("access_token") ||
+    h.has("error_description")
+  );
+}
+
+export async function completeOAuthRedirect(): Promise<{ error: string | null }> {
+  const sb = getSupabase();
+  if (!sb || typeof window === "undefined") return { error: null };
+
+  const q = new URLSearchParams(window.location.search);
+  const h = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  let error: string | null =
+    q.get("error_description") || h.get("error_description") || q.get("error") || h.get("error");
+
+  try {
+    const code = q.get("code");
+    if (code) {
+      const { error: exErr } = await sb.auth.exchangeCodeForSession(window.location.href);
+      if (exErr) error = exErr.message;
+    } else if (h.get("access_token")) {
+      // implicit flow — detectSessionInUrl already handled it; make sure it settled
+      await sb.auth.getSession();
+    }
+  } catch (e: any) {
+    error = e?.message ?? "Не вдалося завершити вхід через Google";
+  }
+
+  // clean the URL so a refresh doesn't retry an already-used code
+  try {
+    window.history.replaceState({}, "", window.location.pathname);
+  } catch {}
+
+  return { error };
+}

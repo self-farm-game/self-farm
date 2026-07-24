@@ -18,7 +18,12 @@ export function getSupabase(): SupabaseClient | null {
   if (typeof window === "undefined") return null; // browser only
   if (!client) {
     client = createClient(url as string, anon as string, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: "pkce",
+      },
     });
   }
   return client;

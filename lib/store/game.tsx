@@ -12,6 +12,8 @@ import {
   signOutUser,
   signInWithGoogle,
   subscribeAuth,
+  hasOAuthParams,
+  completeOAuthRedirect,
 } from "@/lib/supabase/persistence";
 
 // State is cached in localStorage AND (when Supabase is configured) saved to the
@@ -57,6 +59,7 @@ export interface AuthState {
   ready: boolean;
   email: string | null;
   isAnonymous: boolean;
+  error: string | null;
 }
 
 interface Ctx {
@@ -95,11 +98,12 @@ function rollDrop() {
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GameState>(SEED);
   const [hydrated, setHydrated] = useState(false);
-  const [auth, setAuth] = useState<AuthState>({ ready: false, email: null, isAnonymous: true });
+  const [auth, setAuth] = useState<AuthState>({ ready: false, email: null, isAnonymous: true, error: null });
   const first = useRef(true);
   const userId = useRef<string | null>(null);
   const stateRef = useRef<GameState>(SEED);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const oauthError = useRef<string | null>(null);
   stateRef.current = state;
 
   // per-user localStorage cache key (so accounts don't bleed on one browser)
@@ -116,7 +120,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       } catch {}
       setState(initial);
       setHydrated(true);
-      setAuth({ ready: true, email: null, isAnonymous: false });
+      setAuth({ ready: true, email: null, isAnonymous: false, error: null });
       return;
     }
 
@@ -144,10 +148,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             else await saveRemote(user.id, initial);
           } catch {}
         }
-        setAuth({ ready: true, email: user.email, isAnonymous: false });
+        setAuth({ ready: true, email: user.email, isAnonymous: false, error: null });
       } else {
         userId.current = null;
-        setAuth({ ready: true, email: null, isAnonymous: true });
+        setAuth({ ready: true, email: null, isAnonymous: true, error: oauthError.current });
       }
       setHydrated(true);
     };
@@ -155,12 +159,33 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     // onAuthStateChange emits INITIAL_SESSION immediately, then SIGNED_IN /
     // SIGNED_OUT (covers email login, Google OAuth return, restore, sign-out).
     let done = false;
-    const unsub = subscribeAuth((user) => {
-      const firstRun = !done;
-      done = true;
-      apply(user, firstRun);
-    });
-    return () => unsub();
+    let unsub: (() => void) | null = null;
+    let cancelled = false;
+
+    const start = () => {
+      if (cancelled) return;
+      unsub = subscribeAuth((user) => {
+        const firstRun = !done;
+        done = true;
+        apply(user, firstRun);
+      });
+    };
+
+    if (hasOAuthParams()) {
+      // Returning from Google: finish the code→session exchange FIRST, so the
+      // app doesn't navigate away (stripping ?code=) and bounce back to the gate.
+      completeOAuthRedirect().then((r) => {
+        oauthError.current = r.error;
+        start();
+      });
+    } else {
+      start();
+    }
+
+    return () => {
+      cancelled = true;
+      if (unsub) unsub();
+    };
   }, []);
 
   // persist: per-user localStorage immediately + debounced cloud save
@@ -259,10 +284,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    oauthError.current = null;
     await signOutUser();
     userId.current = null;
     setState(SEED);
-    setAuth({ ready: true, email: null, isAnonymous: true }); // show the gate again
+    setAuth({ ready: true, email: null, isAnonymous: true, error: oauthError.current }); // show the gate again
   };
 
   return (
