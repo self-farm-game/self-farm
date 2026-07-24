@@ -99,61 +99,83 @@ export default function Garden() {
 
   /* ---------------- HOME ---------------- */
   if (flow === "home") {
+    const line = BOMBOM_LINES[state.bombomIdx % BOMBOM_LINES.length];
     return (
-      <div
-        className="sf-screen"
-        style={{ padding: "52px 16px 18px", minHeight: "100%", display: "flex", flexDirection: "column" }}
-      >
-        {/* header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "0 4px" }}>
-          <div style={{ maxWidth: 215 }}>
-            <div style={{ fontSize: 10, letterSpacing: 1.6, color: "#9a8fc0", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+      <div className="sf-screen sf-garden">
+        {/* ---- background scene (full bleed) ---- */}
+        <div className="sf-garden-sky" />
+        <div className="sf-cloud sf-cloud-a" />
+        <div className="sf-cloud sf-cloud-b" />
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+          <Stars n={10} seed={11} area={50} />
+        </div>
+        <div className="sf-garden-grass" />
+        <div className="sf-garden-soil" />
+
+        {/* ---- the tree itself ---- */}
+        <div className="sf-garden-tree">
+          <div className="sf-garden-shadow" />
+          <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
+        </div>
+
+        {/* ---- Бомбом standing on the grass ---- */}
+        <div
+          className="sf-garden-bombom"
+          onClick={() => {
+            nextBombom();
+            play("tap");
+          }}
+          title="тицьни, щоб почути ще"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assets/sprites/bombom.png" alt="БомБом" />
+        </div>
+
+        {/* ---- top overlay: level + inventory ---- */}
+        <div className="sf-garden-top">
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 10, letterSpacing: 1.6, color: "#e8f2fa", textTransform: "uppercase", textShadow: "0 1px 2px rgba(0,0,0,.55)" }}>
               Твоє дерево-супутник
             </div>
-            <div style={{ fontSize: 34, lineHeight: 1.05, color: "#f4ecd6", fontWeight: 700, marginTop: 2, textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>
+            <div style={{ fontSize: "clamp(26px,6vw,34px)", lineHeight: 1.05, color: "#fff8e6", fontWeight: 700, marginTop: 2, textShadow: "0 3px 0 rgba(0,0,0,.45)" }}>
               {lvl.name}
             </div>
-            <div style={{ fontSize: 14, color: "#a99fc8", fontStyle: "italic", marginTop: 1 }}>{lvl.sub}</div>
+            <div style={{ fontSize: 13.5, color: "#eef6fb", fontStyle: "italic", marginTop: 1, textShadow: "0 1px 3px rgba(0,0,0,.6)" }}>{lvl.sub}</div>
           </div>
+
+          <div className="sf-inv-btn" onClick={() => go("inventory")}>
+            <span style={{ fontSize: 23, lineHeight: 1 }}>🎒</span>
+            <span style={{ fontSize: 8.5, letterSpacing: 0.5, color: "#e7c389", fontWeight: 700 }}>Знахідки</span>
+            <div className="sf-inv-badge">{state.ownedItems.length}</div>
+          </div>
+        </div>
+
+        {/* ---- bottom overlay: Бомбом line + XP + CTA ---- */}
+        <div className="sf-garden-bottom">
           <div
-            style={{
-              textAlign: "center",
-              padding: "7px 12px 6px",
-              borderRadius: 12,
-              background: "linear-gradient(180deg,#6a4a2c,#43290f)",
-              boxShadow:
-                "inset 0 1px 0 rgba(255,220,160,.4), inset 0 -3px 0 rgba(0,0,0,.45), 0 0 0 2px #2a1a0e, 0 4px 0 rgba(0,0,0,.3)",
+            className="sf-bombom-note"
+            onClick={() => {
+              nextBombom();
+              play("tap");
             }}
           >
-            <div style={{ fontSize: 9, letterSpacing: 2, color: "#e7c389" }}>СЕРІЯ</div>
-            <div style={{ fontSize: 22, color: "#ffd98a", fontWeight: 700, lineHeight: 1, marginTop: 2 }}>🔥 {state.streak}</div>
-          </div>
-        </div>
-
-        {/* tree scene */}
-        <TreeScene level={lvl.levelNum} pct={lvl.pct} invCount={state.ownedItems.length} onInventory={() => go("inventory")} />
-
-        {/* XP panel */}
-        <div
-          style={{
-            marginTop: 14,
-            borderRadius: 16,
-            padding: "13px 15px 15px",
-            background: "linear-gradient(180deg,#5d3f24,#3f2812)",
-            boxShadow: "inset 0 2px 0 rgba(255,220,160,.3), inset 0 -5px 0 rgba(0,0,0,.4), 0 0 0 2px #2a1a0e, 0 5px 0 rgba(0,0,0,.3)",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 9 }}>
-            <div style={{ fontSize: 13, color: "#f3d9a8", fontWeight: 700, letterSpacing: 1 }}>РІВЕНЬ {lvl.levelNum}</div>
-            <div style={{ fontSize: 13, color: "#e7c389", fontWeight: 600 }}>
-              {lvl.inLevel} / {lvl.target} XP
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+              <div style={{ fontSize: 12, color: "#3a2a1c", fontWeight: 700, letterSpacing: 0.5 }}>БомБом</div>
+              <div style={{ fontSize: 9.5, color: "#9a8a74", letterSpacing: 1 }}>тицьни ↻</div>
             </div>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: "#2b2230" }}>{line}</p>
           </div>
-          <HeartBar pct={Math.round(lvl.pct * 100) + "%"} />
-        </div>
 
-        {/* main CTA */}
-        <div style={{ marginTop: 16 }}>
+          <div className="sf-xp-panel">
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
+              <div style={{ fontSize: 12.5, color: "#f3d9a8", fontWeight: 700, letterSpacing: 1 }}>РІВЕНЬ {lvl.levelNum}</div>
+              <div style={{ fontSize: 12.5, color: "#e7c389", fontWeight: 600 }}>
+                {lvl.inLevel} / {lvl.target} XP
+              </div>
+            </div>
+            <HeartBar pct={Math.round(lvl.pct * 100) + "%"} />
+          </div>
+
           <ParchButton
             onClick={() => {
               play("confirm");
@@ -162,44 +184,6 @@ export default function Garden() {
           >
             ✦  Як ти зараз?
           </ParchButton>
-        </div>
-
-        {/* Бомбом */}
-        <div
-          onClick={() => {
-            nextBombom();
-            play("tap");
-          }}
-          style={{ position: "relative", marginTop: 16, display: "flex", alignItems: "flex-end", cursor: "pointer" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/assets/sprites/bombom.png"
-            alt="БомБом"
-            style={{ width: 134, height: "auto", flexShrink: 0, alignSelf: "flex-end", marginBottom: -2, filter: "drop-shadow(0 3px 3px rgba(0,0,0,.5))", animation: "sf-float 5.5s ease-in-out infinite" }}
-          />
-          <div
-            style={{
-              position: "relative",
-              flex: 1,
-              marginLeft: 10,
-              marginBottom: 30,
-              background: "#f5f1e6",
-              borderRadius: 17,
-              padding: "13px 16px 14px",
-              boxShadow: "0 0 0 3px #241a32, 4px 6px 0 rgba(0,0,0,.28)",
-            }}
-          >
-            <div style={{ position: "absolute", left: 16, bottom: -15, width: 0, height: 0, borderLeft: "12px solid transparent", borderRight: "12px solid transparent", borderTop: "15px solid #241a32" }} />
-            <div style={{ position: "absolute", left: 19, bottom: -11, width: 0, height: 0, borderLeft: "9px solid transparent", borderRight: "9px solid transparent", borderTop: "11px solid #f5f1e6" }} />
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
-              <div style={{ fontSize: 13, color: "#3a2a1c", fontWeight: 700, letterSpacing: 0.5 }}>БомБом</div>
-              <div style={{ fontSize: 10, color: "#9a8a74", letterSpacing: 1 }}>тицьни ↻</div>
-            </div>
-            <div style={{ fontSize: 13.5, lineHeight: 1.5, color: "#2b2230" }}>
-              {BOMBOM_LINES[state.bombomIdx % BOMBOM_LINES.length]}
-            </div>
-          </div>
         </div>
       </div>
     );
@@ -509,47 +493,3 @@ export default function Garden() {
 }
 
 /* ---------------- TREE SCENE (clean, watermark-free pixel scene) ---------------- */
-function TreeScene({ level, pct, invCount, onInventory }: { level: number; pct: number; invCount: number; onInventory: () => void }) {
-  return (
-    <div
-      style={{
-        position: "relative",
-        marginTop: 8,
-        height: 286,
-        borderRadius: 18,
-        overflow: "hidden",
-        boxShadow: "inset 0 0 0 3px rgba(0,0,0,.4), inset 0 0 50px rgba(0,0,0,.25)",
-        background: "linear-gradient(180deg,#8fc7ea 0%,#a9d8ef 46%,#cfe9f5 60%)",
-        imageRendering: "pixelated",
-      }}
-    >
-      {/* pixel clouds */}
-      <div style={{ position: "absolute", top: 34, left: 28, width: 64, height: 16, background: "#f4fbff", boxShadow: "12px -8px 0 0 #f4fbff, 30px 0 0 0 #f4fbff", borderRadius: 8, opacity: 0.92 }} />
-      <div style={{ position: "absolute", top: 70, right: 30, width: 50, height: 14, background: "#eaf6ff", boxShadow: "20px 0 0 0 #eaf6ff", borderRadius: 8, opacity: 0.85 }} />
-      {/* ambient daytime sparkles */}
-      <Stars n={10} seed={11} area={50} />
-
-      {/* grass + soil */}
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 30, height: 22, background: "#6fae46", boxShadow: "inset 0 3px 0 rgba(255,255,255,.18), inset 0 -2px 0 rgba(0,0,0,.2)" }} />
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 30, background: "repeating-linear-gradient(90deg,#6b4a2c 0 22px,#5c3f24 22px 24px), linear-gradient(180deg,#7a5436,#5c3f24)" }} />
-
-      {/* ground shadow */}
-      <div style={{ position: "absolute", left: "8%", right: "8%", bottom: 26, height: 22, borderRadius: "50%", background: "radial-gradient(closest-side, rgba(20,30,10,.5), transparent)" }} />
-
-      {/* tree */}
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 16, display: "flex", justifyContent: "center", alignItems: "flex-end" }}>
-        <TreeStages stage={level} pct={pct} />
-      </div>
-
-      {/* inventory button */}
-      <div
-        onClick={onInventory}
-        style={{ position: "absolute", left: 12, bottom: 12, width: 62, height: 62, borderRadius: 12, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, background: "linear-gradient(180deg,#6a4a2c,#43290f)", boxShadow: "inset 0 2px 0 rgba(255,220,160,.35), inset 0 -4px 0 rgba(0,0,0,.45), 0 0 0 2px #2a1a0e, 0 4px 0 rgba(0,0,0,.35)" }}
-      >
-        <span style={{ fontSize: 25, lineHeight: 1 }}>🎒</span>
-        <span style={{ fontSize: 9, letterSpacing: 0.5, color: "#e7c389", fontWeight: 700 }}>Знахідки</span>
-        <div style={{ position: "absolute", top: -7, right: -7, minWidth: 19, height: 19, padding: "0 4px", borderRadius: 10, background: "linear-gradient(180deg,#caa24a,#a07a28)", boxShadow: "0 0 0 2px #2a1a0e", color: "#2a1a0e", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{invCount}</div>
-      </div>
-    </div>
-  );
-}

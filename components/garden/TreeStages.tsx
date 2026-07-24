@@ -121,7 +121,11 @@ export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: nu
   }
 
   return (
-    <svg viewBox="0 0 160 156" width={236} height={230} style={{ overflow: "visible", filter: "drop-shadow(0 6px 5px rgba(0,0,0,.4))" }}>
+    <svg
+      viewBox="0 0 160 156"
+      preserveAspectRatio="xMidYMax meet"
+      style={{ width: "100%", height: "100%", overflow: "visible", filter: "drop-shadow(0 6px 5px rgba(0,0,0,.4))" }}
+    >
       <g style={{ transformOrigin: "80px 150px", transform: `scale(${grow})` }}>
         <g className="sf-treesway" style={{ transformOrigin: "80px 150px" }}>
           {body}

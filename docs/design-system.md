@@ -52,3 +52,20 @@ there; keep everything else quiet.
   sidebar; content centered (`.sf-page`, max ~480px). The old portrait "phone
   floating on a desktop" state (which looked wrong on tablets) is gone — tablets
   now use the same sidebar layout as desktop, sized via `min(1080px,94vw)`.
+
+## Garden as a full-bleed scene (no scrolling)
+The home screen is no longer a card stack with the tree in a framed box. It is a
+single scene that fills the visible area:
+- `.sf-garden` is absolutely positioned inside `.sf-scroll`, so it always equals
+  the visible area (above the bottom nav on phones, full panel on desktop) and
+  never scrolls.
+- Background layers: `.sf-garden-sky`, clouds, `Stars`, `.sf-garden-grass`,
+  `.sf-garden-soil`. The tree (`TreeStages`, now a fluid SVG) sits on the ground,
+  Бомбом stands next to it and is tappable.
+- UI floats over the scene: `.sf-garden-top` (level + inventory) and
+  `.sf-garden-bottom` (Бомбом's line, XP panel, the single «Як ти зараз?» CTA),
+  both capped at 560px and centered — identical on phone, tablet, desktop.
+- All scene sizes use `clamp()` (vh-based), so the tree scales with screen
+  height instead of overflowing. `@media (max-height: 680px)` trims the tree and
+  clamps Бомбом's line to two rows so short phones still never scroll.
+Other screens keep the normal scrolling column layout.
