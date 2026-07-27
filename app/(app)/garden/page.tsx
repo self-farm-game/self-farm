@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { useGame } from "@/lib/store/game";
+import { useGame, DAILY_QUEST_LIMIT } from "@/lib/store/game";
 import TreeStages from "@/components/garden/TreeStages";
 import { levelInfo } from "@/lib/utils/xp";
 import { play } from "@/lib/sound/sound";
@@ -37,7 +37,7 @@ const parchShadow =
   "inset 0 2px 0 rgba(255,245,220,.55), inset 0 -5px 0 rgba(120,86,48,.5), 0 0 0 3px #6a4a2c, 0 0 0 5px #2a1a0e, 0 5px 0 rgba(0,0,0,.3)";
 
 export default function Garden() {
-  const { state, recordSession, nextBombom } = useGame();
+  const { state, recordSession, nextBombom, dailyLeft, dailyDone } = useGame();
   const [flow, setFlow] = useState<Flow>("home");
   const [states, setStates] = useState<string[]>([]);
   const [energy, setEnergy] = useState<string | null>(null);
@@ -52,11 +52,11 @@ export default function Garden() {
   const [reward, setReward] = useState<{ xp: number; item: any } | null>(null);
 
   // ordered chips (personalised) + quests matched to the chosen states
+  const lvl = levelInfo(state.totalXp);
   const orderedStates = orderStates(state.stateCounts || {});
-  const suggested: MockQuest[] = states.length ? suggestQuests(states, 3) : [];
+  const suggested: MockQuest[] = states.length ? suggestQuests(states, lvl.levelNum, 3) : [];
   const starter = QUESTS.find((x) => x.id === STARTER_QUEST_ID) || QUESTS[0];
   const q = suggested[qIdx] || suggested[0] || starter;
-  const lvl = levelInfo(state.totalXp);
 
   const tick = useRef<any>(null);
   useEffect(() => {
@@ -172,17 +172,29 @@ export default function Garden() {
 
         {/* ---- bottom: the single action ---- */}
         <div className="sf-garden-bottom">
-          <ParchButton
-            onClick={() => {
-              play("confirm");
-              go("checkin_state");
-            }}
-          >
-            ✦  Як ти зараз?
-          </ParchButton>
-          {state.questsDone === 0 && (
-            <div style={{ textAlign: "center", fontSize: 11.5, color: "#e9dcc0", marginTop: 2, textShadow: "0 1px 2px rgba(0,0,0,.5)" }}>
-              почни з одного стану — під нього відкриються стежки
+          {dailyLeft > 0 ? (
+            <ParchButton
+              onClick={() => {
+                play("confirm");
+                setQIdx(0);
+                go("checkin_state");
+              }}
+            >
+              ✦  Як ти зараз?
+            </ParchButton>
+          ) : (
+            <div style={{ textAlign: "center", borderRadius: 14, padding: "13px 14px", background: "linear-gradient(180deg,#4a3a2a,#33251a)", boxShadow: "0 0 0 2px #2a1a0e" }}>
+              <div style={{ fontSize: 14, color: "#f3d9a8", fontWeight: 700 }}>На сьогодні досить 🌙</div>
+              <div style={{ fontSize: 12, color: "#c9a878", marginTop: 3, lineHeight: 1.4 }}>
+                {DAILY_QUEST_LIMIT} квести зроблено. Дерево росте від повернень, не від перевтоми — приходь завтра.
+              </div>
+            </div>
+          )}
+          {dailyLeft > 0 && (
+            <div style={{ textAlign: "center", fontSize: 11, color: "#e9dcc0", marginTop: 1, textShadow: "0 1px 2px rgba(0,0,0,.5)" }}>
+              {state.questsDone === 0
+                ? "почни з одного стану — під нього відкриються стежки"
+                : `сьогодні лишилось стежок: ${dailyLeft} з ${DAILY_QUEST_LIMIT}`}
             </div>
           )}
         </div>
@@ -352,9 +364,14 @@ export default function Garden() {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 17, color: "#3a2616", fontWeight: 700, lineHeight: 1.1 }}>{qq.title}</div>
                 <div style={{ fontSize: 12, color: "#7a5836", margin: "4px 0 8px" }}>для: {qq.for}</div>
-                <div style={{ display: "flex", gap: 7 }}>
+                <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 11, color: "#5a3f24", padding: "3px 8px", borderRadius: 6, background: "rgba(106,74,44,.18)" }}>⏱ {qq.dur}</span>
                   <span style={{ fontSize: 11, color: "#5a3f24", padding: "3px 8px", borderRadius: 6, background: "rgba(106,74,44,.18)" }}>✦ +{qq.xp}</span>
+                  {qq.tier > 1 && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: qq.tier === 3 ? "#8a2f2f" : "#8a5a1f", padding: "3px 8px", borderRadius: 6, background: qq.tier === 3 ? "rgba(180,60,60,.18)" : "rgba(200,140,50,.2)" }}>
+                      {qq.tier === 3 ? "🔥 сміливий" : "↗ виклик"}
+                    </span>
+                  )}
                 </div>
               </div>
               <div style={{ fontSize: 22, color: "#7a5836" }}>›</div>

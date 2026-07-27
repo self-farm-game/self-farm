@@ -191,3 +191,19 @@ to use and lands on exactly that one.
   until a state is chosen; quest suggestions are `suggestQuests(chosenStates)`,
   labelled "підібрано під: …". Home nudges first-time players to start from a
   state so paths open up.
+
+## Quests v3 — daily limit + difficulty that scales with the tree
+- **Daily limit (5/day).** `GameState` gains `dayKey` (YYYY-MM-DD) + `dailyDone`.
+  `recordSession` rolls the counter over on a new calendar day. Store exposes
+  `dailyDone` / `dailyLeft` (via `DAILY_QUEST_LIMIT`, `todayKey()`). Garden home
+  swaps the «Як ти зараз?» CTA for a "На сьогодні досить 🌙" card once the 5 are
+  used, and shows "лишилось стежок: N з 5" otherwise. Resets automatically at
+  local midnight; per-account (stored in player_saves).
+- **Difficulty tiers.** Each quest has `tier` (1 gentle · 2 stretch · 3 bold) and
+  `minLevel` (tree level to unlock). New harder quests: call-someone, say-no,
+  ask-help (tier 2); talk-stranger, solo-outing, hard-conversation (tier 3, e.g.
+  «Заговорити з незнайомцем»). `suggestQuests(states, level, n)` only offers
+  unlocked quests, nudges toward the hardest unlocked tier, but always keeps one
+  tier-1 gentle option. Cards show a «↗ виклик» / «🔥 сміливий» badge.
+- So challenge rises as the tree grows, while the daily cap keeps it to small,
+  sustainable returns rather than grinding.

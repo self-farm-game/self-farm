@@ -32,6 +32,8 @@ export interface GameState {
   muted: boolean;
   bombomIdx: number;
   stateCounts: Record<string, number>; // how often each state key was picked
+  dayKey: string; // calendar day the daily counter belongs to (YYYY-MM-DD)
+  dailyDone: number; // quests completed on dayKey
 }
 
 // Pre-beta: every visitor starts from zero (no DB/auth yet — state lives in
@@ -48,6 +50,8 @@ const SEED: GameState = {
   muted: false,
   bombomIdx: 0,
   stateCounts: {},
+  dayKey: "",
+  dailyDone: 0,
 };
 
 const KEY = "self-farm-state-v1";
@@ -68,6 +72,8 @@ interface Ctx {
   state: GameState;
   hydrated: boolean;
   auth: AuthState;
+  dailyDone: number; // completed today (0 if the stored day is stale)
+  dailyLeft: number; // DAILY_QUEST_LIMIT - dailyDone
   plantTree: () => void;
   nextBombom: () => void;
   toggleMute: () => void;
@@ -92,6 +98,14 @@ interface Ctx {
 
 const GameContext = createContext<Ctx | null>(null);
 
+export const DAILY_QUEST_LIMIT = 5;
+
+// local calendar day, e.g. "2026-07-24"
+export function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function rollDrop() {
   const r = Math.random();
   if (r < 0.45) return DROP_POOL[Math.floor(Math.random() * DROP_POOL.length)];
@@ -111,6 +125,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // per-user localStorage cache key (so accounts don't bleed on one browser)
   const localKey = () => (isSupabaseConfigured && userId.current ? `${KEY}:${userId.current}` : KEY);
+
+  // daily quest allowance (resets on a new calendar day)
+  const dailyDone = state.dayKey === todayKey() ? state.dailyDone : 0;
+  const dailyLeft = Math.max(0, DAILY_QUEST_LIMIT - dailyDone);
 
   // load: decide signed-in vs gate; render fast from per-user cache
   useEffect(() => {
@@ -253,6 +271,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       // tally picked states so the chips reorder toward this person's own patterns
       const stateCounts = { ...(s.stateCounts || {}) };
       for (const k of input.stateKeys || []) stateCounts[k] = (stateCounts[k] || 0) + 1;
+      // roll the daily counter over on a new calendar day
+      const tk = todayKey();
+      const dailyDone = (s.dayKey === tk ? s.dailyDone : 0) + 1;
       return {
         ...s,
         totalXp: s.totalXp + input.questXp,
@@ -260,6 +281,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ownedItems,
         journal,
         stateCounts,
+        dayKey: tk,
+        dailyDone,
       };
     });
     return reward;
@@ -300,7 +323,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <GameContext.Provider
-      value={{ state, hydrated, auth, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
+      value={{ state, hydrated, auth, dailyDone, dailyLeft, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
     >
       {children}
     </GameContext.Provider>
