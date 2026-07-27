@@ -207,3 +207,21 @@ to use and lands on exactly that one.
   tier-1 gentle option. Cards show a «↗ виклик» / «🔥 сміливий» badge.
 - So challenge rises as the tree grows, while the daily cap keeps it to small,
   sustainable returns rather than grinding.
+
+## Quests v4 — Questbook is now a daily hub (3h check-in window)
+- Removed the category filter and the static browsable list from
+  `app/(app)/questbook/page.tsx`.
+- New store fields on `GameState`: `activeQuestIds`, `activeStates`,
+  `activeUntil` (epoch ms), `doneToday[{id,title,icon,time}]`.
+  `CHECKIN_WINDOW_MS = 3h`. `openCheckin(stateKeys, questIds)` stamps the mood
+  and unlocks its matched quests until `activeUntil`; `recordSession` records the
+  finished quest into `doneToday` and removes it from `activeQuestIds`. Both roll
+  over on a new calendar day. Store exposes `checkinLeftMs` + `openCheckin`.
+- Garden calls `openCheckin(states, suggestQuests(...).ids)` when leaving the
+  state screen, and passes `questId`/`questIcon` to `recordSession`.
+- Questbook shows: a status banner (N/5 done, mood-active countdown); when a
+  check-in is active → the matched **Актуальні** quests (with a live "ще N хв"),
+  else → the always-available **starter** quest + a locked "введи настрій" card;
+  a **Виконано сьогодні** list; and a "На сьогодні досить" state at the daily cap.
+  Tapping any quest routes to /garden to run the check-in/quest flow.
+- `QUESTBOOK`/`QUESTBOOK_CATEGORIES` are now unused by the UI (kept exported).

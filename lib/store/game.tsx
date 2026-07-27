@@ -34,6 +34,11 @@ export interface GameState {
   stateCounts: Record<string, number>; // how often each state key was picked
   dayKey: string; // calendar day the daily counter belongs to (YYYY-MM-DD)
   dailyDone: number; // quests completed on dayKey
+  // --- daily quest hub ---
+  activeQuestIds: string[]; // quests unlocked by the latest check-in
+  activeStates: string[]; // state keys of the latest check-in (for display)
+  activeUntil: number; // epoch ms until which the check-in stays valid (3h)
+  doneToday: { id: string; title: string; icon: string; time: string }[]; // finished on dayKey
 }
 
 // Pre-beta: every visitor starts from zero (no DB/auth yet — state lives in
@@ -52,6 +57,10 @@ const SEED: GameState = {
   stateCounts: {},
   dayKey: "",
   dailyDone: 0,
+  activeQuestIds: [],
+  activeStates: [],
+  activeUntil: 0,
+  doneToday: [],
 };
 
 const KEY = "self-farm-state-v1";
@@ -74,6 +83,8 @@ interface Ctx {
   auth: AuthState;
   dailyDone: number; // completed today (0 if the stored day is stale)
   dailyLeft: number; // DAILY_QUEST_LIMIT - dailyDone
+  checkinLeftMs: number; // ms left on the current check-in (0 = need a new one)
+  openCheckin: (stateKeys: string[], questIds: string[]) => void;
   plantTree: () => void;
   nextBombom: () => void;
   toggleMute: () => void;
@@ -89,6 +100,8 @@ interface Ctx {
     energy: string | null;
     tension: string | null;
     note?: string;
+    questId?: string;
+    questIcon?: string;
     questTitle: string;
     questXp: number;
     after: string;
@@ -99,6 +112,7 @@ interface Ctx {
 const GameContext = createContext<Ctx | null>(null);
 
 export const DAILY_QUEST_LIMIT = 5;
+export const CHECKIN_WINDOW_MS = 3 * 60 * 60 * 1000; // mood is valid for 3 hours
 
 // local calendar day, e.g. "2026-07-24"
 export function todayKey(): string {
@@ -127,8 +141,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const localKey = () => (isSupabaseConfigured && userId.current ? `${KEY}:${userId.current}` : KEY);
 
   // daily quest allowance (resets on a new calendar day)
-  const dailyDone = state.dayKey === todayKey() ? state.dailyDone : 0;
+  const isToday = state.dayKey === todayKey();
+  const dailyDone = isToday ? state.dailyDone : 0;
   const dailyLeft = Math.max(0, DAILY_QUEST_LIMIT - dailyDone);
+  const checkinLeftMs = Math.max(0, (state.activeUntil || 0) - Date.now());
 
   // load: decide signed-in vs gate; render fast from per-user cache
   useEffect(() => {
@@ -243,6 +259,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured && userId.current) saveRemote(userId.current, fresh);
   };
 
+  // Register a mood check-in: unlocks the matched quests for CHECKIN_WINDOW_MS.
+  const openCheckin = (stateKeys: string[], questIds: string[]) => {
+    setState((s) => {
+      const tk = todayKey();
+      const rolledDaily = s.dayKey === tk ? s.dailyDone : 0;
+      const rolledDone = s.dayKey === tk ? s.doneToday : [];
+      return {
+        ...s,
+        dayKey: tk,
+        dailyDone: rolledDaily,
+        doneToday: rolledDone,
+        activeStates: stateKeys,
+        activeQuestIds: questIds,
+        activeUntil: Date.now() + CHECKIN_WINDOW_MS,
+      };
+    });
+  };
+
   const recordSession: Ctx["recordSession"] = (input) => {
     const drop = rollDrop();
     const reward: SessionResult = {
@@ -273,7 +307,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       for (const k of input.stateKeys || []) stateCounts[k] = (stateCounts[k] || 0) + 1;
       // roll the daily counter over on a new calendar day
       const tk = todayKey();
-      const dailyDone = (s.dayKey === tk ? s.dailyDone : 0) + 1;
+      const sameDay = s.dayKey === tk;
+      const dailyDone = (sameDay ? s.dailyDone : 0) + 1;
+      const doneEntry = {
+        id: input.questId || "",
+        title: input.questTitle,
+        icon: input.questIcon || "✦",
+        time: new Date().toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }),
+      };
+      const doneToday = [doneEntry, ...(sameDay ? s.doneToday : [])];
+      // consume this quest from the active set
+      const activeQuestIds = (s.activeQuestIds || []).filter((id) => id !== input.questId);
       return {
         ...s,
         totalXp: s.totalXp + input.questXp,
@@ -283,6 +327,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         stateCounts,
         dayKey: tk,
         dailyDone,
+        doneToday,
+        activeQuestIds,
       };
     });
     return reward;
@@ -323,7 +369,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <GameContext.Provider
-      value={{ state, hydrated, auth, dailyDone, dailyLeft, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
+      value={{ state, hydrated, auth, dailyDone, dailyLeft, checkinLeftMs, openCheckin, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
     >
       {children}
     </GameContext.Provider>

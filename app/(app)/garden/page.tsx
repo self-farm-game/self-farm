@@ -37,7 +37,7 @@ const parchShadow =
   "inset 0 2px 0 rgba(255,245,220,.55), inset 0 -5px 0 rgba(120,86,48,.5), 0 0 0 3px #6a4a2c, 0 0 0 5px #2a1a0e, 0 5px 0 rgba(0,0,0,.3)";
 
 export default function Garden() {
-  const { state, recordSession, nextBombom, dailyLeft, dailyDone } = useGame();
+  const { state, recordSession, nextBombom, dailyLeft, dailyDone, openCheckin } = useGame();
   const [flow, setFlow] = useState<Flow>("home");
   const [states, setStates] = useState<string[]>([]);
   const [energy, setEnergy] = useState<string | null>(null);
@@ -93,6 +93,8 @@ export default function Garden() {
       energy,
       tension,
       note,
+      questId: q.id,
+      questIcon: q.icon,
       questTitle: q.title,
       questXp: q.xp,
       after,
@@ -303,7 +305,12 @@ export default function Garden() {
           </div>
         )}
         <div style={{ marginTop: 24, opacity: states.length ? 1 : 0.5, pointerEvents: states.length ? "auto" : "none" }}>
-          <WoodButton big onClick={() => { play("confirm"); setQIdx(0); go("checkin_energy"); }}>
+          <WoodButton big onClick={() => {
+            play("confirm");
+            setQIdx(0);
+            openCheckin(states, suggestQuests(states, lvl.levelNum, 3).map((x) => x.id));
+            go("checkin_energy");
+          }}>
             {states.length ? "Далі  →" : "обери хоч один стан"}
           </WoodButton>
         </div>
