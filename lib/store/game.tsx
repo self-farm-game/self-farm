@@ -83,7 +83,9 @@ interface Ctx {
   auth: AuthState;
   dailyDone: number; // completed today (0 if the stored day is stale)
   dailyLeft: number; // DAILY_QUEST_LIMIT - dailyDone
-  checkinLeftMs: number; // ms left on the current check-in (0 = need a new one)
+  checkinLeftMs: number; // ms left on the current check-in window
+  canCheckin: boolean; // true once the 3h gap since the last check-in has passed
+  nextCheckinInMs: number; // ms until a new check-in is allowed (0 = now)
   openCheckin: (stateKeys: string[], questIds: string[]) => void;
   plantTree: () => void;
   nextBombom: () => void;
@@ -145,6 +147,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const dailyDone = isToday ? state.dailyDone : 0;
   const dailyLeft = Math.max(0, DAILY_QUEST_LIMIT - dailyDone);
   const checkinLeftMs = Math.max(0, (state.activeUntil || 0) - Date.now());
+  // a fresh check-in is only allowed once the previous 3h window has elapsed
+  const nextCheckinInMs = checkinLeftMs;
+  const canCheckin = checkinLeftMs <= 0;
 
   // load: decide signed-in vs gate; render fast from per-user cache
   useEffect(() => {
@@ -261,6 +266,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Register a mood check-in: unlocks the matched quests for CHECKIN_WINDOW_MS.
   const openCheckin = (stateKeys: string[], questIds: string[]) => {
+    // ignore if the 3h window from the last check-in hasn't elapsed yet
+    if ((stateRef.current.activeUntil || 0) - Date.now() > 0) return;
     setState((s) => {
       const tk = todayKey();
       const rolledDaily = s.dayKey === tk ? s.dailyDone : 0;
@@ -369,7 +376,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <GameContext.Provider
-      value={{ state, hydrated, auth, dailyDone, dailyLeft, checkinLeftMs, openCheckin, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
+      value={{ state, hydrated, auth, dailyDone, dailyLeft, checkinLeftMs, canCheckin, nextCheckinInMs, openCheckin, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
     >
       {children}
     </GameContext.Provider>

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useGame, DAILY_QUEST_LIMIT } from "@/lib/store/game";
 import TreeStages from "@/components/garden/TreeStages";
 import { levelInfo } from "@/lib/utils/xp";
@@ -37,8 +38,11 @@ const parchShadow =
   "inset 0 2px 0 rgba(255,245,220,.55), inset 0 -5px 0 rgba(120,86,48,.5), 0 0 0 3px #6a4a2c, 0 0 0 5px #2a1a0e, 0 5px 0 rgba(0,0,0,.3)";
 
 export default function Garden() {
-  const { state, recordSession, nextBombom, dailyLeft, dailyDone, openCheckin } = useGame();
+  const { state, recordSession, nextBombom, dailyLeft, dailyDone, openCheckin, canCheckin, nextCheckinInMs } = useGame();
+  const router = useRouter();
+  const params = useSearchParams();
   const [flow, setFlow] = useState<Flow>("home");
+  const [directId, setDirectId] = useState<string | null>(null);
   const [states, setStates] = useState<string[]>([]);
   const [energy, setEnergy] = useState<string | null>(null);
   const [tension, setTension] = useState<string | null>(null);
@@ -56,7 +60,23 @@ export default function Garden() {
   const orderedStates = orderStates(state.stateCounts || {});
   const suggested: MockQuest[] = states.length ? suggestQuests(states, lvl.levelNum, 3) : [];
   const starter = QUESTS.find((x) => x.id === STARTER_QUEST_ID) || QUESTS[0];
-  const q = suggested[qIdx] || suggested[0] || starter;
+  const directQ = directId ? QUESTS.find((x) => x.id === directId) : null;
+  const q = directQ || suggested[qIdx] || suggested[0] || starter;
+
+  // deep-link from the Questbook: /garden?quest=<id> opens that quest directly
+  useEffect(() => {
+    const qid = params.get("quest");
+    if (!qid) return;
+    const found = QUESTS.find((x) => x.id === qid);
+    if (found) {
+      // reuse the states from the active check-in so the session is tagged
+      setStates((state.activeStates && state.activeStates.length ? state.activeStates : []) as string[]);
+      setDirectId(qid);
+      go("quest_detail");
+    }
+    router.replace("/garden");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const tick = useRef<any>(null);
   useEffect(() => {
@@ -81,10 +101,16 @@ export default function Garden() {
     setAfter("");
     setReflection("");
     setTimer(120);
+    setDirectId(null);
     go("home");
   };
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+  const fmtWait = (ms: number) => {
+    const m = Math.max(0, Math.ceil(ms / 60000));
+    const h = Math.floor(m / 60);
+    return h > 0 ? `${h} год ${m % 60} хв` : `${m} хв`;
+  };
 
   const finishToReward = () => {
     const r = recordSession({
@@ -174,7 +200,14 @@ export default function Garden() {
 
         {/* ---- bottom: the single action ---- */}
         <div className="sf-garden-bottom">
-          {dailyLeft > 0 ? (
+          {dailyLeft <= 0 ? (
+            <div style={{ textAlign: "center", borderRadius: 14, padding: "13px 14px", background: "linear-gradient(180deg,#4a3a2a,#33251a)", boxShadow: "0 0 0 2px #2a1a0e" }}>
+              <div style={{ fontSize: 14, color: "#f3d9a8", fontWeight: 700 }}>На сьогодні досить 🌙</div>
+              <div style={{ fontSize: 12, color: "#c9a878", marginTop: 3, lineHeight: 1.4 }}>
+                {DAILY_QUEST_LIMIT} квести зроблено. Дерево росте від повернень, не від перевтоми — приходь завтра.
+              </div>
+            </div>
+          ) : canCheckin ? (
             <ParchButton
               onClick={() => {
                 play("confirm");
@@ -185,14 +218,14 @@ export default function Garden() {
               ✦  Як ти зараз?
             </ParchButton>
           ) : (
-            <div style={{ textAlign: "center", borderRadius: 14, padding: "13px 14px", background: "linear-gradient(180deg,#4a3a2a,#33251a)", boxShadow: "0 0 0 2px #2a1a0e" }}>
-              <div style={{ fontSize: 14, color: "#f3d9a8", fontWeight: 700 }}>На сьогодні досить 🌙</div>
-              <div style={{ fontSize: 12, color: "#c9a878", marginTop: 3, lineHeight: 1.4 }}>
-                {DAILY_QUEST_LIMIT} квести зроблено. Дерево росте від повернень, не від перевтоми — приходь завтра.
+            <div style={{ textAlign: "center", borderRadius: 14, padding: "13px 14px", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: "0 0 0 2px #4a3a6e" }}>
+              <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>Настрій уже введено 🌿</div>
+              <div style={{ fontSize: 12, color: "#a99fc8", marginTop: 3, lineHeight: 1.4 }}>
+                Стежки чекають у вкладці «Квести». Новий чек-ін — за {fmtWait(nextCheckinInMs)}.
               </div>
             </div>
           )}
-          {dailyLeft > 0 && (
+          {dailyLeft > 0 && canCheckin && (
             <div style={{ textAlign: "center", fontSize: 11, color: "#e9dcc0", marginTop: 1, textShadow: "0 1px 2px rgba(0,0,0,.5)" }}>
               {state.questsDone === 0
                 ? "почни з одного стану — під нього відкриються стежки"

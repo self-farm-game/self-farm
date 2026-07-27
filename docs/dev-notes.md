@@ -225,3 +225,16 @@ to use and lands on exactly that one.
   a **Виконано сьогодні** list; and a "На сьогодні досить" state at the daily cap.
   Tapping any quest routes to /garden to run the check-in/quest flow.
 - `QUESTBOOK`/`QUESTBOOK_CATEGORIES` are now unused by the UI (kept exported).
+
+## Quests v5 — run from Questbook + 3h check-in gap
+- Store: `canCheckin` (true only once the 3h window from the last check-in has
+  elapsed) and `nextCheckinInMs`. `openCheckin` now no-ops if called during the
+  window, so check-ins are spaced ≥3h apart. Values exposed on context.
+- Deep link: `/garden?quest=<id>` opens that quest's detail immediately (garden
+  reads the param on mount, reuses `activeStates` to tag the session, then cleans
+  the URL). Questbook "Виконати →" uses this to run a quest without walking the
+  whole check-in flow again.
+- Questbook: always shows the starter quest with a working "Виконати →"; after a
+  check-in shows the matched quests (each runnable); shows a check-in prompt when
+  none active and `canCheckin`, or a "новий чек-ін за N" cooldown notice, or the
+  daily-limit card. Garden home CTA is likewise gated by `canCheckin`.
