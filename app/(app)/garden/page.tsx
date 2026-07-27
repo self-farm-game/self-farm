@@ -4,9 +4,11 @@ import { useGame } from "@/lib/store/game";
 import TreeStages from "@/components/garden/TreeStages";
 import { levelInfo } from "@/lib/utils/xp";
 import { play } from "@/lib/sound/sound";
-import { QUESTS } from "@/lib/mock-data/quests";
+import { QUESTS, STARTER_QUEST_ID, suggestQuests, type MockQuest } from "@/lib/mock-data/quests";
+import { orderStates, toggleState } from "@/lib/utils/states";
+import { STATE_LABEL, GROUP_TINT } from "@/lib/mock-data/states";
 import { ITEMS } from "@/lib/mock-data/items";
-import { STATES, ENERGY, TENSION, BODY, AFTER, BOMBOM_LINES } from "@/lib/mock-data/content";
+import { ENERGY, TENSION, BODY, AFTER, BOMBOM_LINES } from "@/lib/mock-data/content";
 import {
   WoodButton,
   ParchButton,
@@ -49,7 +51,11 @@ export default function Garden() {
   const [timer, setTimer] = useState(120);
   const [reward, setReward] = useState<{ xp: number; item: any } | null>(null);
 
-  const q = QUESTS[qIdx] || QUESTS[0];
+  // ordered chips (personalised) + quests matched to the chosen states
+  const orderedStates = orderStates(state.stateCounts || {});
+  const suggested: MockQuest[] = states.length ? suggestQuests(states, 3) : [];
+  const starter = QUESTS.find((x) => x.id === STARTER_QUEST_ID) || QUESTS[0];
+  const q = suggested[qIdx] || suggested[0] || starter;
   const lvl = levelInfo(state.totalXp);
 
   const tick = useRef<any>(null);
@@ -82,7 +88,8 @@ export default function Garden() {
 
   const finishToReward = () => {
     const r = recordSession({
-      states,
+      states: states.map((k) => STATE_LABEL[k] || k),
+      stateKeys: states,
       energy,
       tension,
       note,
@@ -173,6 +180,11 @@ export default function Garden() {
           >
             ✦  Як ти зараз?
           </ParchButton>
+          {state.questsDone === 0 && (
+            <div style={{ textAlign: "center", fontSize: 11.5, color: "#e9dcc0", marginTop: 2, textShadow: "0 1px 2px rgba(0,0,0,.5)" }}>
+              почни з одного стану — під нього відкриються стежки
+            </div>
+          )}
         </div>
       </div>
     );
@@ -233,19 +245,37 @@ export default function Garden() {
         </div>
         <div style={{ fontSize: 28, color: "#f4ecd6", fontWeight: 700, textAlign: "center", margin: "24px 0 4px", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>Як ти зараз?</div>
         <div style={{ fontSize: 13, color: "#a99fc8", textAlign: "center", marginBottom: 18 }}>обери, що відгукується — можна кілька</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-          {STATES.map((s) => (
-            <Chip
-              key={s}
-              active={states.includes(s)}
-              onClick={() => {
-                play("select");
-                setStates((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]));
-              }}
-            >
-              {s}
-            </Chip>
-          ))}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 9, justifyContent: "center" }}>
+          {orderedStates.map((sd) => {
+            const on = states.includes(sd.key);
+            const tint = GROUP_TINT[sd.group];
+            return (
+              <div
+                key={sd.key}
+                onClick={() => {
+                  play("select");
+                  setStates((cur) => toggleState(cur, sd.key));
+                }}
+                style={{
+                  cursor: "pointer",
+                  userSelect: "none",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  padding: "9px 14px",
+                  borderRadius: 20,
+                  color: on ? "#1a1226" : "#e7dcc4",
+                  background: on ? tint : "rgba(60,48,86,.55)",
+                  boxShadow: on ? `0 0 0 2px ${tint}, 0 0 10px ${tint}66` : "inset 0 0 0 2px rgba(150,120,200,.35)",
+                  transition: "background .12s",
+                }}
+              >
+                {sd.label}
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ fontSize: 11, color: "#7d7298", textAlign: "center", marginTop: 12 }}>
+          з часом угорі зʼявлятимуться ті, що ти обираєш найчастіше
         </div>
         <div onClick={() => setShowNote((v) => !v)} style={{ textAlign: "center", marginTop: 22, fontSize: 14, color: "#c9a878", cursor: "pointer", letterSpacing: 0.5 }}>
           + додати словами
@@ -260,8 +290,10 @@ export default function Garden() {
             />
           </div>
         )}
-        <div style={{ marginTop: 26 }}>
-          <WoodButton big onClick={() => { play("confirm"); go("checkin_energy"); }}>Далі  →</WoodButton>
+        <div style={{ marginTop: 24, opacity: states.length ? 1 : 0.5, pointerEvents: states.length ? "auto" : "none" }}>
+          <WoodButton big onClick={() => { play("confirm"); setQIdx(0); go("checkin_energy"); }}>
+            {states.length ? "Далі  →" : "обери хоч один стан"}
+          </WoodButton>
         </div>
       </div>
     );
@@ -303,11 +335,14 @@ export default function Garden() {
       <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%" }}>
         <BackRow onClick={() => go("checkin_energy")} />
         <div style={{ marginTop: 6 }}>
-          <BombomBanner>«Схоже, в голові шумить. Не будемо перемагати день. Візьми маленький квест.»</BombomBanner>
+          <BombomBanner>«Ось стежки під те, що ти зараз відчуваєш. Не мусиш перемагати день — обери одну маленьку.»</BombomBanner>
         </div>
-        <div style={{ fontSize: 13, color: "#9a8fc0", textAlign: "center", textTransform: "uppercase", letterSpacing: 2, margin: "22px 0 14px" }}>обери одну стежку</div>
+        <div style={{ fontSize: 12.5, color: "#c9bfe0", textAlign: "center", margin: "18px 0 4px" }}>
+          підібрано під: {states.map((k) => STATE_LABEL[k] || k).join(", ") || "твій стан"}
+        </div>
+        <div style={{ fontSize: 13, color: "#9a8fc0", textAlign: "center", textTransform: "uppercase", letterSpacing: 2, margin: "6px 0 14px" }}>обери одну стежку</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {QUESTS.map((qq, i) => (
+          {suggested.map((qq, i) => (
             <div
               key={qq.id}
               onClick={() => { play("select"); setQIdx(i); go("quest_detail"); }}

@@ -31,6 +31,7 @@ export interface GameState {
   journal: JournalDay[];
   muted: boolean;
   bombomIdx: number;
+  stateCounts: Record<string, number>; // how often each state key was picked
 }
 
 // Pre-beta: every visitor starts from zero (no DB/auth yet — state lives in
@@ -46,6 +47,7 @@ const SEED: GameState = {
   journal: [],
   muted: false,
   bombomIdx: 0,
+  stateCounts: {},
 };
 
 const KEY = "self-farm-state-v1";
@@ -77,6 +79,7 @@ interface Ctx {
   // records a completed care session and returns the reward
   recordSession: (input: {
     states: string[];
+    stateKeys?: string[];
     energy: string | null;
     tension: string | null;
     note?: string;
@@ -247,12 +250,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         journal.unshift({ day: "Сьогодні", entries: [entry] });
       }
       const ownedItems = drop && !s.ownedItems.includes(drop.name) ? [...s.ownedItems, drop.name] : s.ownedItems;
+      // tally picked states so the chips reorder toward this person's own patterns
+      const stateCounts = { ...(s.stateCounts || {}) };
+      for (const k of input.stateKeys || []) stateCounts[k] = (stateCounts[k] || 0) + 1;
       return {
         ...s,
         totalXp: s.totalXp + input.questXp,
         questsDone: s.questsDone + 1,
         ownedItems,
         journal,
+        stateCounts,
       };
     });
     return reward;

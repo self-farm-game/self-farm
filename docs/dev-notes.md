@@ -172,3 +172,22 @@ returned hash. The new account now always replaces the old one deterministically
 Combined with `prompt: "select_account"`, each sign-in asks which Google account
 to use and lands on exactly that one.
 
+
+## Quests v2 — state-matched + adaptive state order
+- `lib/mock-data/states.ts` — 26 states with `group` (colour) + `priority`
+  (default order, most-common-first). `STATE_LABEL`, `GROUP_TINT` helpers.
+- `lib/utils/states.ts` — `orderStates(counts)` blends the user's own pick counts
+  with base priority so their frequent feelings float up (display only, never
+  changes meaning). `toggleState` handles the "Не знаю" reset.
+- `lib/mock-data/quests.ts` — 21 quests, each tagged `states: string[]` and some
+  `maintenance: true` (good for holding an ok state). `suggestQuests(keys, n)`
+  ranks by number of matched states, falling back to maintenance quests when the
+  person feels fine or nothing matches. `STARTER_QUEST_ID` is the single quest a
+  brand-new player is nudged toward. `QUESTBOOK`/`QUESTBOOK_CATEGORIES` are now
+  derived from the library (+ a few locked teasers).
+- Store: `GameState.stateCounts` persists per-state pick counts;
+  `recordSession({ stateKeys })` tallies them; ordering reads them back.
+- Garden flow: check-in shows the ordered, colour-tinted chips; "Далі" is gated
+  until a state is chosen; quest suggestions are `suggestQuests(chosenStates)`,
+  labelled "підібрано під: …". Home nudges first-time players to start from a
+  state so paths open up.
