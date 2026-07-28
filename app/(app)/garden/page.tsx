@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useGame, DAILY_QUEST_LIMIT } from "@/lib/store/game";
+import { useGame, XP_WINDOW_CAP } from "@/lib/store/game";
 import TreeStages from "@/components/garden/TreeStages";
 import { levelInfo } from "@/lib/utils/xp";
 import { play } from "@/lib/sound/sound";
@@ -38,7 +38,7 @@ const parchShadow =
   "inset 0 2px 0 rgba(255,245,220,.55), inset 0 -5px 0 rgba(120,86,48,.5), 0 0 0 3px #6a4a2c, 0 0 0 5px #2a1a0e, 0 5px 0 rgba(0,0,0,.3)";
 
 export default function Garden() {
-  const { state, recordSession, nextBombom, dailyLeft, dailyDone, openCheckin, canCheckin, nextCheckinInMs } = useGame();
+  const { state, recordSession, nextBombom, dailyLeft, dailyDone, openCheckin, canCheckin, xpLeft } = useGame();
   const router = useRouter();
   const params = useSearchParams();
   const [flow, setFlow] = useState<Flow>("home");
@@ -212,20 +212,17 @@ export default function Garden() {
             </ParchButton>
           ) : (
             <div style={{ textAlign: "center", borderRadius: 14, padding: "13px 14px", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: "0 0 0 2px #4a3a6e" }}>
-              <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>Настрій уже введено 🌿</div>
+              <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>Стежки чекають 🌿</div>
               <div style={{ fontSize: 12, color: "#a99fc8", marginTop: 3, lineHeight: 1.4 }}>
-                {dailyLeft > 0
-                  ? `Стежки чекають у вкладці «Квести» (${dailyLeft}). `
-                  : "Ти пройшов цей набір. "}
-                Новий чек-ін — за {fmtWait(nextCheckinInMs)}.
+                Пройди набір у вкладці «Квести» ({dailyLeft}) — тоді відкриється новий чек-ін.
               </div>
             </div>
           )}
           {canCheckin && (
             <div style={{ textAlign: "center", fontSize: 11, color: "#e9dcc0", marginTop: 1, textShadow: "0 1px 2px rgba(0,0,0,.5)" }}>
-              {state.questsDone === 0
-                ? "почни з одного стану — під нього відкриються 3 стежки"
-                : "введи настрій — відкриються 3 стежки під нього"}
+              {xpLeft > 0
+                ? `введи настрій — відкриються 3 стежки · XP лишилось: ${xpLeft}/${XP_WINDOW_CAP}`
+                : "XP-ліміт вікна вичерпано — квести ще діють, але без XP"}
             </div>
           )}
         </div>

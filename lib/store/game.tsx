@@ -38,7 +38,9 @@ export interface GameState {
   activeQuestIds: string[]; // quests unlocked by the latest check-in
   activeStates: string[]; // state keys of the latest check-in (for display)
   activeUntil: number; // epoch ms of the current window end (legacy; = lastCheckinAt+gap)
-  lastCheckinAt: number; // epoch ms of the last check-in (gates the next one)
+  lastCheckinAt: number; // epoch ms of the last check-in (info)
+  xpWindowStart: number; // epoch ms when the current 3h XP window opened
+  xpInWindow: number; // how many XP-earning quests done in the current window
   doneToday: { id: string; title: string; icon: string; time: string }[]; // finished on dayKey
 }
 
@@ -62,6 +64,8 @@ const SEED: GameState = {
   activeStates: [],
   activeUntil: 0,
   lastCheckinAt: 0,
+  xpWindowStart: 0,
+  xpInWindow: 0,
   doneToday: [],
 };
 
@@ -85,9 +89,11 @@ interface Ctx {
   auth: AuthState;
   dailyDone: number; // completed today (0 if the stored day is stale)
   dailyLeft: number; // DAILY_QUEST_LIMIT - dailyDone
-  checkinLeftMs: number; // ms left on the current check-in window
-  canCheckin: boolean; // true once the 3h gap since the last check-in has passed
-  nextCheckinInMs: number; // ms until a new check-in is allowed (0 = now)
+  checkinLeftMs: number; // legacy (always 0 now)
+  canCheckin: boolean; // true only when the active quest set is cleared
+  nextCheckinInMs: number; // legacy (always 0 now)
+  xpLeft: number; // XP-earning quests left in the current 3h window
+  xpWindowLeftMs: number; // ms left in the current 3h XP window (0 if none)
   openCheckin: (stateKeys: string[], questIds: string[]) => void;
   plantTree: () => void;
   nextBombom: () => void;
@@ -116,10 +122,12 @@ interface Ctx {
 const GameContext = createContext<Ctx | null>(null);
 
 export const QUESTS_PER_CHECKIN = 3; // matched quests unlocked by each check-in
-export const CHECKIN_GAP_MS = 3 * 60 * 60 * 1000; // must wait 3h between check-ins
-// kept for older references (no longer a hard daily cap)
-export const DAILY_QUEST_LIMIT = 5;
-export const CHECKIN_WINDOW_MS = CHECKIN_GAP_MS;
+export const XP_WINDOW_MS = 3 * 60 * 60 * 1000; // 3h window in which XP can be earned
+export const XP_WINDOW_CAP = 5; // only 5 quests give XP inside each window
+// legacy names kept for older references
+export const DAILY_QUEST_LIMIT = XP_WINDOW_CAP;
+export const CHECKIN_GAP_MS = XP_WINDOW_MS;
+export const CHECKIN_WINDOW_MS = XP_WINDOW_MS;
 
 // local calendar day, e.g. "2026-07-24"
 export function todayKey(): string {
@@ -150,14 +158,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // daily quest allowance (resets on a new calendar day)
   const isToday = state.dayKey === todayKey();
   const dailyDone = isToday ? state.dailyDone : 0;
-  // time since the last check-in; a new one is allowed after CHECKIN_GAP_MS
-  const sinceCheckin = Date.now() - (state.lastCheckinAt || 0);
-  const nextCheckinInMs = Math.max(0, CHECKIN_GAP_MS - sinceCheckin);
-  const canCheckin = nextCheckinInMs <= 0;
-  // how many of this check-in's quests are still open
+  // NEW model: a check-in is allowed only when the active set is fully cleared.
   const activeLeft = (state.activeQuestIds || []).length;
-  const checkinLeftMs = nextCheckinInMs; // (kept name for existing UI refs)
-  const dailyLeft = activeLeft; // (kept name) → remaining in the current set
+  const canCheckin = activeLeft === 0;
+  // 3h XP window: only XP_WINDOW_CAP quests earn XP inside it
+  const xpWindowActive = Date.now() - (state.xpWindowStart || 0) < XP_WINDOW_MS;
+  const xpUsed = xpWindowActive ? state.xpInWindow || 0 : 0;
+  const xpLeft = Math.max(0, XP_WINDOW_CAP - xpUsed);
+  const xpWindowLeftMs = xpWindowActive ? Math.max(0, XP_WINDOW_MS - (Date.now() - (state.xpWindowStart || 0))) : 0;
+  // legacy names kept for existing UI refs
+  const nextCheckinInMs = 0;
+  const checkinLeftMs = 0;
+  const dailyLeft = activeLeft;
 
   // load: decide signed-in vs gate; render fast from per-user cache
   useEffect(() => {
@@ -272,14 +284,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured && userId.current) saveRemote(userId.current, fresh);
   };
 
-  // Register a mood check-in: unlocks the matched quests for CHECKIN_WINDOW_MS.
+  // Register a mood check-in. Allowed only when the previous set is cleared.
+  // Opens a fresh 3h XP window if none is currently running.
   const openCheckin = (stateKeys: string[], questIds: string[]) => {
-    // only allowed once 3h have passed since the last check-in
-    if (Date.now() - (stateRef.current.lastCheckinAt || 0) < CHECKIN_GAP_MS) return;
+    if ((stateRef.current.activeQuestIds || []).length > 0) return; // finish the set first
     setState((s) => {
       const tk = todayKey();
       const rolledDone = s.dayKey === tk ? s.doneToday : [];
       const now = Date.now();
+      const windowActive = now - (s.xpWindowStart || 0) < XP_WINDOW_MS;
       return {
         ...s,
         dayKey: tk,
@@ -287,15 +300,26 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         activeStates: stateKeys,
         activeQuestIds: questIds,
         lastCheckinAt: now,
-        activeUntil: now + CHECKIN_GAP_MS,
+        activeUntil: now + XP_WINDOW_MS,
+        // start a new XP window only if the previous one has elapsed
+        xpWindowStart: windowActive ? s.xpWindowStart : now,
+        xpInWindow: windowActive ? s.xpInWindow : 0,
       };
     });
   };
 
   const recordSession: Ctx["recordSession"] = (input) => {
     const drop = rollDrop();
+    // decide XP now, from the live state: only 5 quests per 3h window earn XP
+    const cur = stateRef.current;
+    const now = Date.now();
+    const windowActive = now - (cur.xpWindowStart || 0) < XP_WINDOW_MS;
+    const usedInWindow = windowActive ? cur.xpInWindow || 0 : 0;
+    const earnsXp = !windowActive || usedInWindow < XP_WINDOW_CAP; // fresh window earns; capped window doesn't
+    const grantedXp = earnsXp ? input.questXp : 0;
+
     const reward: SessionResult = {
-      xp: input.questXp,
+      xp: grantedXp,
       item: drop ? { icon: drop.icon, name: drop.name, desc: drop.desc } : null,
     };
     setState((s) => {
@@ -306,7 +330,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         tension: input.tension,
         quest: input.questTitle,
         after: input.after,
-        reward: `+${input.questXp} XP${drop ? " · " + drop.name : ""}`,
+        reward: `${grantedXp > 0 ? "+" + grantedXp + " XP" : "без XP (ліміт вікна)"}${drop ? " · " + drop.name : ""}`,
         note: input.reflection || null,
       };
       const journal = [...s.journal];
@@ -317,10 +341,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         journal.unshift({ day: "Сьогодні", entries: [entry] });
       }
       const ownedItems = drop && !s.ownedItems.includes(drop.name) ? [...s.ownedItems, drop.name] : s.ownedItems;
-      // tally picked states so the chips reorder toward this person's own patterns
       const stateCounts = { ...(s.stateCounts || {}) };
       for (const k of input.stateKeys || []) stateCounts[k] = (stateCounts[k] || 0) + 1;
-      // roll the daily counter over on a new calendar day
       const tk = todayKey();
       const sameDay = s.dayKey === tk;
       const dailyDone = (sameDay ? s.dailyDone : 0) + 1;
@@ -331,11 +353,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         time: new Date().toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }),
       };
       const doneToday = [doneEntry, ...(sameDay ? s.doneToday : [])];
-      // consume this quest from the active set
       const activeQuestIds = (s.activeQuestIds || []).filter((id) => id !== input.questId);
+      // advance the XP window counter (reset it if the window had elapsed)
+      const winActive = now - (s.xpWindowStart || 0) < XP_WINDOW_MS;
+      const xpWindowStart = winActive ? s.xpWindowStart : now;
+      const xpInWindow = (winActive ? s.xpInWindow || 0 : 0) + (grantedXp > 0 ? 1 : 0);
       return {
         ...s,
-        totalXp: s.totalXp + input.questXp,
+        totalXp: s.totalXp + grantedXp,
         questsDone: s.questsDone + 1,
         ownedItems,
         journal,
@@ -344,6 +369,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         dailyDone,
         doneToday,
         activeQuestIds,
+        xpWindowStart,
+        xpInWindow,
       };
     });
     return reward;
@@ -384,7 +411,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <GameContext.Provider
-      value={{ state, hydrated, auth, dailyDone, dailyLeft, checkinLeftMs, canCheckin, nextCheckinInMs, openCheckin, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
+      value={{ state, hydrated, auth, dailyDone, dailyLeft, checkinLeftMs, canCheckin, nextCheckinInMs, xpLeft, xpWindowLeftMs, openCheckin, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
     >
       {children}
     </GameContext.Provider>

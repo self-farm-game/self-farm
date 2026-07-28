@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useGame, QUESTS_PER_CHECKIN } from "@/lib/store/game";
+import { useGame, QUESTS_PER_CHECKIN, XP_WINDOW_CAP } from "@/lib/store/game";
 import { QUESTS, STARTER_QUEST_ID, type MockQuest } from "@/lib/mock-data/quests";
 import { STATE_LABEL } from "@/lib/mock-data/states";
 import { ScreenTitle } from "@/components/ui/primitives";
@@ -19,7 +19,7 @@ function fmtLeft(ms: number) {
 
 export default function Questbook() {
   const router = useRouter();
-  const { state, canCheckin, nextCheckinInMs } = useGame();
+  const { state, canCheckin, xpLeft, xpWindowLeftMs } = useGame();
 
   const [, setNow] = useState(Date.now());
   useEffect(() => {
@@ -87,11 +87,9 @@ export default function Questbook() {
             <>Базова стежка доступна завжди</>
           )}
         </div>
-        {canCheckin ? (
-          <div style={{ fontSize: 12, color: "#b9d99a" }}>можна ввести настрій</div>
-        ) : (
-          <div style={{ fontSize: 12, color: "#c9a878" }}>новий чек-ін за {fmtLeft(nextCheckinInMs)}</div>
-        )}
+        <div style={{ fontSize: 12, color: xpLeft > 0 ? "#b9d99a" : "#c9a878" }}>
+          XP-стежок лишилось: {xpLeft}/{XP_WINDOW_CAP}
+        </div>
       </div>
 
       {/* ALWAYS-AVAILABLE starter quest */}
@@ -110,15 +108,16 @@ export default function Questbook() {
         </>
       )}
 
-      {/* CHECK-IN prompt or cooldown */}
+      {/* CHECK-IN prompt (only when the current set is cleared) */}
       {canCheckin ? (
         <div onClick={goCheckin} style={{ cursor: "pointer", marginTop: 18, borderRadius: 15, padding: "18px 16px", textAlign: "center", background: "linear-gradient(180deg,#2c2150,#241a42)", boxShadow: "0 0 0 2px #4a3a6e" }}>
           <div style={{ fontSize: 30, marginBottom: 6 }}>🧭</div>
-          <div style={{ fontSize: 15, color: "#cfc4e6", fontWeight: 700 }}>
-            {hasSet ? "Онови стежки під новий стан" : "Відкрий стежки під свій стан"}
-          </div>
+          <div style={{ fontSize: 15, color: "#cfc4e6", fontWeight: 700 }}>Відкрий стежки під свій стан</div>
           <div style={{ fontSize: 12.5, color: "#8a7fb0", marginTop: 5, lineHeight: 1.4 }}>
-            Введи, як ти зараз — і зʼявляться {QUESTS_PER_CHECKIN} підібрані квести. Наступний чек-ін — за 3 години.
+            Введи, як ти зараз — і зʼявляться {QUESTS_PER_CHECKIN} підібрані квести.
+            {xpLeft > 0
+              ? ` XP приносять перші ${XP_WINDOW_CAP} квести за 3 години (лишилось ${xpLeft}).`
+              : " XP-ліміт вікна вичерпано — квести ще діють, але без XP до нового вікна."}
           </div>
           <div style={{ display: "inline-block", marginTop: 11, padding: "9px 18px", borderRadius: 11, fontSize: 14, fontWeight: 700, color: "#2a1d10", background: "linear-gradient(180deg,#e6cf9c,#cda874)", boxShadow: "0 0 0 2px #6a4a2c" }}>
             ✦ Як ти зараз?
@@ -126,10 +125,10 @@ export default function Questbook() {
         </div>
       ) : (
         <div style={{ marginTop: 18, borderRadius: 15, padding: "16px", textAlign: "center", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: "0 0 0 2px #4a3a6e" }}>
-          <div style={{ fontSize: 26, marginBottom: 5 }}>⏳</div>
-          <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>Проміжок між чек-інами</div>
+          <div style={{ fontSize: 26, marginBottom: 5 }}>🌱</div>
+          <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>Спершу пройди активні стежки</div>
           <div style={{ fontSize: 12.5, color: "#a99fc8", marginTop: 4, lineHeight: 1.4 }}>
-            Новий настрій можна ввести за {fmtLeft(nextCheckinInMs)}. А поки — базова стежка вище завжди доступна.
+            Новий настрій можна ввести, коли завершиш поточний набір ({activeQuests.length}).
           </div>
         </div>
       )}

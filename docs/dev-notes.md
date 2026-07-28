@@ -252,3 +252,17 @@ to use and lands on exactly that one.
 - Questbook: base quest (Виконати →) always; the active 3 after a check-in (each
   Виконати →, deep-linking to /garden?quest=id); a check-in prompt when allowed,
   else a cooldown card; plus "Виконано сьогодні".
+
+## Quests v7 — check-in gated by clearing the set; XP capped per 3h window
+- **Check-in is allowed only when the active set is empty** (`canCheckin =
+  activeQuestIds.length === 0`) — NOT on a timer. Finish the base + 3 to unlock
+  the next mood.
+- **XP window:** `XP_WINDOW_MS = 3h`, `XP_WINDOW_CAP = 5`. Only the first 5
+  quests completed within a rolling 3h window grant XP; further quests still
+  count as done (journal, doneToday, tree unaffected by them) but grant 0 XP and
+  are labelled "без XP (ліміт вікна)". Tracked via `state.xpWindowStart` +
+  `xpInWindow`; window resets when 3h elapse. `recordSession` computes granted XP
+  from live state and returns it (reward screen shows the real amount, incl. 0).
+- Store exposes `xpLeft` (XP-earning quests left in the window) and
+  `xpWindowLeftMs`. Garden + Questbook show "XP лишилось: N/5" and gate the
+  check-in on a cleared set.
