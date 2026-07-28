@@ -37,7 +37,8 @@ export interface GameState {
   // --- daily quest hub ---
   activeQuestIds: string[]; // quests unlocked by the latest check-in
   activeStates: string[]; // state keys of the latest check-in (for display)
-  activeUntil: number; // epoch ms until which the check-in stays valid (3h)
+  activeUntil: number; // epoch ms of the current window end (legacy; = lastCheckinAt+gap)
+  lastCheckinAt: number; // epoch ms of the last check-in (gates the next one)
   doneToday: { id: string; title: string; icon: string; time: string }[]; // finished on dayKey
 }
 
@@ -60,6 +61,7 @@ const SEED: GameState = {
   activeQuestIds: [],
   activeStates: [],
   activeUntil: 0,
+  lastCheckinAt: 0,
   doneToday: [],
 };
 
@@ -113,8 +115,11 @@ interface Ctx {
 
 const GameContext = createContext<Ctx | null>(null);
 
+export const QUESTS_PER_CHECKIN = 3; // matched quests unlocked by each check-in
+export const CHECKIN_GAP_MS = 3 * 60 * 60 * 1000; // must wait 3h between check-ins
+// kept for older references (no longer a hard daily cap)
 export const DAILY_QUEST_LIMIT = 5;
-export const CHECKIN_WINDOW_MS = 3 * 60 * 60 * 1000; // mood is valid for 3 hours
+export const CHECKIN_WINDOW_MS = CHECKIN_GAP_MS;
 
 // local calendar day, e.g. "2026-07-24"
 export function todayKey(): string {
@@ -145,11 +150,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // daily quest allowance (resets on a new calendar day)
   const isToday = state.dayKey === todayKey();
   const dailyDone = isToday ? state.dailyDone : 0;
-  const dailyLeft = Math.max(0, DAILY_QUEST_LIMIT - dailyDone);
-  const checkinLeftMs = Math.max(0, (state.activeUntil || 0) - Date.now());
-  // a fresh check-in is only allowed once the previous 3h window has elapsed
-  const nextCheckinInMs = checkinLeftMs;
-  const canCheckin = checkinLeftMs <= 0;
+  // time since the last check-in; a new one is allowed after CHECKIN_GAP_MS
+  const sinceCheckin = Date.now() - (state.lastCheckinAt || 0);
+  const nextCheckinInMs = Math.max(0, CHECKIN_GAP_MS - sinceCheckin);
+  const canCheckin = nextCheckinInMs <= 0;
+  // how many of this check-in's quests are still open
+  const activeLeft = (state.activeQuestIds || []).length;
+  const checkinLeftMs = nextCheckinInMs; // (kept name for existing UI refs)
+  const dailyLeft = activeLeft; // (kept name) → remaining in the current set
 
   // load: decide signed-in vs gate; render fast from per-user cache
   useEffect(() => {
@@ -266,20 +274,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Register a mood check-in: unlocks the matched quests for CHECKIN_WINDOW_MS.
   const openCheckin = (stateKeys: string[], questIds: string[]) => {
-    // ignore if the 3h window from the last check-in hasn't elapsed yet
-    if ((stateRef.current.activeUntil || 0) - Date.now() > 0) return;
+    // only allowed once 3h have passed since the last check-in
+    if (Date.now() - (stateRef.current.lastCheckinAt || 0) < CHECKIN_GAP_MS) return;
     setState((s) => {
       const tk = todayKey();
-      const rolledDaily = s.dayKey === tk ? s.dailyDone : 0;
       const rolledDone = s.dayKey === tk ? s.doneToday : [];
+      const now = Date.now();
       return {
         ...s,
         dayKey: tk,
-        dailyDone: rolledDaily,
         doneToday: rolledDone,
         activeStates: stateKeys,
         activeQuestIds: questIds,
-        activeUntil: Date.now() + CHECKIN_WINDOW_MS,
+        lastCheckinAt: now,
+        activeUntil: now + CHECKIN_GAP_MS,
       };
     });
   };

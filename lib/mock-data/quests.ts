@@ -209,6 +209,115 @@ export const QUESTS: MockQuest[] = [
     dur: "8 хв", durationMinutes: 8, xp: 22, category: "Сміливість", tier: 3, minLevel: 6,
     states: ["guilty", "tense", "sad", "anxious"],
     steps: ["Згадай розмову, якої уникаєш.", "Сформулюй одну чесну фразу — без звинувачень.", "Скажи або надішли її.", "Ти торкнувся важкого. Цього достатньо на сьогодні."],
+  }  ,
+  // ---- more calm / anxiety ----
+  {
+    id: "hum-tune", icon: "🎵", title: "Промугикати мелодію", for: "тривога / напруга",
+    dur: "1 хв", durationMinutes: 1, xp: 9, category: "Спокій", tier: 1, minLevel: 1,
+    states: ["anxious", "tense", "sad", "wired"],
+    steps: ["Обери будь-яку мелодію.", "Тихо промугикай її 30 секунд.", "Відчуй вібрацію в грудях.", "Це заспокоює нерв, що тримає тривогу."],
+  },
+  {
+    id: "feet-floor", icon: "🦶", title: "Стопи на підлозі", for: "паніка / відрив від тіла",
+    dur: "1 хв", durationMinutes: 1, xp: 8, category: "Спокій", tier: 1, minLevel: 1,
+    states: ["anxious", "numb", "overwhelmed", "foggy"],
+    steps: ["Сядь і роззуйся, якщо можна.", "Притисни стопи до підлоги.", "Відчуй кожну точку опори.", "Ти стоїш на землі. Вона тримає."],
+  },
+  {
+    id: "warm-shower", icon: "🚿", title: "Тепла вода на 3 хвилини", for: "перевантаження / заціпеніло",
+    dur: "5 хв", durationMinutes: 5, xp: 12, category: "Тіло", tier: 1, minLevel: 1,
+    states: ["overwhelmed", "numb", "tense", "tired", "sad"],
+    steps: ["Пусти приємно теплу воду.", "Постій під нею, не поспішаючи.", "Відчуй, як тепло розходиться.", "Вийди трохи мʼякшим."],
+  },
+  // ---- more low mood / motivation ----
+  {
+    id: "open-window-air", icon: "🌬️", title: "Впустити свіже повітря", for: "туман / застій",
+    dur: "2 хв", durationMinutes: 2, xp: 9, category: "Тіло", tier: 1, minLevel: 1,
+    states: ["foggy", "tired", "empty", "bored", "numb"],
+    steps: ["Відчини вікно навстіж.", "Стань біля нього.", "Зроби 5 глибоких вдихів свіжого повітря.", "Поверни трохи ясності."],
+  },
+  {
+    id: "two-min-task", icon: "✅", title: "Одна 2-хвилинна справа", for: "немає сил почати / провина",
+    dur: "3 хв", durationMinutes: 3, xp: 11, category: "Рух", tier: 1, minLevel: 1,
+    states: ["unmotivated", "guilty", "overwhelmed", "scattered", "bored"],
+    steps: ["Обери справу, що займе ≤2 хв.", "Зроби лише її, до кінця.", "Не берись за наступну.", "Один камінчик зрушено."],
+  },
+  {
+    id: "make-bed", icon: "🛏️", title: "Заправити ліжко", for: "розсіяно / важкий ранок",
+    dur: "3 хв", durationMinutes: 3, xp: 9, category: "Лад", tier: 1, minLevel: 1,
+    states: ["scattered", "unmotivated", "empty", "sad"],
+    steps: ["Підійди до ліжка.", "Розрівняй і заправ його.", "Поглянь на результат.", "День почався з одного зробленого."],
+  },
+  {
+    id: "sunlight", icon: "☀️", title: "2 хвилини на світлі", for: "туман / пригнічено",
+    dur: "3 хв", durationMinutes: 3, xp: 10, category: "Тіло", tier: 1, minLevel: 1,
+    states: ["foggy", "sad", "tired", "empty", "numb"],
+    steps: ["Знайди найсвітліше місце (вікно/двір).", "Постій на світлі 2 хвилини.", "Підстав обличчя.", "Світло трохи будить."],
+  },
+  // ---- more restless / anger ----
+  {
+    id: "pushups", icon: "💪", title: "10 присідань чи віджимань", for: "перезбудження / злість",
+    dur: "2 хв", durationMinutes: 2, xp: 11, category: "Розрядка", tier: 1, minLevel: 1,
+    states: ["wired", "angry", "restless", "irritated", "tense"],
+    steps: ["Зроби 10 присідань (або віджимань).", "Швидко, до легкого видиху.", "Струсни руки.", "Енергія знайшла вихід."],
+  },
+  {
+    id: "rip-paper", icon: "📄", title: "Порвати аркуш", for: "злість / роздратування",
+    dur: "1 хв", durationMinutes: 1, xp: 8, category: "Розрядка", tier: 1, minLevel: 1,
+    states: ["angry", "irritated", "tense", "wired"],
+    steps: ["Візьми непотрібний аркуш.", "Порви його на дрібні шматки.", "Відчуй, як напруга виходить у рух.", "Викинь. Досить."],
+  },
+  {
+    id: "cold-air", icon: "🧊", title: "Вийти на прохолоду", for: "перегрів емоцій",
+    dur: "3 хв", durationMinutes: 3, xp: 9, category: "Розрядка", tier: 1, minLevel: 1,
+    states: ["angry", "wired", "overwhelmed", "irritated"],
+    steps: ["Вийди на балкон/подвір'я/до вікна.", "Вдихни прохолодне повітря.", "Порахуй до 10 повільно.", "Повернись трохи охолодженим."],
+  },
+  // ---- more warmth / loneliness ----
+  {
+    id: "pet-plant", icon: "🪴", title: "Догляд за рослиною/твариною", for: "самотньо / порожньо",
+    dur: "3 хв", durationMinutes: 3, xp: 10, category: "Тепло", tier: 1, minLevel: 1,
+    states: ["lonely", "empty", "sad", "numb"],
+    steps: ["Підійди до рослини чи улюбленця.", "Полий / погладь / приділи увагу.", "Побудь у цій турботі хвилинку.", "Турбота про когось гріє й тебе."],
+  },
+  {
+    id: "photo-memory", icon: "📷", title: "Одне тепле фото", for: "сумно / самотньо",
+    dur: "2 хв", durationMinutes: 2, xp: 9, category: "Тепло", tier: 1, minLevel: 1,
+    states: ["sad", "lonely", "empty", "numb"],
+    steps: ["Відкрий галерею.", "Знайди фото, що гріє.", "Побудь із ним 30 секунд.", "Згадай, що хороше було й буде."],
+  },
+  // ---- more maintenance / good ----
+  {
+    id: "plan-nice", icon: "🗓️", title: "Запланувати дрібну радість", for: "спокій / надія",
+    dur: "3 хв", durationMinutes: 3, xp: 10, category: "Опора", tier: 1, minLevel: 1, maintenance: true,
+    states: ["ok", "calm", "content", "hopeful", "bored"],
+    steps: ["Придумай дрібну приємність на потім.", "Признач їй час.", "Запиши чи постав нагадування.", "Тепер є на що чекати."],
+  },
+  {
+    id: "stretch-reach", icon: "🙆", title: "Потягнутися до неба", for: "запал / бадьорість",
+    dur: "1 хв", durationMinutes: 1, xp: 8, category: "Опора", tier: 1, minLevel: 1, maintenance: true,
+    states: ["energized", "ok", "calm", "content", "restless"],
+    steps: ["Встань, підніми руки вгору.", "Тягнись, наче хочеш торкнутись стелі.", "Зроби глибокий вдих.", "Відпусти з видихом."],
+  },
+  // ---- tier 2 extra ----
+  {
+    id: "compliment", icon: "💬", title: "Сказати комусь щось приємне", for: "самотньо / замкнено",
+    dur: "4 хв", durationMinutes: 4, xp: 15, category: "Сміливість", tier: 2, minLevel: 3,
+    states: ["lonely", "sad", "insecure", "empty"],
+    steps: ["Обери людину поруч чи в мережі.", "Скажи їй одну щиру приємну річ.", "Без очікувань у відповідь.", "Тепло, віддане назовні, вертається."],
+  },
+  {
+    id: "walk-outside", icon: "🌳", title: "Коротка прогулянка надвір", for: "туман / застряг",
+    dur: "10 хв", durationMinutes: 10, xp: 16, category: "Тіло", tier: 2, minLevel: 2,
+    states: ["foggy", "empty", "restless", "sad", "unmotivated", "anxious"],
+    steps: ["Вдягнись і вийди за поріг.", "Пройдись 5-7 хвилин без мети.", "Дивись навколо, не в телефон.", "Повернись трохи іншим."],
+  },
+  // ---- tier 3 extra ----
+  {
+    id: "join-activity", icon: "🎯", title: "Долучитись до чогось із людьми", for: "самотньо / застій",
+    dur: "15 хв", durationMinutes: 15, xp: 24, category: "Сміливість", tier: 3, minLevel: 5,
+    states: ["lonely", "empty", "bored", "sad", "insecure"],
+    steps: ["Знайди подію/групу/гурток поблизу чи онлайн.", "Долучись хоч ненадовго.", "Не мусиш бути зіркою — просто бути там.", "Ти вийшов до людей. Це велике."],
   }
 ];
 
@@ -232,7 +341,13 @@ export function suggestQuests(stateKeys: string[], level = 1, n = 3): MockQuest[
     return { q, hits, score: hits + tierBonus };
   });
 
-  let matches = scored.filter((s) => s.hits > 0).sort((a, b) => b.score - a.score);
+  // small deterministic-ish jitter so equally-fitting quests rotate between
+  // check-ins instead of always showing the same three
+  const jitter = () => Math.random() * 0.35;
+  let matches = scored
+    .filter((s) => s.hits > 0)
+    .map((s) => ({ ...s, score: s.score + jitter() }))
+    .sort((a, b) => b.score - a.score);
 
   // nothing chosen / no direct match → gentle universal maintenance quests
   if (matches.length === 0) {

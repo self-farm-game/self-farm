@@ -238,3 +238,17 @@ to use and lands on exactly that one.
   check-in shows the matched quests (each runnable); shows a check-in prompt when
   none active and `canCheckin`, or a "новий чек-ін за N" cooldown notice, or the
   daily-limit card. Garden home CTA is likewise gated by `canCheckin`.
+
+## Quests v6 — base + 3-per-check-in, 3h gap, no daily cap, bigger library
+- Model change: there is NO daily cap. The **starter quest is always runnable**;
+  each **check-in adds 3** matched quests (`QUESTS_PER_CHECKIN`). A new check-in
+  is allowed only after `CHECKIN_GAP_MS` (3h) since the last one — tracked via
+  `state.lastCheckinAt`. `canCheckin` / `nextCheckinInMs` drive both the garden
+  CTA and the Questbook. `dailyLeft` now means "quests remaining in the active
+  set"; the old DAILY_QUEST_LIMIT is legacy/unused for gating.
+- Library grown to ~43 quests across Спокій/Тіло/Тепло/Розрядка/Ясність/Лад/
+  Опора/Рух/Сміливість, tiers 1–3. `suggestQuests` adds light random jitter among
+  equally-fitting quests so the 3 offered rotate between check-ins.
+- Questbook: base quest (Виконати →) always; the active 3 after a check-in (each
+  Виконати →, deep-linking to /garden?quest=id); a check-in prompt when allowed,
+  else a cooldown card; plus "Виконано сьогодні".

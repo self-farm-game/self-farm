@@ -200,14 +200,7 @@ export default function Garden() {
 
         {/* ---- bottom: the single action ---- */}
         <div className="sf-garden-bottom">
-          {dailyLeft <= 0 ? (
-            <div style={{ textAlign: "center", borderRadius: 14, padding: "13px 14px", background: "linear-gradient(180deg,#4a3a2a,#33251a)", boxShadow: "0 0 0 2px #2a1a0e" }}>
-              <div style={{ fontSize: 14, color: "#f3d9a8", fontWeight: 700 }}>На сьогодні досить 🌙</div>
-              <div style={{ fontSize: 12, color: "#c9a878", marginTop: 3, lineHeight: 1.4 }}>
-                {DAILY_QUEST_LIMIT} квести зроблено. Дерево росте від повернень, не від перевтоми — приходь завтра.
-              </div>
-            </div>
-          ) : canCheckin ? (
+          {canCheckin ? (
             <ParchButton
               onClick={() => {
                 play("confirm");
@@ -221,15 +214,18 @@ export default function Garden() {
             <div style={{ textAlign: "center", borderRadius: 14, padding: "13px 14px", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: "0 0 0 2px #4a3a6e" }}>
               <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>Настрій уже введено 🌿</div>
               <div style={{ fontSize: 12, color: "#a99fc8", marginTop: 3, lineHeight: 1.4 }}>
-                Стежки чекають у вкладці «Квести». Новий чек-ін — за {fmtWait(nextCheckinInMs)}.
+                {dailyLeft > 0
+                  ? `Стежки чекають у вкладці «Квести» (${dailyLeft}). `
+                  : "Ти пройшов цей набір. "}
+                Новий чек-ін — за {fmtWait(nextCheckinInMs)}.
               </div>
             </div>
           )}
-          {dailyLeft > 0 && canCheckin && (
+          {canCheckin && (
             <div style={{ textAlign: "center", fontSize: 11, color: "#e9dcc0", marginTop: 1, textShadow: "0 1px 2px rgba(0,0,0,.5)" }}>
               {state.questsDone === 0
-                ? "почни з одного стану — під нього відкриються стежки"
-                : `сьогодні лишилось стежок: ${dailyLeft} з ${DAILY_QUEST_LIMIT}`}
+                ? "почни з одного стану — під нього відкриються 3 стежки"
+                : "введи настрій — відкриються 3 стежки під нього"}
             </div>
           )}
         </div>

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useGame, DAILY_QUEST_LIMIT } from "@/lib/store/game";
+import { useGame, QUESTS_PER_CHECKIN } from "@/lib/store/game";
 import { QUESTS, STARTER_QUEST_ID, type MockQuest } from "@/lib/mock-data/quests";
 import { STATE_LABEL } from "@/lib/mock-data/states";
 import { ScreenTitle } from "@/components/ui/primitives";
@@ -19,23 +19,20 @@ function fmtLeft(ms: number) {
 
 export default function Questbook() {
   const router = useRouter();
-  const { state, dailyLeft, canCheckin, nextCheckinInMs } = useGame();
+  const { state, canCheckin, nextCheckinInMs } = useGame();
 
-  const [now, setNow] = useState(Date.now());
+  const [, setNow] = useState(Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 20000);
     return () => clearInterval(id);
   }, []);
-  const leftMs = Math.max(0, (state.activeUntil || 0) - now);
-  const active = leftMs > 0;
 
   const byId = (id: string) => QUESTS.find((q) => q.id === id);
   const activeQuests = (state.activeQuestIds || []).map(byId).filter(Boolean) as MockQuest[];
   const starter = byId(STARTER_QUEST_ID)!;
   const done = state.dayKey && state.doneToday ? state.doneToday : [];
-  const limitReached = dailyLeft <= 0;
+  const hasSet = activeQuests.length > 0;
 
-  // run a specific quest right away
   const runQuest = (id: string) => {
     play("confirm");
     router.push(`/garden?quest=${id}`);
@@ -65,16 +62,10 @@ export default function Questbook() {
         </div>
       </div>
       <div
-        onClick={() => !limitReached && runQuest(q.id)}
-        style={{
-          marginTop: 12, textAlign: "center", padding: "11px", borderRadius: 11, fontWeight: 700, fontSize: 14.5,
-          cursor: limitReached ? "default" : "pointer",
-          color: limitReached ? "#8a7256" : "#ffe6b8",
-          background: limitReached ? "rgba(80,60,40,.4)" : "linear-gradient(180deg,#7a5128,#5a3618)",
-          boxShadow: limitReached ? "none" : "inset 0 1px 0 rgba(255,220,160,.3), 0 0 0 2px #2a1a0e",
-        }}
+        onClick={() => runQuest(q.id)}
+        style={{ marginTop: 12, textAlign: "center", padding: "11px", borderRadius: 11, fontWeight: 700, fontSize: 14.5, cursor: "pointer", color: "#ffe6b8", background: "linear-gradient(180deg,#7a5128,#5a3618)", boxShadow: "inset 0 1px 0 rgba(255,220,160,.3), 0 0 0 2px #2a1a0e" }}
       >
-        {limitReached ? "ліміт на сьогодні" : "Виконати →"}
+        Виконати →
       </div>
     </div>
   );
@@ -90,12 +81,16 @@ export default function Questbook() {
       {/* status */}
       <div style={{ borderRadius: 15, padding: "13px 15px", marginTop: 4, background: "linear-gradient(180deg,#34255a,#241a42)", boxShadow: "0 0 0 2px #4a3a6e", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
         <div style={{ fontSize: 13, color: "#cfc4e6" }}>
-          Сьогодні: <b style={{ color: "#f3d9a8" }}>{DAILY_QUEST_LIMIT - dailyLeft}</b> / {DAILY_QUEST_LIMIT}
+          {hasSet ? (
+            <>Набір: <b style={{ color: "#f3d9a8" }}>{activeQuests.length}</b> стежок лишилось</>
+          ) : (
+            <>Базова стежка доступна завжди</>
+          )}
         </div>
-        {active ? (
-          <div style={{ fontSize: 12, color: "#b9d99a" }}>стежки активні ще {fmtLeft(leftMs)}</div>
+        {canCheckin ? (
+          <div style={{ fontSize: 12, color: "#b9d99a" }}>можна ввести настрій</div>
         ) : (
-          <div style={{ fontSize: 12, color: "#c9a878" }}>настрій не введено</div>
+          <div style={{ fontSize: 12, color: "#c9a878" }}>новий чек-ін за {fmtLeft(nextCheckinInMs)}</div>
         )}
       </div>
 
@@ -103,8 +98,8 @@ export default function Questbook() {
       {label("Доступно завжди")}
       <QuestCard q={starter} tag="за замовчуванням" />
 
-      {/* ACTIVE quests after a check-in */}
-      {active && activeQuests.length > 0 && (
+      {/* ACTIVE set from the check-in */}
+      {hasSet && (
         <>
           {label(`Під твій стан · ${(state.activeStates || []).map((k) => STATE_LABEL[k] || k).join(", ")}`)}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -115,35 +110,27 @@ export default function Questbook() {
         </>
       )}
 
-      {/* CHECK-IN prompt / cooldown / limit */}
-      {limitReached ? (
-        <div style={{ marginTop: 18, borderRadius: 15, padding: "20px 16px", textAlign: "center", background: "linear-gradient(180deg,#4a3a2a,#33251a)", boxShadow: "0 0 0 2px #2a1a0e" }}>
-          <div style={{ fontSize: 30, marginBottom: 6 }}>🌙</div>
-          <div style={{ fontSize: 15, color: "#f3d9a8", fontWeight: 700 }}>На сьогодні досить</div>
-          <div style={{ fontSize: 12.5, color: "#c9a878", marginTop: 5, lineHeight: 1.4 }}>
-            {DAILY_QUEST_LIMIT} стежок пройдено. Приходь завтра.
-          </div>
-        </div>
-      ) : !active ? (
-        <div onClick={canCheckin ? goCheckin : undefined} style={{ cursor: canCheckin ? "pointer" : "default", marginTop: 18, borderRadius: 15, padding: "18px 16px", textAlign: "center", background: "linear-gradient(180deg,#2c2150,#241a42)", boxShadow: "0 0 0 2px #4a3a6e" }}>
-          <div style={{ fontSize: 30, marginBottom: 6 }}>{canCheckin ? "🧭" : "⏳"}</div>
+      {/* CHECK-IN prompt or cooldown */}
+      {canCheckin ? (
+        <div onClick={goCheckin} style={{ cursor: "pointer", marginTop: 18, borderRadius: 15, padding: "18px 16px", textAlign: "center", background: "linear-gradient(180deg,#2c2150,#241a42)", boxShadow: "0 0 0 2px #4a3a6e" }}>
+          <div style={{ fontSize: 30, marginBottom: 6 }}>🧭</div>
           <div style={{ fontSize: 15, color: "#cfc4e6", fontWeight: 700 }}>
-            {canCheckin ? "Відкрий стежки під свій стан" : "Стежки нещодавно оновлювались"}
+            {hasSet ? "Онови стежки під новий стан" : "Відкрий стежки під свій стан"}
           </div>
           <div style={{ fontSize: 12.5, color: "#8a7fb0", marginTop: 5, lineHeight: 1.4 }}>
-            {canCheckin
-              ? "Введи, як ти зараз — і сюди на 3 години зʼявляться підібрані квести."
-              : `Новий чек-ін можна зробити за ${fmtLeft(nextCheckinInMs)}.`}
+            Введи, як ти зараз — і зʼявляться {QUESTS_PER_CHECKIN} підібрані квести. Наступний чек-ін — за 3 години.
           </div>
-          {canCheckin && (
-            <div style={{ display: "inline-block", marginTop: 11, padding: "9px 18px", borderRadius: 11, fontSize: 14, fontWeight: 700, color: "#2a1d10", background: "linear-gradient(180deg,#e6cf9c,#cda874)", boxShadow: "0 0 0 2px #6a4a2c" }}>
-              ✦ Як ти зараз?
-            </div>
-          )}
+          <div style={{ display: "inline-block", marginTop: 11, padding: "9px 18px", borderRadius: 11, fontSize: 14, fontWeight: 700, color: "#2a1d10", background: "linear-gradient(180deg,#e6cf9c,#cda874)", boxShadow: "0 0 0 2px #6a4a2c" }}>
+            ✦ Як ти зараз?
+          </div>
         </div>
       ) : (
-        <div style={{ marginTop: 16, textAlign: "center", fontSize: 12.5, color: "#a99fc8" }}>
-          Новий чек-ін — за {fmtLeft(nextCheckinInMs)} (щоб між ними був проміжок).
+        <div style={{ marginTop: 18, borderRadius: 15, padding: "16px", textAlign: "center", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: "0 0 0 2px #4a3a6e" }}>
+          <div style={{ fontSize: 26, marginBottom: 5 }}>⏳</div>
+          <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>Проміжок між чек-інами</div>
+          <div style={{ fontSize: 12.5, color: "#a99fc8", marginTop: 4, lineHeight: 1.4 }}>
+            Новий настрій можна ввести за {fmtLeft(nextCheckinInMs)}. А поки — базова стежка вище завжди доступна.
+          </div>
         </div>
       )}
 
@@ -166,7 +153,7 @@ export default function Questbook() {
       )}
 
       <div style={{ textAlign: "center", fontSize: 11.5, color: "#6a5f88", marginTop: 22, fontStyle: "italic", lineHeight: 1.5 }}>
-        Стежки зʼявляються під твій стан і живуть 3 години.
+        Базова стежка — завжди. Кожен чек-ін додає {QUESTS_PER_CHECKIN} під твій стан.
         <br />
         Один рух за раз. Дерево запамʼятає.
       </div>
