@@ -321,9 +321,6 @@ export const QUESTS: MockQuest[] = [
   }
 ];
 
-// The single starter quest shown on a brand-new garden before any check-in.
-export const STARTER_QUEST_ID = "stand-breathe";
-
 // Pick up to `n` quests that fit the chosen states AND the tree's level.
 // As the tree grows (higher level) harder tiers unlock and are gently favoured,
 // so the challenge rises with progress — but a fitting gentle quest is always

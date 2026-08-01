@@ -41,6 +41,7 @@ export interface GameState {
   lastCheckinAt: number; // epoch ms of the last check-in (info)
   xpWindowStart: number; // epoch ms when the current 3h XP window opened
   xpInWindow: number; // how many XP-earning quests done in the current window
+  hollowRune: string | null; // rune id tucked into the tree hollow (easter egg)
   doneToday: { id: string; title: string; icon: string; time: string }[]; // finished on dayKey
 }
 
@@ -66,6 +67,7 @@ const SEED: GameState = {
   lastCheckinAt: 0,
   xpWindowStart: 0,
   xpInWindow: 0,
+  hollowRune: null,
   doneToday: [],
 };
 
@@ -95,6 +97,7 @@ interface Ctx {
   xpLeft: number; // XP-earning quests left in the current 3h window
   xpWindowLeftMs: number; // ms left in the current 3h XP window (0 if none)
   openCheckin: (stateKeys: string[], questIds: string[]) => void;
+  placeHollowRune: (runeId: string | null) => void;
   plantTree: () => void;
   nextBombom: () => void;
   toggleMute: () => void;
@@ -274,6 +277,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const plantTree = () => setState((s) => ({ ...s, onboarded: true }));
   const nextBombom = () => setState((s) => ({ ...s, bombomIdx: s.bombomIdx + 1 }));
+  const placeHollowRune = (runeId: string | null) => setState((s) => ({ ...s, hollowRune: runeId }));
   const toggleMute = () => setState((s) => ({ ...s, muted: !s.muted }));
   const reset = () => {
     try {
@@ -411,7 +415,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <GameContext.Provider
-      value={{ state, hydrated, auth, dailyDone, dailyLeft, checkinLeftMs, canCheckin, nextCheckinInMs, xpLeft, xpWindowLeftMs, openCheckin, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
+      value={{ state, hydrated, auth, dailyDone, dailyLeft, checkinLeftMs, canCheckin, nextCheckinInMs, xpLeft, xpWindowLeftMs, openCheckin, placeHollowRune, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
     >
       {children}
     </GameContext.Provider>

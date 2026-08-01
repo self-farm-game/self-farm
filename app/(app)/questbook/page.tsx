@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGame, QUESTS_PER_CHECKIN, XP_WINDOW_CAP } from "@/lib/store/game";
-import { QUESTS, STARTER_QUEST_ID, type MockQuest } from "@/lib/mock-data/quests";
+import { QUESTS, type MockQuest } from "@/lib/mock-data/quests";
 import { STATE_LABEL } from "@/lib/mock-data/states";
 import { ScreenTitle } from "@/components/ui/primitives";
 import { play } from "@/lib/sound/sound";
@@ -29,7 +29,6 @@ export default function Questbook() {
 
   const byId = (id: string) => QUESTS.find((q) => q.id === id);
   const activeQuests = (state.activeQuestIds || []).map(byId).filter(Boolean) as MockQuest[];
-  const starter = byId(STARTER_QUEST_ID)!;
   const done = state.dayKey && state.doneToday ? state.doneToday : [];
   const hasSet = activeQuests.length > 0;
 
@@ -84,17 +83,13 @@ export default function Questbook() {
           {hasSet ? (
             <>Набір: <b style={{ color: "#f3d9a8" }}>{activeQuests.length}</b> стежок лишилось</>
           ) : (
-            <>Базова стежка доступна завжди</>
+            <>Стежок поки нема — введи настрій</>
           )}
         </div>
         <div style={{ fontSize: 12, color: xpLeft > 0 ? "#b9d99a" : "#c9a878" }}>
           XP-стежок лишилось: {xpLeft}/{XP_WINDOW_CAP}
         </div>
       </div>
-
-      {/* ALWAYS-AVAILABLE starter quest */}
-      {label("Доступно завжди")}
-      <QuestCard q={starter} tag="за замовчуванням" />
 
       {/* ACTIVE set from the check-in */}
       {hasSet && (
@@ -152,7 +147,7 @@ export default function Questbook() {
       )}
 
       <div style={{ textAlign: "center", fontSize: 11.5, color: "#6a5f88", marginTop: 22, fontStyle: "italic", lineHeight: 1.5 }}>
-        Базова стежка — завжди. Кожен чек-ін додає {QUESTS_PER_CHECKIN} під твій стан.
+        Кожен чек-ін відкриває {QUESTS_PER_CHECKIN} стежки під твій стан.
         <br />
         Один рух за раз. Дерево запамʼятає.
       </div>

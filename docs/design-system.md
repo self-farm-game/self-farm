@@ -104,3 +104,15 @@ visible gap under the plant. All frames now end exactly at y=150.
 
 Order inside `.sf-garden-top` (top → down): level bar, then the Бомбом bubble
 and the inventory button on one row.
+
+## Tree v3 — 10 sprite stages + hollow easter egg
+- Growth is now 10 stages (`lib/utils/xp.ts`) rendered from real pixel sprites
+  `public/assets/sprites/tree/stage-1..10.png` (sliced from the provided sheet,
+  background removed, shared 200px-wide frame so the ground line aligns).
+- The **base/starter quest is gone** — quests exist only inside a check-in set.
+- **Hollow easter egg:** from stage 5 the trunk gains a hollow. A transparent,
+  unlabelled hotspot sits over it (`HOLLOW = {x:.45,y:.66}` in TreeStages). Tapping
+  opens a small panel to tuck ONE unlocked rune inside; the placed rune glows
+  faintly in the hollow. State: `GameState.hollowRune`; action `placeHollowRune`;
+  eligible runes via `lib/utils/runes.ts` (`unlockedRunes`). No visible button —
+  it stays a discoverable secret.

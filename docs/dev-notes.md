@@ -266,3 +266,9 @@ to use and lands on exactly that one.
 - Store exposes `xpLeft` (XP-earning quests left in the window) and
   `xpWindowLeftMs`. Garden + Questbook show "XP лишилось: N/5" and gate the
   check-in on a cleared set.
+
+## Tree v3 + hollow rune
+- 10-stage growth; `TreeStages` renders PNG frames + `sf-treesway`. Base quest
+  removed (`STARTER_QUEST_ID` gone; garden/questbook no longer show it).
+- Hollow (stage ≥5): invisible hotspot → rune-placing modal. `hollowRune` in
+  state, `placeHollowRune(id|null)`, `lib/utils/runes.ts` computes eligible runes.

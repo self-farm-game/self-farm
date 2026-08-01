@@ -1,151 +1,143 @@
 "use client";
-import React from "react";
+import { useState } from "react";
+import { useGame } from "@/lib/store/game";
+import { unlockedRunes, runeById } from "@/lib/utils/runes";
+import { play } from "@/lib/sound/sound";
 
-const P = 8; // pixel block size
-const GROUND = 150;
-
-const LEAF = "#5e9e3f";
-const LEAF_HI = "#84c45c";
-const LEAF_SH = "#3f6a2a";
-const BARK = "#7a5128";
-const BARK_SH = "#5a3618";
-
-function hash(x: number, y: number) {
-  const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-  return s - Math.floor(s);
-}
-
-function blocks(cx: number, cy: number, rx: number, ry: number) {
-  const cx0 = Math.round(cx / P) * P;
-  const cy0 = Math.round(cy / P) * P;
-  const out: React.ReactNode[] = [];
-  for (let gx = cx0 - Math.ceil(rx / P) * P; gx <= cx0 + rx; gx += P) {
-    for (let gy = cy0 - Math.ceil(ry / P) * P; gy <= cy0 + ry; gy += P) {
-      const dx = (gx + P / 2 - cx) / rx;
-      const dy = (gy + P / 2 - cy) / ry;
-      if (dx * dx + dy * dy > 1) continue;
-      const ny = dy;
-      let fill = LEAF;
-      if (ny > 0.45) fill = LEAF_SH;
-      else if (ny < -0.1 && hash(gx, gy) > 0.62) fill = LEAF_HI;
-      out.push(<rect key={`c${gx}_${gy}`} x={gx} y={gy} width={P} height={P} fill={fill} />);
-    }
-  }
-  return out;
-}
-
-function trunk(w: number, h: number) {
-  const x0 = Math.round((80 - w / 2) / P) * P;
-  const out: React.ReactNode[] = [];
-  for (let gx = x0; gx < x0 + w; gx += P) {
-    for (let gy = GROUND - h; gy < GROUND; gy += P) {
-      const fill = gx >= x0 + w - P ? BARK_SH : BARK;
-      out.push(<rect key={`t${gx}_${gy}`} x={gx} y={gy} width={P} height={P} fill={fill} />);
-    }
-  }
-  return out;
-}
-
-function branch(fromX: number, fromY: number, dir: number, len: number) {
-  const out: React.ReactNode[] = [];
-  for (let i = 0; i < len; i++) {
-    out.push(
-      <rect key={`b${dir}_${i}`} x={fromX + dir * (i + 1) * P} y={fromY - i * P} width={P} height={P} fill={BARK_SH} />,
-    );
-  }
-  return out;
-}
-
-// Each stage is framed tightly enough to be clearly visible: an acorn shown in
-// the full 160x156 canvas would be a few pixels tall and vanish behind the UI.
-// The frame widens with every stage, so growth still reads as growth.
-// IMPORTANT: every frame must END exactly on the ground line (y = 150).
-// Extending below it left empty space under the drawing, which — once the frame
-// was zoomed for small stages — made the acorn/sprout look like it was hovering.
-const VIEWBOX = [
-  "52 96 56 54",   // 1 acorn
-  "40 86 80 64",   // 2 sprout
-  "34 64 92 86",   // 3 sapling
-  "16 40 128 110", // 4 young oak
-  "4 14 152 136",  // 5 oak
-  "0 0 160 150",   // 6 grand oak
-];
+// The hollow appears from stage 5. Its centre (as a fraction of the sprite box)
+// is roughly the same across stages 5–10.
+const HOLLOW = { x: 0.45, y: 0.66 };
+const HOLLOW_FROM_STAGE = 5;
 
 export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: number }) {
-  const s = Math.min(6, Math.max(1, stage));
-  // small continuous growth within a stage
-  const grow = 1 + Math.min(0.06, pct * 0.06);
+  const s = Math.min(10, Math.max(1, Math.round(stage)));
+  const { state, placeHollowRune } = useGame();
+  const [open, setOpen] = useState(false);
 
-  let body: React.ReactNode = null;
-
-  if (s === 1) {
-    // acorn in a little mound
-    body = (
-      <g>
-        <rect x={72} y={GROUND - 8} width={16} height={8} fill="#8a6a44" />
-        <rect x={76} y={GROUND - 22} width={8} height={6} fill="#caa24a" />
-        <rect x={74} y={GROUND - 18} width={12} height={10} fill="#a9772f" />
-        <rect x={74} y={GROUND - 22} width={3} height={4} fill="#6a4a2c" />
-        <rect x={83} y={GROUND - 22} width={3} height={4} fill="#6a4a2c" />
-        <rect x={78} y={GROUND - 28} width={4} height={6} fill="#7a5836" />
-      </g>
-    );
-  } else if (s === 2) {
-    // sprout: short stem + two leaves
-    body = (
-      <g>
-        <rect x={72} y={GROUND - 6} width={16} height={6} fill="#8a6a44" />
-        <rect x={77} y={GROUND - 34} width={6} height={28} fill="#6aa83f" />
-        {blocks(64, GROUND - 34, 14, 11)}
-        {blocks(96, GROUND - 30, 14, 11)}
-        <rect x={77} y={GROUND - 40} width={6} height={8} fill="#6aa83f" />
-      </g>
-    );
-  } else {
-    const cfg = {
-      3: { tw: 8, th: 26, cx: 80, cy: 96, rx: 22, ry: 19, br: false },
-      4: { tw: 16, th: 42, cx: 80, cy: 78, rx: 32, ry: 27, br: true },
-      5: { tw: 18, th: 54, cx: 80, cy: 62, rx: 42, ry: 35, br: true },
-      6: { tw: 24, th: 62, cx: 80, cy: 50, rx: 52, ry: 43, br: true },
-    }[s as 3 | 4 | 5 | 6]!;
-
-    const trunkTopY = GROUND - cfg.th;
-    body = (
-      <g>
-        {trunk(cfg.tw, cfg.th)}
-        {cfg.br && branch(80 - cfg.tw / 2, trunkTopY + 18, -1, 3)}
-        {cfg.br && branch(80 + cfg.tw / 2 - P, trunkTopY + 26, 1, 3)}
-        {/* dark backing for a soft outline */}
-        <g opacity={0.9}>{blocks(cfg.cx, cfg.cy, cfg.rx + 3, cfg.ry + 3).map((r, i) => React.cloneElement(r as any, { key: "o" + i, fill: LEAF_SH }))}</g>
-        {blocks(cfg.cx, cfg.cy, cfg.rx, cfg.ry)}
-        {/* highlight cap */}
-        {blocks(cfg.cx - cfg.rx * 0.25, cfg.cy - cfg.ry * 0.4, cfg.rx * 0.5, cfg.ry * 0.35).map((r, i) =>
-          React.cloneElement(r as any, { key: "h" + i, fill: LEAF_HI }),
-        )}
-        {/* grand oak: blossoms + fruit */}
-        {s === 6 && (
-          <g>
-            <rect x={56} y={36} width={P} height={P} fill="#e8b7c4" />
-            <rect x={104} y={52} width={P} height={P} fill="#e8b7c4" />
-            <rect x={88} y={28} width={P} height={P} fill="#f0c96b" />
-            <rect x={64} y={64} width={P} height={P} fill="#c97f3a" />
-          </g>
-        )}
-      </g>
-    );
-  }
+  const hasHollow = s >= HOLLOW_FROM_STAGE;
+  const runes = unlockedRunes(state);
+  const placed = runeById(state.hollowRune);
 
   return (
-    <svg
-      viewBox={VIEWBOX[s - 1]}
-      preserveAspectRatio="xMidYMax meet"
-      style={{ width: "100%", height: "100%", overflow: "visible", filter: "drop-shadow(0 6px 5px rgba(0,0,0,.4))" }}
-    >
-      <g style={{ transformOrigin: "80px 150px", transform: `scale(${grow})` }}>
-        <g className="sf-treesway" style={{ transformOrigin: "80px 150px" }}>
-          {body}
-        </g>
-      </g>
-    </svg>
+    <div style={{ position: "relative", height: "100%", width: "100%", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ position: "relative", height: "100%" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/assets/sprites/tree/stage-${s}.png`}
+          alt="дерево"
+          className="sf-treesway"
+          style={{ height: "100%", width: "auto", display: "block", imageRendering: "pixelated", filter: "drop-shadow(0 8px 6px rgba(0,0,0,.45))" }}
+        />
+
+        {/* hidden hollow hotspot — no visible button, just a tappable area */}
+        {hasHollow && (
+          <div
+            onClick={() => {
+              play("select");
+              setOpen((o) => !o);
+            }}
+            title=""
+            style={{
+              position: "absolute",
+              left: `calc(${HOLLOW.x * 100}% - 22px)`,
+              top: `calc(${HOLLOW.y * 100}% - 26px)`,
+              width: 44,
+              height: 52,
+              borderRadius: "50%",
+              cursor: "pointer",
+              // invisible by default; the placed rune glows faintly inside the hollow
+              background: "transparent",
+            }}
+          >
+            {placed && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18,
+                  color: "#cdbef0",
+                  textShadow: "0 0 8px rgba(170,140,255,.9), 0 0 3px rgba(170,140,255,.9)",
+                  animation: "sf-glow 3s ease-in-out infinite",
+                }}
+              >
+                {placed.sym}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* the rune-placing panel, opened by tapping the hollow */}
+      {open && hasHollow && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(10,8,20,.55)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 320, borderRadius: 18, padding: 18, background: "linear-gradient(180deg,#2c2150,#1c1530)", boxShadow: "0 0 0 2px #4a3a6e, 0 10px 30px rgba(0,0,0,.5)" }}
+          >
+            <div style={{ fontSize: 16, color: "#f4ecd6", fontWeight: 700 }}>🕳️ Дупло дерева</div>
+            <div style={{ fontSize: 12.5, color: "#a99fc8", marginTop: 4, marginBottom: 14, lineHeight: 1.4 }}>
+              Сюди можна сховати одну руну — тихий оберіг у стовбурі.
+            </div>
+
+            {runes.length === 0 ? (
+              <div style={{ fontSize: 13, color: "#8a7fb0", textAlign: "center", padding: "10px 0" }}>
+                Поки нема жодної руни. Вони проростають від повернень і квестів.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
+                {runes.map((r) => {
+                  const on = state.hollowRune === r.id;
+                  return (
+                    <div
+                      key={r.id}
+                      onClick={() => {
+                        play(on ? "select" : "reward");
+                        placeHollowRune(on ? null : r.id);
+                      }}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 3,
+                        width: 60,
+                        padding: "9px 4px",
+                        borderRadius: 12,
+                        cursor: "pointer",
+                        background: on ? "radial-gradient(circle,#5a4a8a,#332658)" : "rgba(60,48,86,.5)",
+                        boxShadow: on ? "0 0 12px rgba(150,110,220,.6), inset 0 0 0 2px #7a6ab0" : "inset 0 0 0 2px rgba(150,120,200,.3)",
+                      }}
+                    >
+                      <div style={{ fontSize: 22, color: on ? "#fff" : "#cdbef0" }}>{r.sym}</div>
+                      <div style={{ fontSize: 8.5, color: on ? "#e8dcc4" : "#9a8fc0", textAlign: "center", lineHeight: 1.1 }}>{r.name}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {placed && (
+              <div
+                onClick={() => {
+                  play("select");
+                  placeHollowRune(null);
+                }}
+                style={{ marginTop: 14, textAlign: "center", fontSize: 12.5, color: "#c9a878", cursor: "pointer", textDecoration: "underline" }}
+              >
+                прибрати руну з дупла
+              </div>
+            )}
+            <div onClick={() => setOpen(false)} style={{ marginTop: 12, textAlign: "center", fontSize: 13, color: "#8a7fb0", cursor: "pointer" }}>
+              закрити
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

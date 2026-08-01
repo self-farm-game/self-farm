@@ -5,7 +5,7 @@ import { useGame, XP_WINDOW_CAP } from "@/lib/store/game";
 import TreeStages from "@/components/garden/TreeStages";
 import { levelInfo } from "@/lib/utils/xp";
 import { play } from "@/lib/sound/sound";
-import { QUESTS, STARTER_QUEST_ID, suggestQuests, type MockQuest } from "@/lib/mock-data/quests";
+import { QUESTS, suggestQuests, type MockQuest } from "@/lib/mock-data/quests";
 import { orderStates, toggleState } from "@/lib/utils/states";
 import { STATE_LABEL, GROUP_TINT } from "@/lib/mock-data/states";
 import { ITEMS } from "@/lib/mock-data/items";
@@ -59,9 +59,8 @@ export default function Garden() {
   const lvl = levelInfo(state.totalXp);
   const orderedStates = orderStates(state.stateCounts || {});
   const suggested: MockQuest[] = states.length ? suggestQuests(states, lvl.levelNum, 3) : [];
-  const starter = QUESTS.find((x) => x.id === STARTER_QUEST_ID) || QUESTS[0];
   const directQ = directId ? QUESTS.find((x) => x.id === directId) : null;
-  const q = directQ || suggested[qIdx] || suggested[0] || starter;
+  const q = directQ || suggested[qIdx] || suggested[0] || QUESTS[0];
 
   // deep-link from the Questbook: /garden?quest=<id> opens that quest directly
   useEffect(() => {

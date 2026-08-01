@@ -201,7 +201,8 @@ textarea, input, button { font-family: inherit; }
   position: relative; height: 100%; width: 100%;
   display: flex; align-items: flex-end; justify-content: center;
 }
-.sf-tree-fit svg { width: auto; height: 100%; max-width: 76%; }
+.sf-tree-fit > div { height: 100%; }
+.sf-tree-fit img { width: auto; height: 100%; max-width: 88%; }
 .sf-garden-shadow {
   position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
   width: 58%; height: 22px; border-radius: 50%;
