@@ -135,7 +135,7 @@ export default function Garden() {
   if (flow === "home") {
     const line = BOMBOM_LINES[state.bombomIdx % BOMBOM_LINES.length];
     // each stage fills a bit more of the scene than the last one
-    const fit = ["42%", "52%", "64%", "78%", "90%", "100%"][Math.min(6, lvl.levelNum) - 1];
+    const fit = ["50%", "58%", "66%", "74%", "82%", "88%", "92%", "96%", "98%", "100%"][Math.min(10, lvl.levelNum) - 1];
     return (
       <div className="sf-screen sf-garden">
         {/* ---- the scene: takes whatever height the UI leaves ---- */}

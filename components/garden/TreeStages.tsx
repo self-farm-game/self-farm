@@ -6,7 +6,7 @@ import { play } from "@/lib/sound/sound";
 
 // The hollow appears from stage 5. Its centre (as a fraction of the sprite box)
 // is roughly the same across stages 5–10.
-const HOLLOW = { x: 0.45, y: 0.66 };
+const HOLLOW = { x: 0.46, y: 0.62 };
 const HOLLOW_FROM_STAGE = 5;
 
 export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: number }) {
@@ -39,10 +39,10 @@ export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: nu
             title=""
             style={{
               position: "absolute",
-              left: `calc(${HOLLOW.x * 100}% - 22px)`,
-              top: `calc(${HOLLOW.y * 100}% - 26px)`,
-              width: 44,
-              height: 52,
+              left: `calc(${HOLLOW.x * 100}% - 25px)`,
+              top: `calc(${HOLLOW.y * 100}% - 29px)`,
+              width: 50,
+              height: 58,
               borderRadius: "50%",
               cursor: "pointer",
               // invisible by default; the placed rune glows faintly inside the hollow

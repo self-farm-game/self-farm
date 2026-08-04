@@ -191,10 +191,9 @@ textarea, input, button { font-family: inherit; }
 }
 .sf-garden-tree {
   position: absolute; left: 0; right: 0;
-  top: clamp(150px, 26vh, 210px);   /* below the level bar */
-  bottom: clamp(8px, 1.6vh, 14px);  /* on the grass */
+  top: clamp(118px, 20vh, 172px);   /* below the level bar */
+  bottom: clamp(4px, 1vh, 10px);    /* on the grass */
   display: flex; align-items: flex-end; justify-content: center;
-  pointer-events: none;
 }
 /* each stage occupies a share of the scene, so growth stays legible */
 .sf-tree-fit {
@@ -202,7 +201,7 @@ textarea, input, button { font-family: inherit; }
   display: flex; align-items: flex-end; justify-content: center;
 }
 .sf-tree-fit > div { height: 100%; }
-.sf-tree-fit img { width: auto; height: 100%; max-width: 88%; }
+.sf-tree-fit img { width: auto; height: 100%; max-width: 96%; }
 .sf-garden-shadow {
   position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
   width: 58%; height: 22px; border-radius: 50%;
@@ -278,5 +277,5 @@ textarea, input, button { font-family: inherit; }
 /* tablets + desktop: no mobile top bar, so the overlay starts higher */
 @media (min-width: 768px) {
   .sf-garden-top { padding-top: 16px; }
-  .sf-garden-tree { top: clamp(120px, 22vh, 190px); }
+  .sf-garden-tree { top: clamp(96px, 17vh, 150px); }
 }

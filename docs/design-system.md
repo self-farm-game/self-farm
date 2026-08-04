@@ -116,3 +116,18 @@ and the inventory button on one row.
   faintly in the hollow. State: `GameState.hollowRune`; action `placeHollowRune`;
   eligible runes via `lib/utils/runes.ts` (`unlockedRunes`). No visible button —
   it stays a discoverable secret.
+
+## Tree v3.1 — clean slices, bigger, new font
+- Re-sliced the 10 sprites with an edge flood-fill that keys out both the dark
+  backdrop and the grey grid separators, and a top inset that drops the number.
+  Each sprite is then padded onto ONE shared canvas, bottom-aligned and
+  horizontally centered (220px wide), so the ground line matches across stages
+  and nothing shows a number or a neighbour sliver.
+- Tree enlarged: per-stage `fit` now spans 50%→100% across the 10 levels, the
+  scene reserves more vertical room (`.sf-garden-tree` top raised), and
+  `max-width` on the sprite up to 96%.
+- Hollow hotspot moved to `{x:.46,y:.62}` for the new proportions, slightly
+  larger tap area.
+- Font switched from Pixelify Sans to **Fredoka** (rounded, friendly, far more
+  readable, full Cyrillic) via next/font; still drives `--font-pixel`.
+
