@@ -131,3 +131,9 @@ and the inventory button on one row.
 - Font switched from Pixelify Sans to **Fredoka** (rounded, friendly, far more
   readable, full Cyrillic) via next/font; still drives `--font-pixel`.
 
+### Font fix
+Fredoka/Baloo 2 have NO Cyrillic subset in next/font (build error `Unknown subset
+`cyrillic``). Switched to **Comfortaa** — rounded, friendly, readable, and it
+does ship a `cyrillic` subset (verified in next/font's google/font-data.json).
+When picking a Google font here, confirm cyrillic in that manifest first.
+

@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Fredoka } from "next/font/google";
+import { Comfortaa } from "next/font/google";
 import "./globals.css";
 import { GameProvider } from "@/lib/store/game";
 import GameShell from "@/components/layout/GameShell";
 
-const pixel = Fredoka({
+const pixel = Comfortaa({
   subsets: ["latin", "cyrillic"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
