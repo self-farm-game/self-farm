@@ -4,10 +4,17 @@ import { useGame } from "@/lib/store/game";
 import { unlockedRunes, runeById } from "@/lib/utils/runes";
 import { play } from "@/lib/sound/sound";
 
-// The hollow appears from stage 5. Its centre (as a fraction of the sprite box)
-// is roughly the same across stages 5–10.
-const HOLLOW = { x: 0.46, y: 0.62 };
+// The hollow appears from stage 5. Per-stage centre (fraction of the sprite box)
+// since the trunk shifts a little as the tree grows.
 const HOLLOW_FROM_STAGE = 5;
+const HOLLOW_BY_STAGE: Record<number, { x: number; y: number }> = {
+  5: { x: 0.42, y: 0.68 },
+  6: { x: 0.44, y: 0.70 },
+  7: { x: 0.42, y: 0.66 },
+  8: { x: 0.42, y: 0.66 },
+  9: { x: 0.42, y: 0.66 },
+  10: { x: 0.42, y: 0.66 },
+};
 
 export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: number }) {
   const s = Math.min(10, Math.max(1, Math.round(stage)));
@@ -15,6 +22,7 @@ export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: nu
   const [open, setOpen] = useState(false);
 
   const hasHollow = s >= HOLLOW_FROM_STAGE;
+  const HOLLOW = HOLLOW_BY_STAGE[s] || { x: 0.42, y: 0.66 };
   const runes = unlockedRunes(state);
   const placed = runeById(state.hollowRune);
 

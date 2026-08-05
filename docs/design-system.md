@@ -137,3 +137,12 @@ Fredoka/Baloo 2 have NO Cyrillic subset in next/font (build error `Unknown subse
 does ship a `cyrillic` subset (verified in next/font's google/font-data.json).
 When picking a Google font here, confirm cyrillic in that manifest first.
 
+### Tree v4 — final hand-drawn stages, aligned in place
+Replaced the sliced sheet with 10 provided transparent frames (1..10.png). They
+vary in size, so the pipeline: tight-crop each → measure the soil-platform width
+along the bottom band → scale every frame so the platform is the SAME width
+(median) → composite onto one shared canvas, bottom-aligned + centered (260→
+exported 220px). Result: the ground disc stays put and the same size while the
+tree above it grows. Hollow hotspot now uses a per-stage map
+(`HOLLOW_BY_STAGE`, stages 5–10) since the trunk drifts a bit with growth.
+
