@@ -146,3 +146,10 @@ exported 220px). Result: the ground disc stays put and the same size while the
 tree above it grows. Hollow hotspot now uses a per-stage map
 (`HOLLOW_BY_STAGE`, stages 5–10) since the trunk drifts a bit with growth.
 
+### Fix — ghost debris beside the tree
+Resampling during normalization smeared a faint sliver into the empty canvas on
+some stages (a vertical 'ghost' of leaves to the right). Fixed by isolating each
+frame to its LARGEST connected opaque component before scaling (drops any detached
+debris), then hard-clipping alpha <=8 after the final resize. Canopies stay whole
+because they're one connected mass.
+
