@@ -272,3 +272,14 @@ to use and lands on exactly that one.
   removed (`STARTER_QUEST_ID` gone; garden/questbook no longer show it).
 - Hollow (stage ≥5): invisible hotspot → rune-placing modal. `hollowRune` in
   state, `placeHollowRune(id|null)`, `lib/utils/runes.ts` computes eligible runes.
+
+## i18n — working language toggle (en default, uk with attitude)
+- `GameState.lang` ("uk" | "en") + `setLang`. Persisted per account.
+- `lib/mock-data/i18n.ts`: `BOMBOM_LINES` per lang + a small `t(lang, key, vars)`
+  dictionary for the visible garden/hollow/cabin strings. EN is the neutral
+  "default" voice; UK is a deliberately blunt, uncensored Бомбом (mild profanity)
+  — a stylistic feature, not an oversight. Only the *voice* changes sharply; UI
+  labels are plain translations.
+- Cabin: the language row is now a live toggle (uk⇄en). Garden Bombom line, CTA,
+  hints and the hollow modal read from `t(state.lang, …)`.
+- Old `content.ts` BOMBOM_LINES retained but unused (garden reads i18n).

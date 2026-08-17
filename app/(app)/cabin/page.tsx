@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useGame } from "@/lib/store/game";
 import { levelInfo } from "@/lib/utils/xp";
 import { CABIN_ROWS } from "@/lib/mock-data/content";
+import { t } from "@/lib/mock-data/i18n";
 import { ScreenTitle } from "@/components/ui/primitives";
 import { play } from "@/lib/sound/sound";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -127,7 +128,8 @@ function AuthForm() {
 }
 
 export default function Cabin() {
-  const { state, auth, toggleMute, reset } = useGame();
+  const { state, auth, toggleMute, reset, setLang } = useGame();
+  const lang = state.lang;
   const lvl = levelInfo(state.totalXp);
 
   const sessionsCount = state.journal.reduce((a, d) => a + d.entries.length, 0);
@@ -169,8 +171,14 @@ export default function Cabin() {
       {isSupabaseConfigured && <AuthSection />}
 
       <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+        <Row
+          icon="🌐"
+          label={t(lang, "cabin.language")}
+          val={t(lang, "cabin.language_val")}
+          onClick={() => { setLang(lang === "uk" ? "en" : "uk"); play("select"); }}
+        />
         <Row icon="🔈" label="Звук" val={state.muted ? "вимкнено" : "увімкнено"} onClick={() => { toggleMute(); if (state.muted) play("select"); }} />
-        {CABIN_ROWS.map((c, i) => (
+        {CABIN_ROWS.filter((c) => c.label !== "Мова").map((c, i) => (
           <Row key={i} icon={c.icon} label={c.label} val={c.val} />
         ))}
         <Row icon="♻️" label="Скинути прогрес" onClick={() => { if (confirm("Скинути весь прогрес? Дерево почнеться з жолудя.")) reset(); }} />

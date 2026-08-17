@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useGame } from "@/lib/store/game";
 import { unlockedRunes, runeById } from "@/lib/utils/runes";
 import { play } from "@/lib/sound/sound";
+import { t } from "@/lib/mock-data/i18n";
 
 // The hollow appears from stage 5. Per-stage centre (fraction of the sprite box)
 // since the trunk shifts a little as the tree grows.
@@ -19,6 +20,7 @@ const HOLLOW_BY_STAGE: Record<number, { x: number; y: number }> = {
 export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: number }) {
   const s = Math.min(10, Math.max(1, Math.round(stage)));
   const { state, placeHollowRune } = useGame();
+  const lang = state.lang;
   const [open, setOpen] = useState(false);
 
   const hasHollow = s >= HOLLOW_FROM_STAGE;
@@ -88,14 +90,14 @@ export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: nu
             onClick={(e) => e.stopPropagation()}
             style={{ width: "100%", maxWidth: 320, borderRadius: 18, padding: 18, background: "linear-gradient(180deg,#2c2150,#1c1530)", boxShadow: "0 0 0 2px #4a3a6e, 0 10px 30px rgba(0,0,0,.5)" }}
           >
-            <div style={{ fontSize: 16, color: "#f4ecd6", fontWeight: 700 }}>🕳️ Дупло дерева</div>
+            <div style={{ fontSize: 16, color: "#f4ecd6", fontWeight: 700 }}>{t(lang, "hollow.title")}</div>
             <div style={{ fontSize: 12.5, color: "#a99fc8", marginTop: 4, marginBottom: 14, lineHeight: 1.4 }}>
-              Сюди можна сховати одну руну — тихий оберіг у стовбурі.
+              {t(lang, "hollow.desc")}
             </div>
 
             {runes.length === 0 ? (
               <div style={{ fontSize: 13, color: "#8a7fb0", textAlign: "center", padding: "10px 0" }}>
-                Поки нема жодної руни. Вони проростають від повернень і квестів.
+                {t(lang, "hollow.empty")}
               </div>
             ) : (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
@@ -137,11 +139,11 @@ export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: nu
                 }}
                 style={{ marginTop: 14, textAlign: "center", fontSize: 12.5, color: "#c9a878", cursor: "pointer", textDecoration: "underline" }}
               >
-                прибрати руну з дупла
+                {t(lang, "hollow.remove")}
               </div>
             )}
             <div onClick={() => setOpen(false)} style={{ marginTop: 12, textAlign: "center", fontSize: 13, color: "#8a7fb0", cursor: "pointer" }}>
-              закрити
+              {t(lang, "hollow.close")}
             </div>
           </div>
         </div>

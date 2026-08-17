@@ -9,7 +9,8 @@ import { QUESTS, suggestQuests, type MockQuest } from "@/lib/mock-data/quests";
 import { orderStates, toggleState } from "@/lib/utils/states";
 import { STATE_LABEL, GROUP_TINT } from "@/lib/mock-data/states";
 import { ITEMS } from "@/lib/mock-data/items";
-import { ENERGY, TENSION, BODY, AFTER, BOMBOM_LINES } from "@/lib/mock-data/content";
+import { ENERGY, TENSION, BODY, AFTER } from "@/lib/mock-data/content";
+import { BOMBOM_LINES, t } from "@/lib/mock-data/i18n";
 import {
   WoodButton,
   ParchButton,
@@ -133,7 +134,8 @@ export default function Garden() {
 
   /* ---------------- HOME ---------------- */
   if (flow === "home") {
-    const line = BOMBOM_LINES[state.bombomIdx % BOMBOM_LINES.length];
+    const lines = BOMBOM_LINES[state.lang] || BOMBOM_LINES.en;
+    const line = lines[state.bombomIdx % lines.length];
     // each stage fills a bit more of the scene than the last one
     const fit = ["50%", "58%", "66%", "74%", "82%", "88%", "92%", "96%", "98%", "100%"][Math.min(10, lvl.levelNum) - 1];
     return (
@@ -207,21 +209,21 @@ export default function Garden() {
                 go("checkin_state");
               }}
             >
-              ✦  Як ти зараз?
+              {t(state.lang, "cta.how_are_you")}
             </ParchButton>
           ) : (
             <div style={{ textAlign: "center", borderRadius: 14, padding: "13px 14px", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: "0 0 0 2px #4a3a6e" }}>
-              <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>Стежки чекають 🌿</div>
+              <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>{t(state.lang, "cta.paths_waiting")}</div>
               <div style={{ fontSize: 12, color: "#a99fc8", marginTop: 3, lineHeight: 1.4 }}>
-                Пройди набір у вкладці «Квести» ({dailyLeft}) — тоді відкриється новий чек-ін.
+                {t(state.lang, "cta.finish_set", { n: dailyLeft })}
               </div>
             </div>
           )}
           {canCheckin && (
             <div style={{ textAlign: "center", fontSize: 11, color: "#e9dcc0", marginTop: 1, textShadow: "0 1px 2px rgba(0,0,0,.5)" }}>
               {xpLeft > 0
-                ? `введи настрій — відкриються 3 стежки · XP лишилось: ${xpLeft}/${XP_WINDOW_CAP}`
-                : "XP-ліміт вікна вичерпано — квести ще діють, але без XP"}
+                ? `${state.questsDone === 0 ? t(state.lang, "hint.first") : t(state.lang, "hint.again")} · ${t(state.lang, "hint.xp_left", { n: xpLeft, cap: XP_WINDOW_CAP })}`
+                : t(state.lang, "hint.xp_done")}
             </div>
           )}
         </div>
