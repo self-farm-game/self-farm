@@ -1,11 +1,15 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { NAV } from "@/lib/mock-data/content";
+import { useGame } from "@/lib/store/game";
+import { t } from "@/lib/mock-data/i18n";
 import { play } from "@/lib/sound/sound";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { state } = useGame();
+  const L = state.lang;
   const active = NAV.find((n) => pathname.startsWith(n.href))?.id ?? "garden";
 
   return (
@@ -75,7 +79,7 @@ export default function BottomNav() {
                 letterSpacing: 0.5,
               }}
             >
-              {n.label}
+              {t(L, "tab." + n.id)}
             </div>
           </div>
         );

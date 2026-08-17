@@ -2,6 +2,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { NAV } from "@/lib/mock-data/content";
 import { useGame } from "@/lib/store/game";
+import { t } from "@/lib/mock-data/i18n";
 import { levelInfo } from "@/lib/utils/xp";
 import { play } from "@/lib/sound/sound";
 
@@ -9,6 +10,7 @@ export default function SideNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { state } = useGame();
+  const L = state.lang;
   const lvl = levelInfo(state.totalXp);
   const active = NAV.find((n) => pathname.startsWith(n.href))?.id ?? "garden";
 
@@ -72,7 +74,7 @@ export default function SideNav() {
               >
                 {n.icon}
               </span>
-              {n.label}
+              {t(L, "tab." + n.id)}
             </div>
           );
         })}

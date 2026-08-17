@@ -7,10 +7,10 @@ import { levelInfo } from "@/lib/utils/xp";
 import { play } from "@/lib/sound/sound";
 import { QUESTS, suggestQuests, type MockQuest } from "@/lib/mock-data/quests";
 import { orderStates, toggleState } from "@/lib/utils/states";
-import { STATE_LABEL, GROUP_TINT } from "@/lib/mock-data/states";
+import { GROUP_TINT, stateLabel } from "@/lib/mock-data/states";
 import { ITEMS } from "@/lib/mock-data/items";
-import { ENERGY, TENSION, BODY, AFTER } from "@/lib/mock-data/content";
-import { BOMBOM_LINES, t } from "@/lib/mock-data/i18n";
+import { BODY } from "@/lib/mock-data/content";
+import { BOMBOM_LINES, t, ENERGY_OPTS, TENSION_OPTS, AFTER_OPTS } from "@/lib/mock-data/i18n";
 import {
   WoodButton,
   ParchButton,
@@ -58,6 +58,7 @@ export default function Garden() {
 
   // ordered chips (personalised) + quests matched to the chosen states
   const lvl = levelInfo(state.totalXp);
+  const L = state.lang;
   const orderedStates = orderStates(state.stateCounts || {});
   const suggested: MockQuest[] = states.length ? suggestQuests(states, lvl.levelNum, 3) : [];
   const directQ = directId ? QUESTS.find((x) => x.id === directId) : null;
@@ -114,7 +115,7 @@ export default function Garden() {
 
   const finishToReward = () => {
     const r = recordSession({
-      states: states.map((k) => STATE_LABEL[k] || k),
+      states: states.map((k) => stateLabel(L, k)),
       stateKeys: states,
       energy,
       tension,
@@ -185,14 +186,14 @@ export default function Garden() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/assets/sprites/bombom.png" alt="БомБом" />
                 <div className="sf-bombom-bubble">
-                  <div className="sf-bombom-name">БомБом · тицьни ↻</div>
+                  <div className="sf-bombom-name">{t(L, "bombom.tap")}</div>
                   <p>{line}</p>
                 </div>
               </div>
 
               <div className="sf-inv-btn" onClick={() => go("inventory")}>
                 <span style={{ fontSize: 22, lineHeight: 1 }}>🎒</span>
-                <span style={{ fontSize: 8.5, letterSpacing: 0.5, color: "#e7c389", fontWeight: 700 }}>Знахідки</span>
+                <span style={{ fontSize: 8.5, letterSpacing: 0.5, color: "#e7c389", fontWeight: 700 }}>{t(L, "garden.finds")}</span>
                 <div className="sf-inv-badge">{state.ownedItems.length}</div>
               </div>
             </div>
@@ -238,7 +239,7 @@ export default function Garden() {
     return (
       <div className="sf-screen" style={{ padding: "54px 16px 18px", minHeight: "100%" }}>
         <BackRow onClick={() => go("home")} />
-        <div style={{ fontSize: 30, color: "#f4ecd6", fontWeight: 700, textShadow: "0 3px 0 rgba(0,0,0,.35)", marginTop: 6 }}>Знахідки</div>
+        <div style={{ fontSize: 30, color: "#f4ecd6", fontWeight: 700, textShadow: "0 3px 0 rgba(0,0,0,.35)", marginTop: 6 }}>{t(L, "garden.finds")}</div>
         <div style={{ fontSize: 13, color: "#a99fc8", fontStyle: "italic", marginBottom: 16 }}>речі, що чіпляються до стежки</div>
 
         {found.length === 0 && (
@@ -284,8 +285,8 @@ export default function Garden() {
         <div style={{ marginTop: 6 }}>
           <BombomBanner>«Не будемо садити ліс. Одне дерево. Один рух. Кажи, що там у тебе зараз.»</BombomBanner>
         </div>
-        <div style={{ fontSize: 28, color: "#f4ecd6", fontWeight: 700, textAlign: "center", margin: "24px 0 4px", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>Як ти зараз?</div>
-        <div style={{ fontSize: 13, color: "#a99fc8", textAlign: "center", marginBottom: 18 }}>обери, що відгукується — можна кілька</div>
+        <div style={{ fontSize: 28, color: "#f4ecd6", fontWeight: 700, textAlign: "center", margin: "24px 0 4px", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "checkin.state.title")}</div>
+        <div style={{ fontSize: 13, color: "#a99fc8", textAlign: "center", marginBottom: 18 }}>{t(L, "checkin.state.sub")}</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 9, justifyContent: "center" }}>
           {orderedStates.map((sd) => {
             const on = states.includes(sd.key);
@@ -310,23 +311,23 @@ export default function Garden() {
                   transition: "background .12s",
                 }}
               >
-                {sd.label}
+                {stateLabel(L, sd.key)}
               </div>
             );
           })}
         </div>
         <div style={{ fontSize: 11, color: "#7d7298", textAlign: "center", marginTop: 12 }}>
-          з часом угорі зʼявлятимуться ті, що ти обираєш найчастіше
+          {t(L, "checkin.state.reorder")}
         </div>
         <div onClick={() => setShowNote((v) => !v)} style={{ textAlign: "center", marginTop: 22, fontSize: 14, color: "#c9a878", cursor: "pointer", letterSpacing: 0.5 }}>
-          + додати словами
+          {t(L, "quest.add_words")}
         </div>
         {showNote && (
           <div style={{ marginTop: 12, borderRadius: 13, padding: 10, background: "rgba(212,191,148,.12)", boxShadow: "inset 0 0 0 2px #6a4a2c" }}>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="кілька слів, якщо хочеться…"
+              placeholder={t(L, "quest.note_ph")}
               style={{ width: "100%", height: 62, resize: "none", border: "none", outline: "none", background: "transparent", color: "#efe7d2", fontSize: 14 }}
             />
           </div>
@@ -338,7 +339,7 @@ export default function Garden() {
             openCheckin(states, suggestQuests(states, lvl.levelNum, 3).map((x) => x.id));
             go("checkin_energy");
           }}>
-            {states.length ? "Далі  →" : "обери хоч один стан"}
+            {states.length ? t(L, "checkin.next") : t(L, "checkin.pick_one")}
           </WoodButton>
         </div>
       </div>
@@ -350,26 +351,26 @@ export default function Garden() {
     return (
       <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%" }}>
         <BackRow onClick={() => go("checkin_state")} />
-        <div style={{ fontSize: 26, color: "#f4ecd6", fontWeight: 700, textAlign: "center", margin: "14px 0 6px", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>Скільки енергії?</div>
+        <div style={{ fontSize: 26, color: "#f4ecd6", fontWeight: 700, textAlign: "center", margin: "14px 0 6px", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "checkin.energy.title")}</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 9, justifyContent: "center", marginBottom: 8 }}>
-          {ENERGY.map((e) => (
+          {ENERGY_OPTS[L].map((e) => (
             <Chip key={e} active={energy === e} onClick={() => { play("select"); setEnergy(e); }}>{e}</Chip>
           ))}
         </div>
-        <div style={{ fontSize: 26, color: "#f4ecd6", fontWeight: 700, textAlign: "center", margin: "28px 0 6px", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>Напруга в тілі?</div>
+        <div style={{ fontSize: 26, color: "#f4ecd6", fontWeight: 700, textAlign: "center", margin: "28px 0 6px", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "checkin.tension.title")}</div>
         <div style={{ display: "flex", gap: 9, justifyContent: "center", marginBottom: 18 }}>
-          {TENSION.map((t) => (
-            <Chip key={t} active={tension === t} onClick={() => { play("select"); setTension(t); }}>{t}</Chip>
+          {TENSION_OPTS[L].map((tn) => (
+            <Chip key={tn} active={tension === tn} onClick={() => { play("select"); setTension(tn); }}>{tn}</Chip>
           ))}
         </div>
-        <div style={{ fontSize: 13, color: "#9a8fc0", textAlign: "center", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>де саме? (необов&apos;язково)</div>
+        <div style={{ fontSize: 13, color: "#9a8fc0", textAlign: "center", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>{t(L, "quest.where")}</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
           {BODY.map((b) => (
             <Chip key={b} sm active={body.includes(b)} onClick={() => { play("tap"); setBody((cur) => (cur.includes(b) ? cur.filter((x) => x !== b) : [...cur, b])); }}>{b}</Chip>
           ))}
         </div>
         <div style={{ marginTop: 30 }}>
-          <WoodButton big onClick={() => { play("confirm"); go("quest_suggest"); }}>Далі  →</WoodButton>
+          <WoodButton big onClick={() => { play("confirm"); go("quest_suggest"); }}>{t(L, "checkin.next")}</WoodButton>
         </div>
       </div>
     );
@@ -384,9 +385,9 @@ export default function Garden() {
           <BombomBanner>«Ось стежки під те, що ти зараз відчуваєш. Не мусиш перемагати день — обери одну маленьку.»</BombomBanner>
         </div>
         <div style={{ fontSize: 12.5, color: "#c9bfe0", textAlign: "center", margin: "18px 0 4px" }}>
-          підібрано під: {states.map((k) => STATE_LABEL[k] || k).join(", ") || "твій стан"}
+          {t(L, "quest.pick_for", { states: states.map((k) => stateLabel(L, k)).join(", ") || t(L, "quest.your_state") })}
         </div>
-        <div style={{ fontSize: 13, color: "#9a8fc0", textAlign: "center", textTransform: "uppercase", letterSpacing: 2, margin: "6px 0 14px" }}>обери одну стежку</div>
+        <div style={{ fontSize: 13, color: "#9a8fc0", textAlign: "center", textTransform: "uppercase", letterSpacing: 2, margin: "6px 0 14px" }}>{t(L, "quest.choose")}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {suggested.map((qq, i) => (
             <div
@@ -397,13 +398,13 @@ export default function Garden() {
               <div style={{ width: 52, height: 52, flexShrink: 0, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, background: "radial-gradient(circle,#efe0bd,#c9a878)", boxShadow: "inset 0 0 0 2px #6a4a2c" }}>{qq.icon}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 17, color: "#3a2616", fontWeight: 700, lineHeight: 1.1 }}>{qq.title}</div>
-                <div style={{ fontSize: 12, color: "#7a5836", margin: "4px 0 8px" }}>для: {qq.for}</div>
+                <div style={{ fontSize: 12, color: "#7a5836", margin: "4px 0 8px" }}>{t(L, "quest.for", { for: qq.for })}</div>
                 <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 11, color: "#5a3f24", padding: "3px 8px", borderRadius: 6, background: "rgba(106,74,44,.18)" }}>⏱ {qq.dur}</span>
                   <span style={{ fontSize: 11, color: "#5a3f24", padding: "3px 8px", borderRadius: 6, background: "rgba(106,74,44,.18)" }}>✦ +{qq.xp}</span>
                   {qq.tier > 1 && (
                     <span style={{ fontSize: 11, fontWeight: 700, color: qq.tier === 3 ? "#8a2f2f" : "#8a5a1f", padding: "3px 8px", borderRadius: 6, background: qq.tier === 3 ? "rgba(180,60,60,.18)" : "rgba(200,140,50,.2)" }}>
-                      {qq.tier === 3 ? "🔥 сміливий" : "↗ виклик"}
+                      {qq.tier === 3 ? t(L, "quest.badge.bold") : t(L, "quest.badge.challenge")}
                     </span>
                   )}
                 </div>
@@ -467,7 +468,7 @@ export default function Garden() {
           Не треба робити ідеально.<br />Просто повернись, коли зробиш.
         </div>
         <div style={{ width: "100%" }}>
-          <WoodButton big onClick={() => { play("complete"); go("quest_complete"); }}>Здати квест</WoodButton>
+          <WoodButton big onClick={() => { play("complete"); go("quest_complete"); }}>{t(L, "quest.submit")}</WoodButton>
         </div>
       </div>
     );
@@ -478,10 +479,10 @@ export default function Garden() {
     return (
       <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <div style={{ fontSize: 54, textAlign: "center", marginBottom: 10, animation: "sf-pop .5s ease both" }}>🌿</div>
-        <div style={{ fontSize: 28, color: "#f4ecd6", fontWeight: 700, textAlign: "center", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>Що змінилось?</div>
-        <div style={{ fontSize: 13, color: "#a99fc8", textAlign: "center", margin: "8px 0 24px", fontStyle: "italic" }}>чесно, без правильних відповідей</div>
+        <div style={{ fontSize: 28, color: "#f4ecd6", fontWeight: 700, textAlign: "center", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "complete.title")}</div>
+        <div style={{ fontSize: 13, color: "#a99fc8", textAlign: "center", margin: "8px 0 24px", fontStyle: "italic" }}>{t(L, "complete.sub")}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {AFTER.map((a) => (
+          {AFTER_OPTS[L].map((a) => (
             <div
               key={a.label}
               onClick={() => { play("select"); setAfter(a.label); go("quest_note"); }}
@@ -499,20 +500,20 @@ export default function Garden() {
   if (flow === "quest_note") {
     return (
       <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <div style={{ fontSize: 26, color: "#f4ecd6", fontWeight: 700, textAlign: "center", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>Хочеш лишити пару слів?</div>
-        <div style={{ fontSize: 13, color: "#a99fc8", textAlign: "center", margin: "8px 0 20px", fontStyle: "italic" }}>це не домашка. просто слід.</div>
+        <div style={{ fontSize: 26, color: "#f4ecd6", fontWeight: 700, textAlign: "center", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "note.title")}</div>
+        <div style={{ fontSize: 13, color: "#a99fc8", textAlign: "center", margin: "8px 0 20px", fontStyle: "italic" }}>{t(L, "note.sub")}</div>
         <div style={{ borderRadius: 16, padding: 14, background: parchCard, boxShadow: "inset 0 2px 0 rgba(255,245,220,.5), 0 0 0 3px #6a4a2c, 0 0 0 5px #2a1a0e" }}>
           <textarea
             value={reflection}
             onChange={(e) => setReflection(e.target.value)}
-            placeholder="підійшов до вікна, побачив дощ. стало тихіше…"
+            placeholder={t(L, "note.ph")}
             style={{ width: "100%", height: 120, resize: "none", border: "none", outline: "none", background: "transparent", color: "#3a2616", fontSize: 15, lineHeight: 1.5 }}
           />
         </div>
         <div style={{ marginTop: 18 }}>
-          <ParchButton onClick={() => { play("confirm"); finishToReward(); }}>Додати запис</ParchButton>
+          <ParchButton onClick={() => { play("confirm"); finishToReward(); }}>{t(L, "note.add")}</ParchButton>
         </div>
-        <div onClick={() => { setReflection(""); finishToReward(); }} style={{ textAlign: "center", marginTop: 14, fontSize: 14, color: "#7d7298", cursor: "pointer", letterSpacing: 1 }}>пропустити</div>
+        <div onClick={() => { setReflection(""); finishToReward(); }} style={{ textAlign: "center", marginTop: 14, fontSize: 14, color: "#7d7298", cursor: "pointer", letterSpacing: 1 }}>{t(L, "note.skip")}</div>
       </div>
     );
   }
@@ -522,15 +523,15 @@ export default function Garden() {
     return (
       <div className="sf-screen" style={{ padding: "50px 18px 24px", minHeight: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <div style={{ textAlign: "center", animation: "sf-pop .5s ease both" }}>
-          <div style={{ fontSize: 40, color: "#ffd98a", fontWeight: 700, textShadow: "0 4px 0 rgba(0,0,0,.4)" }}>+{reward.xp} XP</div>
-          <div style={{ fontSize: 15, color: "#b9d99a", fontStyle: "italic", marginTop: 6 }}>Дерево трохи прокинулось.</div>
+          <div style={{ fontSize: 40, color: "#ffd98a", fontWeight: 700, textShadow: "0 4px 0 rgba(0,0,0,.4)" }}>{t(L, "reward.xp", { n: reward.xp })}</div>
+          <div style={{ fontSize: 15, color: "#b9d99a", fontStyle: "italic", marginTop: 6 }}>{t(L, "reward.woke")}</div>
         </div>
 
         {reward.item && (
           <div style={{ marginTop: 22, borderRadius: 16, padding: 16, background: parchCard, boxShadow: parchShadow, display: "flex", gap: 14, alignItems: "center" }}>
             <div style={{ width: 62, height: 62, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, background: "radial-gradient(circle,#efe0bd,#c9a878)", boxShadow: "inset 0 0 0 2px #6a4a2c, 0 0 14px rgba(255,220,140,.5)", animation: "sf-glow 2.2s ease-in-out infinite" }}>{reward.item.icon}</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, letterSpacing: 2, color: "#8a6a44", textTransform: "uppercase" }}>знайдено предмет</div>
+              <div style={{ fontSize: 11, letterSpacing: 2, color: "#8a6a44", textTransform: "uppercase" }}>{t(L, "reward.found_item")}</div>
               <div style={{ fontSize: 18, color: "#3a2616", fontWeight: 700 }}>{reward.item.name}</div>
               <div style={{ fontSize: 13, color: "#6a4a2c", fontStyle: "italic" }}>«{reward.item.desc}»</div>
             </div>
@@ -546,8 +547,8 @@ export default function Garden() {
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 46, height: 46, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, background: "radial-gradient(circle,#5a4a8a,#332658)", boxShadow: "0 0 14px rgba(150,110,220,.6), inset 0 0 0 2px #7a6ab0", animation: "sf-glow 2.4s ease-in-out infinite" }}>ᛗ</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, letterSpacing: 2, color: "#9a8fc0", textTransform: "uppercase" }}>{opened ? "руна відкрилась" : "руна росте"}</div>
-                  <div style={{ fontSize: 17, color: "#efe7d2", fontWeight: 700 }}>Руна Руху · {cur}/3</div>
+                  <div style={{ fontSize: 11, letterSpacing: 2, color: "#9a8fc0", textTransform: "uppercase" }}>{opened ? t(L, "reward.rune_open") : t(L, "reward.rune_grow")}</div>
+                  <div style={{ fontSize: 17, color: "#efe7d2", fontWeight: 700 }}>{t(L, "reward.rune_move", { cur })}</div>
                 </div>
               </div>
               <div style={{ marginTop: 10, height: 9, borderRadius: 5, background: "rgba(0,0,0,.35)", boxShadow: "inset 0 0 0 2px #1a1230", overflow: "hidden" }}>
@@ -558,7 +559,7 @@ export default function Garden() {
         })()}
 
         <div style={{ marginTop: 22 }}>
-          <WoodButton big onClick={() => { play("tap"); resetFlow(); }}>← До саду</WoodButton>
+          <WoodButton big onClick={() => { play("tap"); resetFlow(); }}>{t(L, "reward.to_garden")}</WoodButton>
         </div>
       </div>
     );

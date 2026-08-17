@@ -42,7 +42,7 @@ export interface GameState {
   xpWindowStart: number; // epoch ms when the current 3h XP window opened
   xpInWindow: number; // how many XP-earning quests done in the current window
   hollowRune: string | null; // rune id tucked into the tree hollow (easter egg)
-  lang: "uk" | "en"; // UI language; 'uk' has the raw/unfiltered Бомбом voice
+  lang: "en" | "uk" | "uk_raw"; // UI language ("uk_raw" = uncensored Бомбом)
   doneToday: { id: string; title: string; icon: string; time: string }[]; // finished on dayKey
 }
 
@@ -100,7 +100,7 @@ interface Ctx {
   xpWindowLeftMs: number; // ms left in the current 3h XP window (0 if none)
   openCheckin: (stateKeys: string[], questIds: string[]) => void;
   placeHollowRune: (runeId: string | null) => void;
-  setLang: (lang: "uk" | "en") => void;
+  setLang: (lang: "en" | "uk" | "uk_raw") => void;
   plantTree: () => void;
   nextBombom: () => void;
   toggleMute: () => void;
@@ -281,7 +281,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const plantTree = () => setState((s) => ({ ...s, onboarded: true }));
   const nextBombom = () => setState((s) => ({ ...s, bombomIdx: s.bombomIdx + 1 }));
   const placeHollowRune = (runeId: string | null) => setState((s) => ({ ...s, hollowRune: runeId }));
-  const setLang = (lang: "uk" | "en") => setState((s) => ({ ...s, lang }));
+  const setLang = (lang: "en" | "uk" | "uk_raw") => setState((s) => ({ ...s, lang }));
   const toggleMute = () => setState((s) => ({ ...s, muted: !s.muted }));
   const reset = () => {
     try {

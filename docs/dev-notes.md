@@ -283,3 +283,17 @@ to use and lands on exactly that one.
 - Cabin: the language row is now a live toggle (uk⇄en). Garden Bombom line, CTA,
   hints and the hollow modal read from `t(state.lang, …)`.
 - Old `content.ts` BOMBOM_LINES retained but unused (garden reads i18n).
+
+## i18n v2 — full UI localization + language picker dialog + 3 languages
+- Three languages in `lib/mock-data/i18n.ts`: `en` (default), `uk` (clean),
+  `uk_raw` (Ukrainian 18+ — identical UI to `uk`, but Бомбом's lines are blunt/
+  uncensored). `LANGS` drives the picker; `t(lang, key, vars)` covers the whole
+  UI; `ENERGY_OPTS/TENSION_OPTS/AFTER_OPTS` localize the check-in option sets.
+- States: `STATE_DEFS` gained `en` labels; `stateLabel(lang,key)` returns the
+  right one (uk_raw uses uk).
+- Store: `lang: "en"|"uk"|"uk_raw"` + `setLang`. Persisted per account.
+- Localized: garden (all check-in/quest/reward/hollow chrome), questbook, journal,
+  runes titles, cabin (all rows + auth), BottomNav/SideNav tabs.
+- Cabin language row now opens a **choice dialog** (LANGS list with check),
+  replacing the toggle. Quest *content* (titles/steps) stays Ukrainian for now —
+  a separate translation pass would localize the ~43 quests + 26 states fully.

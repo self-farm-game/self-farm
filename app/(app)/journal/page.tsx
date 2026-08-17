@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useGame } from "@/lib/store/game";
+import { t } from "@/lib/mock-data/i18n";
 import { JOURNAL_FILTERS } from "@/lib/mock-data/content";
 import { Chip, ScreenTitle } from "@/components/ui/primitives";
 import { play } from "@/lib/sound/sound";
@@ -16,11 +17,12 @@ const tag: React.CSSProperties = {
 
 export default function Journal() {
   const { state } = useGame();
+  const L = state.lang;
   const [filter, setFilter] = useState("Усе");
 
   return (
     <div className="sf-screen" style={{ padding: "52px 16px 18px", minHeight: "100%" }}>
-      <ScreenTitle title="Журнал ферми" sub="що сталось — день за днем" />
+      <ScreenTitle title={t(L, "jr.title")} sub={t(L, "jr.sub")} />
 
       <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 6, marginBottom: 16 }}>
         {JOURNAL_FILTERS.map((f) => (
@@ -33,7 +35,7 @@ export default function Journal() {
       {state.journal.length === 0 && (
         <div style={{ borderRadius: 16, padding: "26px 18px", textAlign: "center", background: "linear-gradient(180deg,#2c2150,#241a42)", boxShadow: "0 0 0 2px #4a3a6e" }}>
           <div style={{ fontSize: 38, marginBottom: 10 }}>📖</div>
-          <div style={{ fontSize: 16, color: "#cfc4e6", fontWeight: 700 }}>Журнал поки чистий</div>
+          <div style={{ fontSize: 16, color: "#cfc4e6", fontWeight: 700 }}>{t(L, "jr.empty")}</div>
           <div style={{ fontSize: 13, color: "#8a7fb0", marginTop: 8, lineHeight: 1.5 }}>
             Тут зʼявлятиметься те, що ти проживаєш — день за днем.
             <br />

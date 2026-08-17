@@ -1,9 +1,11 @@
 "use client";
 import { useGame } from "@/lib/store/game";
 import { RUNE_BRANCHES } from "@/lib/mock-data/runes";
+import { t } from "@/lib/mock-data/i18n";
 
 export default function Runes() {
   const { state } = useGame();
+  const L = state.lang;
 
   const sessionsCount = state.journal.reduce((a, d) => a + d.entries.length, 0);
   const notesCount = state.journal.reduce(
@@ -41,7 +43,7 @@ export default function Runes() {
           boxShadow: "inset 0 -8px 20px rgba(0,0,0,.4)",
         }}
       >
-        <div style={{ fontSize: 30, color: "#f4ecd6", fontWeight: 700, textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>Руни</div>
+        <div style={{ fontSize: 30, color: "#f4ecd6", fontWeight: 700, textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "rune.title")}</div>
         <div style={{ fontSize: 13, lineHeight: 1.5, color: "#a99fc8", fontStyle: "italic", marginTop: 6 }}>
           Дерево пам&apos;ятає не перемоги, а повернення.
           <br />

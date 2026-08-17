@@ -2,8 +2,7 @@
 import { useState } from "react";
 import { useGame } from "@/lib/store/game";
 import { levelInfo } from "@/lib/utils/xp";
-import { CABIN_ROWS } from "@/lib/mock-data/content";
-import { t } from "@/lib/mock-data/i18n";
+import { t, LANGS, type Lang } from "@/lib/mock-data/i18n";
 import { ScreenTitle } from "@/components/ui/primitives";
 import { play } from "@/lib/sound/sound";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -26,13 +25,14 @@ function Row({ icon, label, val, onClick }: { icon: string; label: string; val?:
 }
 
 function AuthSection() {
-  const { auth, signOut } = useGame();
+  const { auth, signOut, state } = useGame();
+  const L = state.lang;
   const [busy, setBusy] = useState(false);
 
   if (!auth.ready) {
     return (
       <div style={{ marginTop: 16, borderRadius: 14, padding: 16, textAlign: "center", color: "#8a7fb0", fontSize: 13, background: card, boxShadow: cardShadow }}>
-        синхронізація…
+        {t(L, "cabin.syncing")}
       </div>
     );
   }
@@ -40,7 +40,7 @@ function AuthSection() {
   if (!auth.isAnonymous) {
     return (
       <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-        <Row icon="✦" label="Акаунт" val={auth.email || "увійдено"} />
+        <Row icon="✦" label={t(L, "cabin.account")} val={auth.email || t(L, "cabin.signed_in")} />
         <div
           onClick={async () => {
             if (busy) return;
@@ -50,7 +50,7 @@ function AuthSection() {
           }}
           style={{ textAlign: "center", padding: "13px", borderRadius: 13, cursor: "pointer", fontWeight: 700, color: "#cfc4e6", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: cardShadow }}
         >
-          {busy ? "…" : "Вийти"}
+          {busy ? "…" : t(L, "cabin.sign_out")}
         </div>
       </div>
     );
@@ -60,7 +60,8 @@ function AuthSection() {
 }
 
 function AuthForm() {
-  const { signIn, signUp } = useGame();
+  const { signIn, signUp, state } = useGame();
+  const L = state.lang;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -84,7 +85,7 @@ function AuthForm() {
     setErr(null);
     setOk(null);
     if (!email.trim() || password.length < 6) {
-      setErr("Введи пошту і пароль (мін. 6 символів).");
+      setErr(t(L, "cabin.err_creds"));
       return;
     }
     setBusy(true);
@@ -93,19 +94,19 @@ function AuthForm() {
     if (res.error) setErr(res.error);
     else {
       play("reward");
-      setOk(mode === "up" ? "Акаунт створено — прогрес збережено." : "Готово, з поверненням.");
+      setOk(mode === "up" ? t(L, "cabin.ok_up") : t(L, "cabin.ok_in"));
     }
   };
 
   return (
     <div style={{ marginTop: 16, borderRadius: 16, padding: 16, background: "linear-gradient(180deg,#34255a,#241a42)", boxShadow: "0 0 0 2px #4a3a6e, inset 0 1px 0 rgba(150,120,200,.2)" }}>
-      <div style={{ fontSize: 16, color: "#f4ecd6", fontWeight: 700 }}>Збережи свій сад</div>
+      <div style={{ fontSize: 16, color: "#f4ecd6", fontWeight: 700 }}>{t(L, "cabin.save_title")}</div>
       <div style={{ fontSize: 12.5, color: "#a99fc8", marginTop: 4, marginBottom: 12, lineHeight: 1.4 }}>
-        Акаунт переносить прогрес на інші пристрої. Грати можна й без нього.
+        {t(L, "cabin.save_desc")}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-        <input style={input} type="email" inputMode="email" autoComplete="email" placeholder="пошта" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <input style={input} type="password" autoComplete="current-password" placeholder="пароль (мін. 6)" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input style={input} type="email" inputMode="email" autoComplete="email" placeholder={t(L, "cabin.email")} value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input style={input} type="password" autoComplete="current-password" placeholder={t(L, "cabin.password")} value={password} onChange={(e) => setPassword(e.target.value)} />
       </div>
       {err && <div style={{ fontSize: 12.5, color: "#e8a0a0", marginTop: 9 }}>{err}</div>}
       {ok && <div style={{ fontSize: 12.5, color: "#b9d99a", marginTop: 9 }}>{ok}</div>}
@@ -114,13 +115,13 @@ function AuthForm() {
           onClick={() => !busy && run("up")}
           style={{ flex: 1, textAlign: "center", padding: "12px", borderRadius: 12, cursor: "pointer", fontWeight: 700, color: "#2a1d10", background: "linear-gradient(180deg,#e6cf9c,#cda874)", boxShadow: "inset 0 2px 0 rgba(255,250,225,.5), 0 0 0 2px #6a4a2c" }}
         >
-          {busy ? "…" : "Створити"}
+          {busy ? "…" : t(L, "cabin.create")}
         </div>
         <div
           onClick={() => !busy && run("in")}
           style={{ flex: 1, textAlign: "center", padding: "12px", borderRadius: 12, cursor: "pointer", fontWeight: 700, color: "#cfc4e6", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: cardShadow }}
         >
-          {busy ? "…" : "Увійти"}
+          {busy ? "…" : t(L, "cabin.enter")}
         </div>
       </div>
     </div>
@@ -131,6 +132,8 @@ export default function Cabin() {
   const { state, auth, toggleMute, reset, setLang } = useGame();
   const lang = state.lang;
   const lvl = levelInfo(state.totalXp);
+  const L = state.lang;
+  const [langOpen, setLangOpen] = useState(false);
 
   const sessionsCount = state.journal.reduce((a, d) => a + d.entries.length, 0);
   const notesCount = state.journal.reduce((a, d) => a + d.entries.filter((e) => e.note).length, 0);
@@ -149,13 +152,13 @@ export default function Cabin() {
 
   return (
     <div className="sf-screen" style={{ padding: "52px 16px 18px", minHeight: "100%" }}>
-      <ScreenTitle title="Хатина" sub="твій кут у тиші" />
+      <ScreenTitle title={t(L, "cabin.title")} sub={t(L, "cabin.sub")} />
 
       <div style={{ borderRadius: 18, padding: 18, background: "linear-gradient(180deg,#5d3f24,#3f2812)", boxShadow: "inset 0 2px 0 rgba(255,220,160,.3), inset 0 -5px 0 rgba(0,0,0,.4), 0 0 0 2px #2a1a0e, 0 6px 0 rgba(0,0,0,.3)", display: "flex", gap: 15, alignItems: "center" }}>
         <div style={{ width: 66, height: 66, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, background: "radial-gradient(circle,#7bbf5a,#3f6a2a)", boxShadow: "inset 0 0 0 3px #2a1a0e, 0 0 0 2px #6a4a2c" }}>🌱</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 22, color: "#f3d9a8", fontWeight: 700 }}>Мандрівник V</div>
-          <div style={{ fontSize: 13, color: "#c9a878" }}>Рівень дерева {lvl.levelNum} · {state.totalXp} XP усього</div>
+          <div style={{ fontSize: 22, color: "#f3d9a8", fontWeight: 700 }}>{t(L, "cabin.traveller")}</div>
+          <div style={{ fontSize: 13, color: "#c9a878" }}>{t(L, "cabin.tree_level", { n: lvl.levelNum, xp: state.totalXp })}</div>
           {!auth.isAnonymous && auth.email && (
             <div style={{ fontSize: 12, color: "#b9d99a", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>✦ {auth.email}</div>
           )}
@@ -163,9 +166,9 @@ export default function Cabin() {
       </div>
 
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-        {stat(state.day, "ДНІВ", "#ffd98a")}
-        {stat(runesUnlocked, "РУН", "#a98bff")}
-        {stat(state.questsDone, "КВЕСТІВ", "#7bbf5a")}
+        {stat(state.day, t(L, "cabin.days"), "#ffd98a")}
+        {stat(runesUnlocked, t(L, "cabin.runes"), "#a98bff")}
+        {stat(state.questsDone, t(L, "cabin.quests"), "#7bbf5a")}
       </div>
 
       {isSupabaseConfigured && <AuthSection />}
@@ -173,22 +176,57 @@ export default function Cabin() {
       <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
         <Row
           icon="🌐"
-          label={t(lang, "cabin.language")}
-          val={t(lang, "cabin.language_val")}
-          onClick={() => { setLang(lang === "uk" ? "en" : "uk"); play("select"); }}
+          label={t(L, "cabin.language")}
+          val={t(L, "cabin.language_val")}
+          onClick={() => { play("select"); setLangOpen(true); }}
         />
-        <Row icon="🔈" label="Звук" val={state.muted ? "вимкнено" : "увімкнено"} onClick={() => { toggleMute(); if (state.muted) play("select"); }} />
-        {CABIN_ROWS.filter((c) => c.label !== "Мова").map((c, i) => (
-          <Row key={i} icon={c.icon} label={c.label} val={c.val} />
-        ))}
-        <Row icon="♻️" label="Скинути прогрес" onClick={() => { if (confirm("Скинути весь прогрес? Дерево почнеться з жолудя.")) reset(); }} />
+        <Row icon="🔈" label={t(L, "cabin.sound")} val={state.muted ? t(L, "cabin.sound_off") : t(L, "cabin.sound_on")} onClick={() => { toggleMute(); if (state.muted) play("select"); }} />
+        <Row icon="🔔" label={t(L, "cabin.reminders")} val={t(L, "cabin.reminders_val")} />
+        <Row icon="📤" label={t(L, "cabin.export")} />
+        <Row icon="🌱" label={t(L, "cabin.about")} />
+        <Row icon="♻️" label={t(L, "cabin.reset")} onClick={() => { if (confirm(t(L, "cabin.reset_confirm"))) reset(); }} />
       </div>
 
       <div style={{ textAlign: "center", fontSize: 12, color: "#6a5f88", marginTop: 20, fontStyle: "italic" }}>
-        Self-Farm · не self-harm, а self-farm.
-        <br />
-        Одне дерево. Один рух.
+        {t(L, "cabin.tagline")}
       </div>
+
+      {langOpen && (
+        <div
+          onClick={() => setLangOpen(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(10,8,20,.6)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 22 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 340, borderRadius: 18, padding: 18, background: "linear-gradient(180deg,#2c2150,#1c1530)", boxShadow: "0 0 0 2px #4a3a6e, 0 12px 34px rgba(0,0,0,.55)" }}
+          >
+            <div style={{ fontSize: 17, color: "#f4ecd6", fontWeight: 700 }}>{t(L, "lang.title")}</div>
+            <div style={{ fontSize: 12.5, color: "#a99fc8", marginTop: 4, marginBottom: 14 }}>{t(L, "lang.sub")}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {LANGS.map((lg) => {
+                const on = state.lang === lg.id;
+                return (
+                  <div
+                    key={lg.id}
+                    onClick={() => { setLang(lg.id as Lang); play("select"); setLangOpen(false); }}
+                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 15px", borderRadius: 13, cursor: "pointer", background: on ? "radial-gradient(circle at 20% 0%,#5a4a8a,#332658)" : "rgba(60,48,86,.5)", boxShadow: on ? "0 0 0 2px #7a6ab0, 0 0 14px rgba(150,110,220,.4)" : "inset 0 0 0 2px rgba(150,120,200,.28)" }}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 700, minWidth: 34, textAlign: "center", color: on ? "#fff" : "#cdbef0" }}>{lg.flag}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15.5, color: "#efe7d2", fontWeight: 700 }}>{lg.label}</div>
+                      <div style={{ fontSize: 11.5, color: "#9a8fc0" }}>{lg.note}</div>
+                    </div>
+                    {on && <span style={{ color: "#b9d99a", fontSize: 18 }}>✓</span>}
+                  </div>
+                );
+              })}
+            </div>
+            <div onClick={() => setLangOpen(false)} style={{ marginTop: 14, textAlign: "center", fontSize: 13, color: "#8a7fb0", cursor: "pointer" }}>
+              {t(L, "lang.close")}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

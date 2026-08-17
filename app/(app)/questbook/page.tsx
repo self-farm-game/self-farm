@@ -2,8 +2,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGame, QUESTS_PER_CHECKIN, XP_WINDOW_CAP } from "@/lib/store/game";
+import { t } from "@/lib/mock-data/i18n";
+import { stateLabel } from "@/lib/mock-data/states";
 import { QUESTS, type MockQuest } from "@/lib/mock-data/quests";
-import { STATE_LABEL } from "@/lib/mock-data/states";
+
 import { ScreenTitle } from "@/components/ui/primitives";
 import { play } from "@/lib/sound/sound";
 
@@ -20,6 +22,7 @@ function fmtLeft(ms: number) {
 export default function Questbook() {
   const router = useRouter();
   const { state, canCheckin, xpLeft, xpWindowLeftMs } = useGame();
+  const L = state.lang;
 
   const [, setNow] = useState(Date.now());
   useEffect(() => {
@@ -47,13 +50,13 @@ export default function Questbook() {
         <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 25, background: "radial-gradient(circle,#efe0bd,#c9a878)", boxShadow: "inset 0 0 0 2px #6a4a2c" }}>{q.icon}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 16, color: "#3a2616", fontWeight: 700, lineHeight: 1.1 }}>{q.title}</div>
-          <div style={{ fontSize: 12, color: "#7a5836", margin: "3px 0 6px" }}>для: {q.for}</div>
+          <div style={{ fontSize: 12, color: "#7a5836", margin: "3px 0 6px" }}>{t(L, "quest.for", { for: q.for })}</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <span style={{ fontSize: 11, color: "#5a3f24", padding: "3px 8px", borderRadius: 6, background: "rgba(106,74,44,.18)" }}>⏱ {q.dur}</span>
             <span style={{ fontSize: 11, color: "#5a3f24", padding: "3px 8px", borderRadius: 6, background: "rgba(106,74,44,.18)" }}>✦ +{q.xp}</span>
             {q.tier > 1 && (
               <span style={{ fontSize: 11, fontWeight: 700, color: q.tier === 3 ? "#8a2f2f" : "#8a5a1f", padding: "3px 8px", borderRadius: 6, background: q.tier === 3 ? "rgba(180,60,60,.18)" : "rgba(200,140,50,.2)" }}>
-                {q.tier === 3 ? "🔥 сміливий" : "↗ виклик"}
+                {q.tier === 3 ? t(L, "quest.badge.bold") : t(L, "quest.badge.challenge")}
               </span>
             )}
             {tag && <span style={{ fontSize: 11, fontWeight: 700, color: "#3a6a2a", padding: "3px 8px", borderRadius: 6, background: "rgba(120,200,90,.25)" }}>{tag}</span>}
@@ -64,7 +67,7 @@ export default function Questbook() {
         onClick={() => runQuest(q.id)}
         style={{ marginTop: 12, textAlign: "center", padding: "11px", borderRadius: 11, fontWeight: 700, fontSize: 14.5, cursor: "pointer", color: "#ffe6b8", background: "linear-gradient(180deg,#7a5128,#5a3618)", boxShadow: "inset 0 1px 0 rgba(255,220,160,.3), 0 0 0 2px #2a1a0e" }}
       >
-        Виконати →
+        {t(L, "qb.do")}
       </div>
     </div>
   );
@@ -75,26 +78,26 @@ export default function Questbook() {
 
   return (
     <div className="sf-screen" style={{ padding: "52px 16px 18px", minHeight: "100%" }}>
-      <ScreenTitle title="Квести" sub="сьогоднішні стежки" />
+      <ScreenTitle title={t(L, "qb.title")} sub={t(L, "qb.sub")} />
 
       {/* status */}
       <div style={{ borderRadius: 15, padding: "13px 15px", marginTop: 4, background: "linear-gradient(180deg,#34255a,#241a42)", boxShadow: "0 0 0 2px #4a3a6e", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
         <div style={{ fontSize: 13, color: "#cfc4e6" }}>
           {hasSet ? (
-            <>Набір: <b style={{ color: "#f3d9a8" }}>{activeQuests.length}</b> стежок лишилось</>
+            <>{t(L, "qb.set_left", { n: activeQuests.length })}</>
           ) : (
-            <>Стежок поки нема — введи настрій</>
+            <>{t(L, "qb.no_paths")}</>
           )}
         </div>
         <div style={{ fontSize: 12, color: xpLeft > 0 ? "#b9d99a" : "#c9a878" }}>
-          XP-стежок лишилось: {xpLeft}/{XP_WINDOW_CAP}
+          {t(L, "qb.xp_status", { n: xpLeft, cap: XP_WINDOW_CAP })}
         </div>
       </div>
 
       {/* ACTIVE set from the check-in */}
       {hasSet && (
         <>
-          {label(`Під твій стан · ${(state.activeStates || []).map((k) => STATE_LABEL[k] || k).join(", ")}`)}
+          {label(t(L, "qb.for_state", { states: (state.activeStates || []).map((k) => stateLabel(L, k)).join(", ") }))}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {activeQuests.map((q) => (
               <QuestCard key={q.id} q={q} />
@@ -107,23 +110,23 @@ export default function Questbook() {
       {canCheckin ? (
         <div onClick={goCheckin} style={{ cursor: "pointer", marginTop: 18, borderRadius: 15, padding: "18px 16px", textAlign: "center", background: "linear-gradient(180deg,#2c2150,#241a42)", boxShadow: "0 0 0 2px #4a3a6e" }}>
           <div style={{ fontSize: 30, marginBottom: 6 }}>🧭</div>
-          <div style={{ fontSize: 15, color: "#cfc4e6", fontWeight: 700 }}>Відкрий стежки під свій стан</div>
+          <div style={{ fontSize: 15, color: "#cfc4e6", fontWeight: 700 }}>{t(L, "qb.open_title")}</div>
           <div style={{ fontSize: 12.5, color: "#8a7fb0", marginTop: 5, lineHeight: 1.4 }}>
-            Введи, як ти зараз — і зʼявляться {QUESTS_PER_CHECKIN} підібрані квести.
+            {t(L, "qb.open_desc", { n: QUESTS_PER_CHECKIN })}
             {xpLeft > 0
-              ? ` XP приносять перші ${XP_WINDOW_CAP} квести за 3 години (лишилось ${xpLeft}).`
-              : " XP-ліміт вікна вичерпано — квести ще діють, але без XP до нового вікна."}
+              ? t(L, "qb.open_desc_xp", { cap: XP_WINDOW_CAP, left: xpLeft })
+              : t(L, "qb.open_desc_noxp")}
           </div>
           <div style={{ display: "inline-block", marginTop: 11, padding: "9px 18px", borderRadius: 11, fontSize: 14, fontWeight: 700, color: "#2a1d10", background: "linear-gradient(180deg,#e6cf9c,#cda874)", boxShadow: "0 0 0 2px #6a4a2c" }}>
-            ✦ Як ти зараз?
+            {t(L, "cta.how_are_you")}
           </div>
         </div>
       ) : (
         <div style={{ marginTop: 18, borderRadius: 15, padding: "16px", textAlign: "center", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: "0 0 0 2px #4a3a6e" }}>
           <div style={{ fontSize: 26, marginBottom: 5 }}>🌱</div>
-          <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>Спершу пройди активні стежки</div>
+          <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>{t(L, "qb.locked_title")}</div>
           <div style={{ fontSize: 12.5, color: "#a99fc8", marginTop: 4, lineHeight: 1.4 }}>
-            Новий настрій можна ввести, коли завершиш поточний набір ({activeQuests.length}).
+            {t(L, "qb.locked_desc", { n: activeQuests.length })}
           </div>
         </div>
       )}
@@ -131,14 +134,14 @@ export default function Questbook() {
       {/* DONE today */}
       {done.length > 0 && (
         <>
-          {label(`Виконано сьогодні · ${done.length}`)}
+          {label(t(L, "qb.done_today", { n: done.length }))}
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
             {done.map((d, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 11, borderRadius: 12, padding: "10px 13px", background: "linear-gradient(180deg,#2c2645,#241d3a)", boxShadow: "0 0 0 2px #3f6a2a" }}>
                 <div style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: "radial-gradient(circle,#7bbf5a,#3f6a2a)" }}>{d.icon}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, color: "#e8dcc4", fontWeight: 600, lineHeight: 1.1 }}>{d.title}</div>
-                  <div style={{ fontSize: 11, color: "#8a9f7a" }}>{d.time} · зроблено ✓</div>
+                  <div style={{ fontSize: 11, color: "#8a9f7a" }}>{t(L, "qb.done_mark", { time: d.time })}</div>
                 </div>
               </div>
             ))}
@@ -147,9 +150,9 @@ export default function Questbook() {
       )}
 
       <div style={{ textAlign: "center", fontSize: 11.5, color: "#6a5f88", marginTop: 22, fontStyle: "italic", lineHeight: 1.5 }}>
-        Кожен чек-ін відкриває {QUESTS_PER_CHECKIN} стежки під твій стан.
-        <br />
-        Один рух за раз. Дерево запамʼятає.
+        {t(L, "qb.footer", { n: QUESTS_PER_CHECKIN }).split("\n").map((ln, i) => (
+          <span key={i}>{i > 0 && <br />}{ln}</span>
+        ))}
       </div>
     </div>
   );
