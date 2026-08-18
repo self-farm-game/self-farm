@@ -152,6 +152,7 @@ const EN: Dict = {
   "reward.rune_open": "rune unlocked",
   "reward.rune_grow": "rune growing",
   "reward.rune_move": "Rune of Motion · {cur}/3",
+  "tab.questbook": "Quests",
 };
 
 const UK: Dict = {
@@ -254,6 +255,7 @@ const UK: Dict = {
   "reward.rune_open": "руна відкрилась",
   "reward.rune_grow": "руна росте",
   "reward.rune_move": "Руна Руху · {cur}/3",
+  "tab.questbook": "Квести",
 };
 
 const UK_RAW: Dict = { ...UK, "cabin.language_val": "\u0423\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0430 18+" };

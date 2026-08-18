@@ -186,53 +186,34 @@ textarea, input, button { font-family: inherit; }
   from { transform: translateX(0); }
   to   { transform: translateX(160vw); }
 }
-/* distant treeline silhouette + meadow ground */
-.sf-treeline {
-  position: absolute; left: 0; right: 0;
-  bottom: clamp(120px, 34%, 320px);
-  height: clamp(44px, 10vh, 90px);
-  background:
-    radial-gradient(closest-side, #3f7a3a 96%, transparent) 0 100%/34px 44px repeat-x,
-    radial-gradient(closest-side, #356b32 96%, transparent) 17px 100%/34px 38px repeat-x;
-  background-color: transparent;
-  opacity: .9;
-  -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent);
-  mask-image: linear-gradient(180deg, #000 60%, transparent);
-}
-.sf-meadow {
+/* static meadow image (stone circle + decor baked in) */
+.sf-plot {
   position: absolute; left: 0; right: 0; bottom: 0;
-  height: clamp(150px, 42%, 420px);
-  background:
-    radial-gradient(120% 80% at 50% 120%, #82c057 0%, #6fae46 40%, #5e9c3c 100%);
-  box-shadow: inset 0 6px 14px rgba(255,255,255,.12);
-  border-top-left-radius: 60% 26px; border-top-right-radius: 60% 26px;
+  height: clamp(230px, 62%, 640px);
+  display: flex; align-items: flex-end; justify-content: center;
 }
-/* generic decoration image */
-.sf-decor {
-  position: absolute; z-index: 4;
+.sf-plot-img {
+  width: min(112%, 640px); height: 100%;
+  object-fit: contain; object-position: bottom center;
   image-rendering: pixelated;
-  filter: drop-shadow(0 4px 4px rgba(0,0,0,.28));
-  pointer-events: none;
+  filter: drop-shadow(0 -2px 8px rgba(90,140,80,.12));
 }
-/* gentle wind sway for bushes/grass */
-.sf-sway { transform-origin: 50% 100%; animation: sf-sway 4.6s ease-in-out infinite; }
-@keyframes sf-sway { 0%,100% { transform: rotate(-1.4deg); } 50% { transform: rotate(1.4deg); } }
-@media (prefers-reduced-motion: reduce) { .sf-sway, .sf-drift { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sf-drift { animation: none; } }
 
-/* gnome sitting on the meadow with his speech bubble */
+/* gnome sits on the meadow with his speech bubble */
 .sf-gnome {
-  position: absolute; z-index: 8; left: 4%;
-  bottom: clamp(14px, 4vh, 40px);
-  display: flex; align-items: flex-end; gap: 8px; cursor: pointer; max-width: 74%;
+  position: absolute; z-index: 8; left: 3%;
+  bottom: 14%;
+  display: flex; align-items: flex-end; gap: 8px; cursor: pointer; max-width: 80%;
 }
 .sf-gnome > img {
-  width: clamp(56px, 12vh, 96px); height: auto; flex-shrink: 0; display: block;
+  width: clamp(52px, 11vh, 86px); height: auto; flex-shrink: 0; display: block;
   image-rendering: pixelated;
   filter: drop-shadow(0 4px 4px rgba(0,0,0,.4));
   animation: sf-float 6s ease-in-out infinite;
 }
 .sf-gnome-bubble {
-  flex: 1; min-width: 0; margin-bottom: 14px;
+  flex: 1; min-width: 0; margin-bottom: 18px;
   background: rgba(245, 241, 230, 0.92);
   border-radius: 13px; padding: 8px 12px 9px;
   box-shadow: 0 0 0 3px #241a32, 3px 5px 0 rgba(0,0,0,.28);
@@ -243,10 +224,13 @@ textarea, input, button { font-family: inherit; }
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .sf-garden-tree {
-  position: absolute; left: 0; right: 0;
-  top: clamp(118px, 20vh, 172px);
-  bottom: clamp(18px, 5vh, 48px);
+  /* anchored over the stone circle in plot.png (centre ~47% x, ~60% y) */
+  position: absolute; z-index: 6;
+  left: 50%; transform: translateX(-52%);
+  bottom: 30%;
+  width: 62%;
   display: flex; align-items: flex-end; justify-content: center;
+  pointer-events: none;
 }
 /* each stage occupies a share of the scene, so growth stays legible */
 .sf-tree-fit {
@@ -323,12 +307,11 @@ textarea, input, button { font-family: inherit; }
 
 /* short phones: trim the scene, clamp the line to 2 rows — never scroll */
 @media (max-height: 680px) {
-  .sf-garden-tree { top: clamp(132px, 24vh, 180px); }
+  .sf-plot { height: clamp(210px, 58%, 520px); }
   .sf-garden-bottom { padding: 9px 16px 10px; }
-  .sf-bombom-bubble p { -webkit-line-clamp: 2; font-size: 12px; }
+  .sf-gnome-bubble p { -webkit-line-clamp: 2; font-size: 12px; }
 }
 /* tablets + desktop: no mobile top bar, so the overlay starts higher */
 @media (min-width: 768px) {
   .sf-garden-top { padding-top: 16px; }
-  .sf-garden-tree { top: clamp(96px, 17vh, 150px); }
 }

@@ -166,3 +166,15 @@ Rebuilt the home scene as stacked layers (bottom → top):
 5. Tree in the centre; `.sf-gnome` (extracted gnome sprite) sits lower-left with
    his speech bubble, matching the reference — replaces the old corner Бомбом.
 Assets in `public/assets/sprites/garden/`. Respects prefers-reduced-motion.
+
+### Garden scene v5 — single baked meadow image
+User supplied clean textures, so the scene is simpler and correct:
+- `plot.png` is the whole static meadow (stone circle, path, side bushes, rocks,
+  flowers all baked in) — one `.sf-plot-img` anchored to the bottom. No more
+  scattered/floating decor sprites.
+- `cloud-1..5.png` drift across the sky (`sf-cloud-drift`).
+- Tree is absolutely positioned over the stone circle (~50% x, 30% from bottom);
+  `BomBom.png` sits lower-left on the grass with his bubble.
+Also fixed: nav showed literal `tab.questbook` — added that key (NAV id is
+`questbook`, not `quests`).
+

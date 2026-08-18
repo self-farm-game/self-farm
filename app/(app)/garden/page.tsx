@@ -154,7 +154,7 @@ export default function Garden() {
         <div className="sf-stage">
           {/* sky gradient */}
           <div className="sf-garden-sky" />
-          {/* drifting clouds (5 variations, random-ish tracks) */}
+          {/* drifting clouds (5 variations, staggered tracks) */}
           <div className="sf-clouds" aria-hidden>
             {CLOUDS.map((c, i) => (
               // eslint-disable-next-line @next/next/no-img-element
@@ -168,46 +168,34 @@ export default function Garden() {
             ))}
           </div>
           <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-            <Stars n={8} seed={11} area={45} />
+            <Stars n={8} seed={11} area={42} />
           </div>
 
-          {/* distant treeline + meadow ground */}
-          <div className="sf-meadow" />
-          <div className="sf-treeline" />
-
-          {/* side decorations (gently sway) */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/sprites/garden/bush-1.png" alt="" className="sf-decor sf-sway" style={{ left: "-2%", bottom: "8%", width: "34%", animationDelay: "0s" }} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/sprites/garden/bush-2.png" alt="" className="sf-decor sf-sway" style={{ right: "-3%", bottom: "10%", width: "36%", animationDelay: ".8s" }} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/sprites/garden/bush-3.png" alt="" className="sf-decor sf-sway" style={{ right: "6%", bottom: "2%", width: "20%", animationDelay: "1.4s" }} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/sprites/garden/grass-1.png" alt="" className="sf-decor sf-sway" style={{ left: "20%", bottom: "1%", width: "13%", animationDelay: ".4s" }} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/sprites/garden/rock-1.png" alt="" className="sf-decor" style={{ left: "4%", bottom: "1%", width: "16%" }} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/sprites/garden/flower-1.png" alt="" className="sf-decor sf-sway" style={{ right: "24%", bottom: "3%", width: "7%", animationDelay: "1.1s" }} />
-
-          {/* the tree, standing on the meadow */}
-          <div className="sf-garden-tree">
-            <div className="sf-tree-fit" style={{ height: fit }}>
-              <div className="sf-garden-shadow" />
-              <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
-            </div>
-          </div>
-
-          {/* Бомбом sits on the meadow (like the reference) */}
-          <div
-            className="sf-gnome"
-            onClick={() => { nextBombom(); play("tap"); }}
-            title="тицьни, щоб почути ще"
-          >
+          {/* static meadow with the stone circle (all decor baked in) */}
+          <div className="sf-plot">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/sprites/garden/gnome.png" alt="БомБом" />
-            <div className="sf-gnome-bubble">
-              <div className="sf-bombom-name">{t(L, "bombom.tap")}</div>
-              <p>{line}</p>
+            <img src="/assets/sprites/garden/plot.png" alt="" className="sf-plot-img" />
+
+            {/* the tree, planted on the stone circle */}
+            <div className="sf-garden-tree">
+              <div className="sf-tree-fit" style={{ height: fit }}>
+                <div className="sf-garden-shadow" />
+                <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
+              </div>
+            </div>
+
+            {/* Бомбом sits on the meadow (like the reference) */}
+            <div
+              className="sf-gnome"
+              onClick={() => { nextBombom(); play("tap"); }}
+              title="тицьни, щоб почути ще"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/assets/sprites/garden/BomBom.png" alt="БомБом" />
+              <div className="sf-gnome-bubble">
+                <div className="sf-bombom-name">{t(L, "bombom.tap")}</div>
+                <p>{line}</p>
+              </div>
             </div>
           </div>
 
