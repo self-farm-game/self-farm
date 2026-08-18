@@ -173,9 +173,6 @@ export default function Garden() {
 
           {/* static meadow with the stone circle (all decor baked in) */}
           <div className="sf-plot">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/sprites/garden/plot.png" alt="" className="sf-plot-img" />
-
             {/* the tree, planted on the stone circle */}
             <div className="sf-garden-tree">
               <div className="sf-tree-fit" style={{ height: fit }}>

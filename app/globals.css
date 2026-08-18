@@ -131,10 +131,15 @@ textarea, input, button { font-family: inherit; }
 
 /* ===== desktop (landscape window with sidebar) ===== */
 @media (min-width: 768px) {
+  /* Fixed landscape window with a locked 3:2 aspect. It scales as a whole
+     (uniformly) to fit the viewport, so it never reshapes fluidly per-axis. */
   .sf-frame {
-    width: min(1080px, 94vw);
-    height: min(720px, 92vh);
-    max-height: 92vh;
+    /* one controlling size → aspect-ratio derives the other axis, so the whole
+       window scales uniformly and never reshapes fluidly */
+    width: min(1080px, 96vw, 144vh);
+    height: auto;
+    aspect-ratio: 3 / 2;
+    max-height: none;
     border-radius: 28px;
   }
   .sf-inner { border-radius: 20px; }
@@ -189,21 +194,22 @@ textarea, input, button { font-family: inherit; }
 /* static meadow image (stone circle + decor baked in) */
 .sf-plot {
   position: absolute; left: 0; right: 0; bottom: 0;
-  height: clamp(230px, 62%, 640px);
-  display: flex; align-items: flex-end; justify-content: center;
-}
-.sf-plot-img {
-  width: min(112%, 640px); height: 100%;
-  object-fit: contain; object-position: bottom center;
+  /* meadow fills the lower part of the scene edge-to-edge (cover) */
+  height: clamp(300px, 78%, 820px);
+  background-image: url("/assets/sprites/garden/plot.png");
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: cover;         /* fill the whole width, crop top/sides as needed */
   image-rendering: pixelated;
-  filter: drop-shadow(0 -2px 8px rgba(90,140,80,.12));
 }
+/* the <img> is no longer used for the plot; keep the class harmless if present */
+.sf-plot-img { display: none; }
 @media (prefers-reduced-motion: reduce) { .sf-drift { animation: none; } }
 
 /* gnome sits on the meadow with his speech bubble */
 .sf-gnome {
   position: absolute; z-index: 8; left: 3%;
-  bottom: 14%;
+  bottom: 16%;
   display: flex; align-items: flex-end; gap: 8px; cursor: pointer; max-width: 80%;
 }
 .sf-gnome > img {
@@ -224,11 +230,12 @@ textarea, input, button { font-family: inherit; }
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .sf-garden-tree {
-  /* anchored over the stone circle in plot.png (centre ~47% x, ~60% y) */
+  /* sits on the stone circle: the plot image is bottom-anchored width:100%, and
+     the circle centre is ~ (49% x, 38% up) of that image */
   position: absolute; z-index: 6;
-  left: 50%; transform: translateX(-52%);
+  left: 49%; transform: translateX(-50%);
   bottom: 30%;
-  width: 62%;
+  width: min(46%, 300px);
   display: flex; align-items: flex-end; justify-content: center;
   pointer-events: none;
 }

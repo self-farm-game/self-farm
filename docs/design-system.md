@@ -178,3 +178,13 @@ User supplied clean textures, so the scene is simpler and correct:
 Also fixed: nav showed literal `tab.questbook` — added that key (NAV id is
 `questbook`, not `quests`).
 
+### Garden scene v6 — plot fills the window; frame locked to orientation
+- `.sf-plot` now paints `plot.png` as a `background-size: cover` layer filling the
+  lower scene edge-to-edge (no blue gutters). The `<img>` was removed.
+- Tree/gnome positioned as % of `.sf-plot` over the (centered) stone circle;
+  tunable via `.sf-garden-tree { left/bottom/width }` and `.sf-gnome { left/bottom }`.
+- Desktop `.sf-frame` locked to a fixed **3:2 landscape** via `aspect-ratio` and a
+  single controlling width `min(1080px,96vw,144vh)` → it scales uniformly (whole
+  window), never reshaping fluidly per-axis. Below 768px it's the portrait phone
+  frame (100vw×100vh). So the window is portrait OR landscape, not a smooth morph.
+
