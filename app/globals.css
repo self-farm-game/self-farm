@@ -172,27 +172,80 @@ textarea, input, button { font-family: inherit; }
 .sf-stage { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
 .sf-garden-sky {
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, #6fb3e0 0%, #8fc7ea 34%, #b8e0f2 58%, #d9eef8 72%);
+  background: linear-gradient(180deg, #5aa6dc 0%, #74b8e6 30%, #9ed3f0 52%, #c3e6f6 66%, #cdeafc 74%);
 }
-.sf-cloud { position: absolute; border-radius: 8px; pointer-events: none; }
-.sf-cloud-a {
-  top: 12%; left: 9%; width: 64px; height: 16px; background: #f4fbff; opacity: .92;
-  box-shadow: 12px -8px 0 0 #f4fbff, 30px 0 0 0 #f4fbff;
+/* drifting clouds */
+.sf-clouds { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.sf-drift {
+  position: absolute; left: -30%;
+  image-rendering: pixelated;
+  animation-name: sf-cloud-drift; animation-timing-function: linear; animation-iteration-count: infinite;
+  filter: drop-shadow(0 3px 4px rgba(80,110,150,.18));
 }
-.sf-cloud-b {
-  top: 24%; right: 11%; width: 50px; height: 14px; background: #eaf6ff; opacity: .85;
-  box-shadow: 20px 0 0 0 #eaf6ff;
+@keyframes sf-cloud-drift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(160vw); }
 }
-.sf-garden-grass {
+/* distant treeline silhouette + meadow ground */
+.sf-treeline {
+  position: absolute; left: 0; right: 0;
+  bottom: clamp(120px, 34%, 320px);
+  height: clamp(44px, 10vh, 90px);
+  background:
+    radial-gradient(closest-side, #3f7a3a 96%, transparent) 0 100%/34px 44px repeat-x,
+    radial-gradient(closest-side, #356b32 96%, transparent) 17px 100%/34px 38px repeat-x;
+  background-color: transparent;
+  opacity: .9;
+  -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent);
+  mask-image: linear-gradient(180deg, #000 60%, transparent);
+}
+.sf-meadow {
   position: absolute; left: 0; right: 0; bottom: 0;
-  height: clamp(16px, 3vh, 26px);
-  background: #6fae46;
-  box-shadow: inset 0 3px 0 rgba(255,255,255,.18), inset 0 -2px 0 rgba(0,0,0,.25);
+  height: clamp(150px, 42%, 420px);
+  background:
+    radial-gradient(120% 80% at 50% 120%, #82c057 0%, #6fae46 40%, #5e9c3c 100%);
+  box-shadow: inset 0 6px 14px rgba(255,255,255,.12);
+  border-top-left-radius: 60% 26px; border-top-right-radius: 60% 26px;
+}
+/* generic decoration image */
+.sf-decor {
+  position: absolute; z-index: 4;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,.28));
+  pointer-events: none;
+}
+/* gentle wind sway for bushes/grass */
+.sf-sway { transform-origin: 50% 100%; animation: sf-sway 4.6s ease-in-out infinite; }
+@keyframes sf-sway { 0%,100% { transform: rotate(-1.4deg); } 50% { transform: rotate(1.4deg); } }
+@media (prefers-reduced-motion: reduce) { .sf-sway, .sf-drift { animation: none; } }
+
+/* gnome sitting on the meadow with his speech bubble */
+.sf-gnome {
+  position: absolute; z-index: 8; left: 4%;
+  bottom: clamp(14px, 4vh, 40px);
+  display: flex; align-items: flex-end; gap: 8px; cursor: pointer; max-width: 74%;
+}
+.sf-gnome > img {
+  width: clamp(56px, 12vh, 96px); height: auto; flex-shrink: 0; display: block;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,.4));
+  animation: sf-float 6s ease-in-out infinite;
+}
+.sf-gnome-bubble {
+  flex: 1; min-width: 0; margin-bottom: 14px;
+  background: rgba(245, 241, 230, 0.92);
+  border-radius: 13px; padding: 8px 12px 9px;
+  box-shadow: 0 0 0 3px #241a32, 3px 5px 0 rgba(0,0,0,.28);
+}
+.sf-gnome-bubble .sf-bombom-name { color: #6a5f88; }
+.sf-gnome-bubble p {
+  margin: 0; font-size: 12.5px; line-height: 1.4; color: #2b2230;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .sf-garden-tree {
   position: absolute; left: 0; right: 0;
-  top: clamp(118px, 20vh, 172px);   /* below the level bar */
-  bottom: clamp(4px, 1vh, 10px);    /* on the grass */
+  top: clamp(118px, 20vh, 172px);
+  bottom: clamp(18px, 5vh, 48px);
   display: flex; align-items: flex-end; justify-content: center;
 }
 /* each stage occupies a share of the scene, so growth stays legible */

@@ -153,3 +153,16 @@ frame to its LARGEST connected opaque component before scaling (drops any detach
 debris), then hard-clipping alpha <=8 after the final resize. Canopies stay whole
 because they're one connected mass.
 
+
+## Garden scene v4 — layered decorations + drifting clouds + gnome on meadow
+Rebuilt the home scene as stacked layers (bottom → top):
+1. `.sf-garden-sky` — pure gradient (no more CSS box clouds).
+2. `.sf-clouds` — 5 cloud sprites (`cloud-1..5.png`, sliced from the atlas) drift
+   left→right on staggered `sf-cloud-drift` tracks (varied top/width/speed/opacity
+   from the `CLOUDS` array).
+3. `.sf-treeline` + `.sf-meadow` — distant conifer silhouette and the green ground.
+4. `.sf-decor` bushes/grass/rock/flowers (from the atlas) pinned along the sides;
+   leafy ones get `.sf-sway` (gentle wind rotation).
+5. Tree in the centre; `.sf-gnome` (extracted gnome sprite) sits lower-left with
+   his speech bubble, matching the reference — replaces the old corner Бомбом.
+Assets in `public/assets/sprites/garden/`. Respects prefers-reduced-motion.

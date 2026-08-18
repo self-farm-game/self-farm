@@ -38,6 +38,15 @@ const parchCard =
 const parchShadow =
   "inset 0 2px 0 rgba(255,245,220,.55), inset 0 -5px 0 rgba(120,86,48,.5), 0 0 0 3px #6a4a2c, 0 0 0 5px #2a1a0e, 0 5px 0 rgba(0,0,0,.3)";
 
+// 5 cloud sprites drifting across the sky on slightly random tracks
+const CLOUDS = [
+  { v: 1, top: 8, w: 120, dur: 66, delay: 0, op: 0.95 },
+  { v: 2, top: 16, w: 90, dur: 84, delay: -30, op: 0.85 },
+  { v: 3, top: 24, w: 140, dur: 58, delay: -50, op: 0.9 },
+  { v: 4, top: 12, w: 80, dur: 92, delay: -12, op: 0.8 },
+  { v: 5, top: 30, w: 70, dur: 74, delay: -66, op: 0.8 },
+];
+
 export default function Garden() {
   const { state, recordSession, nextBombom, dailyLeft, dailyDone, openCheckin, canCheckin, xpLeft } = useGame();
   const router = useRouter();
@@ -143,15 +152,44 @@ export default function Garden() {
       <div className="sf-screen sf-garden">
         {/* ---- the scene: takes whatever height the UI leaves ---- */}
         <div className="sf-stage">
+          {/* sky gradient */}
           <div className="sf-garden-sky" />
-          <div className="sf-cloud sf-cloud-a" />
-          <div className="sf-cloud sf-cloud-b" />
-          <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-            <Stars n={10} seed={11} area={50} />
+          {/* drifting clouds (5 variations, random-ish tracks) */}
+          <div className="sf-clouds" aria-hidden>
+            {CLOUDS.map((c, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={`/assets/sprites/garden/cloud-${c.v}.png`}
+                alt=""
+                className="sf-drift"
+                style={{ top: `${c.top}%`, width: `${c.w}px`, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, opacity: c.op }}
+              />
+            ))}
           </div>
-          <div className="sf-garden-grass" />
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+            <Stars n={8} seed={11} area={45} />
+          </div>
 
-          {/* the tree, standing on the grass line */}
+          {/* distant treeline + meadow ground */}
+          <div className="sf-meadow" />
+          <div className="sf-treeline" />
+
+          {/* side decorations (gently sway) */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assets/sprites/garden/bush-1.png" alt="" className="sf-decor sf-sway" style={{ left: "-2%", bottom: "8%", width: "34%", animationDelay: "0s" }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assets/sprites/garden/bush-2.png" alt="" className="sf-decor sf-sway" style={{ right: "-3%", bottom: "10%", width: "36%", animationDelay: ".8s" }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assets/sprites/garden/bush-3.png" alt="" className="sf-decor sf-sway" style={{ right: "6%", bottom: "2%", width: "20%", animationDelay: "1.4s" }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assets/sprites/garden/grass-1.png" alt="" className="sf-decor sf-sway" style={{ left: "20%", bottom: "1%", width: "13%", animationDelay: ".4s" }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assets/sprites/garden/rock-1.png" alt="" className="sf-decor" style={{ left: "4%", bottom: "1%", width: "16%" }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assets/sprites/garden/flower-1.png" alt="" className="sf-decor sf-sway" style={{ right: "24%", bottom: "3%", width: "7%", animationDelay: "1.1s" }} />
+
+          {/* the tree, standing on the meadow */}
           <div className="sf-garden-tree">
             <div className="sf-tree-fit" style={{ height: fit }}>
               <div className="sf-garden-shadow" />
@@ -159,7 +197,21 @@ export default function Garden() {
             </div>
           </div>
 
-          {/* ---- top overlay: Бомбом, inventory, level bar ---- */}
+          {/* Бомбом sits on the meadow (like the reference) */}
+          <div
+            className="sf-gnome"
+            onClick={() => { nextBombom(); play("tap"); }}
+            title="тицьни, щоб почути ще"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/assets/sprites/garden/gnome.png" alt="БомБом" />
+            <div className="sf-gnome-bubble">
+              <div className="sf-bombom-name">{t(L, "bombom.tap")}</div>
+              <p>{line}</p>
+            </div>
+          </div>
+
+          {/* ---- top overlay: level bar + inventory ---- */}
           <div className="sf-garden-top">
             <div className="sf-xp-panel">
               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 7 }}>
@@ -174,23 +226,7 @@ export default function Garden() {
               <HeartBar pct={Math.round(lvl.pct * 100) + "%"} />
             </div>
 
-            <div className="sf-top-row">
-              <div
-                className="sf-bombom-corner"
-                onClick={() => {
-                  nextBombom();
-                  play("tap");
-                }}
-                title="тицьни, щоб почути ще"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/assets/sprites/bombom.png" alt="БомБом" />
-                <div className="sf-bombom-bubble">
-                  <div className="sf-bombom-name">{t(L, "bombom.tap")}</div>
-                  <p>{line}</p>
-                </div>
-              </div>
-
+            <div className="sf-top-row" style={{ justifyContent: "flex-end" }}>
               <div className="sf-inv-btn" onClick={() => go("inventory")}>
                 <span style={{ fontSize: 22, lineHeight: 1 }}>🎒</span>
                 <span style={{ fontSize: 8.5, letterSpacing: 0.5, color: "#e7c389", fontWeight: 700 }}>{t(L, "garden.finds")}</span>
