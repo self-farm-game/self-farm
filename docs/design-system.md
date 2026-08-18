@@ -188,3 +188,13 @@ Also fixed: nav showed literal `tab.questbook` — added that key (NAV id is
   window), never reshaping fluidly per-axis. Below 768px it's the portrait phone
   frame (100vw×100vh). So the window is portrait OR landscape, not a smooth morph.
 
+
+### Garden scene v7 — tree planted in the circle, no floating island
+- Cropped the soil/grass platform off each tree sprite (`stage-1..10.png`), so
+  the trunk plants directly into the stone circle's dirt instead of sitting on
+  its own grassy disc ("stump island"). Hollow map y-values shifted down to match
+  the shorter frames.
+- `.sf-plot` background now `130% auto` at `center 118%` so the meadow grass
+  reaches both sides and the rounded island bottom edge (and sky beneath it) is
+  pushed below the visible area.
+- Tree `bottom: 34%`, `width: min(40%,260px)` — sits in the circle. Tunable.

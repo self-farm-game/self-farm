@@ -9,12 +9,12 @@ import { t } from "@/lib/mock-data/i18n";
 // since the trunk shifts a little as the tree grows.
 const HOLLOW_FROM_STAGE = 5;
 const HOLLOW_BY_STAGE: Record<number, { x: number; y: number }> = {
-  5: { x: 0.42, y: 0.68 },
-  6: { x: 0.44, y: 0.70 },
-  7: { x: 0.42, y: 0.66 },
-  8: { x: 0.42, y: 0.66 },
-  9: { x: 0.42, y: 0.66 },
-  10: { x: 0.42, y: 0.66 },
+  5: { x: 0.42, y: 0.74 },
+  6: { x: 0.44, y: 0.76 },
+  7: { x: 0.42, y: 0.72 },
+  8: { x: 0.42, y: 0.72 },
+  9: { x: 0.42, y: 0.72 },
+  10: { x: 0.42, y: 0.72 },
 };
 
 export default function TreeStages({ stage, pct = 0 }: { stage: number; pct?: number }) {

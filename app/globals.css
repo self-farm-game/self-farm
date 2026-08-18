@@ -194,12 +194,12 @@ textarea, input, button { font-family: inherit; }
 /* static meadow image (stone circle + decor baked in) */
 .sf-plot {
   position: absolute; left: 0; right: 0; bottom: 0;
-  /* meadow fills the lower part of the scene edge-to-edge (cover) */
-  height: clamp(300px, 78%, 820px);
+  /* meadow fills the lower part of the scene edge-to-edge */
+  height: clamp(320px, 82%, 860px);
   background-image: url("/assets/sprites/garden/plot.png");
   background-repeat: no-repeat;
-  background-position: center bottom;
-  background-size: cover;         /* fill the whole width, crop top/sides as needed */
+  background-position: center 118%;  /* push the rounded island edge below view */
+  background-size: 130% auto;        /* overscale so grass reaches both sides */
   image-rendering: pixelated;
 }
 /* the <img> is no longer used for the plot; keep the class harmless if present */
@@ -230,12 +230,11 @@ textarea, input, button { font-family: inherit; }
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .sf-garden-tree {
-  /* sits on the stone circle: the plot image is bottom-anchored width:100%, and
-     the circle centre is ~ (49% x, 38% up) of that image */
+  /* trunk base plants into the dirt inside the stone circle (~49% x) */
   position: absolute; z-index: 6;
   left: 49%; transform: translateX(-50%);
-  bottom: 30%;
-  width: min(46%, 300px);
+  bottom: 34%;
+  width: min(40%, 260px);
   display: flex; align-items: flex-end; justify-content: center;
   pointer-events: none;
 }
