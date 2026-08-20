@@ -193,27 +193,31 @@ textarea, input, button { font-family: inherit; }
 }
 /* static meadow image (stone circle + decor baked in) */
 .sf-plot {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  /* meadow fills the lower part of the scene edge-to-edge */
-  height: clamp(320px, 82%, 860px);
-  background-image: url("/assets/sprites/garden/plot.png");
-  background-repeat: no-repeat;
-  background-position: center 118%;  /* push the rounded island edge below view */
-  background-size: 130% auto;        /* overscale so grass reaches both sides */
-  image-rendering: pixelated;
+  position: absolute; left: 0; right: 0; bottom: 0; top: 0;
+  overflow: hidden;
 }
-/* the <img> is no longer used for the plot; keep the class harmless if present */
-.sf-plot-img { display: none; }
+/* solid meadow ground catches any gap at the sides/bottom of the island */
+.sf-plot::before {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0;
+  height: 34%;
+  background: linear-gradient(180deg, #74971f 0%, #688818 45%, #587414 100%);
+}
+/* the meadow image fills the full width, bottom-anchored; sky shows above it */
+.sf-plot-img {
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: 112%; height: auto; max-width: none;
+  image-rendering: pixelated; display: block;
+}
 @media (prefers-reduced-motion: reduce) { .sf-drift { animation: none; } }
 
 /* gnome sits on the meadow with his speech bubble */
 .sf-gnome {
-  position: absolute; z-index: 8; left: 3%;
-  bottom: 16%;
-  display: flex; align-items: flex-end; gap: 8px; cursor: pointer; max-width: 80%;
+  position: absolute; z-index: 8; left: 4%;
+  bottom: 15%;
+  display: flex; align-items: flex-end; gap: 8px; cursor: pointer; max-width: 78%;
 }
 .sf-gnome > img {
-  width: clamp(52px, 11vh, 86px); height: auto; flex-shrink: 0; display: block;
+  width: clamp(50px, 14%, 84px); height: auto; flex-shrink: 0; display: block;
   image-rendering: pixelated;
   filter: drop-shadow(0 4px 4px rgba(0,0,0,.4));
   animation: sf-float 6s ease-in-out infinite;
@@ -230,11 +234,11 @@ textarea, input, button { font-family: inherit; }
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .sf-garden-tree {
-  /* trunk base plants into the dirt inside the stone circle (~49% x) */
+  /* trunk base plants into the dirt inside the stone circle */
   position: absolute; z-index: 6;
-  left: 49%; transform: translateX(-50%);
-  bottom: 34%;
-  width: min(40%, 260px);
+  left: 47%; transform: translateX(-50%);
+  bottom: 27%;
+  width: 22%;
   display: flex; align-items: flex-end; justify-content: center;
   pointer-events: none;
 }
@@ -320,4 +324,9 @@ textarea, input, button { font-family: inherit; }
 /* tablets + desktop: no mobile top bar, so the overlay starts higher */
 @media (min-width: 768px) {
   .sf-garden-top { padding-top: 16px; }
+  /* landscape scene: plot fills width, tree a bit smaller + higher in the circle */
+  .sf-plot-img { width: 100%; }
+  .sf-garden-tree { left: 48%; bottom: 42%; width: 15%; }
+  .sf-gnome { left: 16%; bottom: 23%; }
+  .sf-gnome > img { width: clamp(60px, 8%, 92px); }
 }

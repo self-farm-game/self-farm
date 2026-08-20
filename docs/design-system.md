@@ -198,3 +198,15 @@ Also fixed: nav showed literal `tab.questbook` — added that key (NAV id is
   reaches both sides and the rounded island bottom edge (and sky beneath it) is
   pushed below the visible area.
 - Tree `bottom: 34%`, `width: min(40%,260px)` — sits in the circle. Tunable.
+
+### Garden scene v8 — tuned with a headless render harness
+Instead of guessing CSS, rendered the scene in headless Chromium (Playwright) at
+both desktop 3:2 and portrait sizes and iterated until it matched the reference.
+Final layout: `.sf-plot` holds a bottom ground band (`::before`, plot's own grass
+tones so no seam) + `plot.png` bottom-anchored filling the width; sky gradient
+shows above the meadow's top edge (natural horizon, like the reference). Tree and
+gnome placed as % over the stone circle, with separate portrait defaults and
+desktop (`min-width:768px`) overrides:
+- portrait: plot 112%, tree bottom 27% / width 22%, gnome 4%/15%.
+- desktop: plot 100%, tree bottom 42% / width 15%, gnome 16%/23%.
+
