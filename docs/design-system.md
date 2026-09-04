@@ -330,3 +330,12 @@ desktop width-fill) → one `.sf-garden-tree` (grows via scale) → one `.sf-gno
 Desktop tree at left 51% / bottom 30% sits on the circle (stage height is fixed by
 the uniform-scale window, so a fixed % is stable). No bgbox, no per-format tree.
 
+### Garden scene v20 — THE double-meadow bug (finally found)
+Both bg images were rendering at once. Cause: `.sf-plot-img { display:block }` and
+`.sf-only-desktop { display:none }` have EQUAL specificity (1 class each), and the
+plot-img rule came later in the file → it won → the hide was ignored → BOTH the
+mobile bg (tall, circle low) and desktop bg (wide, circle high) showed, stacked =
+two meadows / two circles. Fixed with 2-class selectors `.sf-plot-img.sf-only-*`
+(higher specificity) placed after the base rule, so exactly ONE bg shows per format.
+Verified: single meadow, single circle, one tree, one gnome.
+

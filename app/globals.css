@@ -183,15 +183,6 @@ textarea, input, button { font-family: inherit; }
   from { transform: translateX(0); }
   to   { transform: translateX(160vw); }
 }
-/* static meadow image (stone circle + decor baked in) */
-/* per-orientation texture visibility */
-.sf-only-desktop { display: none; }
-.sf-only-mobile { display: block; }
-@media (min-width: 768px) {
-  .sf-only-desktop { display: block; }
-  .sf-only-mobile { display: none; }
-}
-
 /* ===== GARDEN SCENE — the meadow box keeps the bg's exact aspect (like the
    sandbox device), so nothing distorts and tree/gnome %s stay locked ===== */
 /* MOBILE bg is ~9:19 (853x1807). The box fills the stage height, centred. */
@@ -202,7 +193,14 @@ textarea, input, button { font-family: inherit; }
   /* fill the FULL stage width, anchored to the bottom; crop the top under the
      level bar. No side gaps — the meadow spans edge-to-edge. */
   object-fit: cover; object-position: 50% 100%;
-  image-rendering: pixelated; display: block;
+  image-rendering: pixelated;
+}
+/* show exactly ONE background per format (2-class selectors beat .sf-plot-img) */
+.sf-plot-img.sf-only-mobile { display: block; }
+.sf-plot-img.sf-only-desktop { display: none; }
+@media (min-width: 768px) {
+  .sf-plot-img.sf-only-mobile { display: none; }
+  .sf-plot-img.sf-only-desktop { display: block; }
 }
 @media (prefers-reduced-motion: reduce) { .sf-drift { animation: none; } }
 
