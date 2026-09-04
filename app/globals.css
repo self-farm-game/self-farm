@@ -195,16 +195,13 @@ textarea, input, button { font-family: inherit; }
 /* ===== GARDEN SCENE — the meadow box keeps the bg's exact aspect (like the
    sandbox device), so nothing distorts and tree/gnome %s stay locked ===== */
 /* MOBILE bg is ~9:19 (853x1807). The box fills the stage height, centred. */
-.sf-plot {
-  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
-  height: 100%; width: auto;
-  aspect-ratio: 853 / 1807;   /* mobile bg aspect → fills the fixed-width frame */
-  overflow: visible;
-}
+.sf-plot { position: absolute; inset: 0; overflow: hidden; }
 .sf-plot-img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  object-fit: fill;           /* box matches aspect → no distortion */
+  /* fill the FULL stage width, anchored to the bottom; crop the top under the
+     level bar. No side gaps — the meadow spans edge-to-edge. */
+  object-fit: cover; object-position: 50% 100%;
   image-rendering: pixelated; display: block;
 }
 @media (prefers-reduced-motion: reduce) { .sf-drift { animation: none; } }
@@ -213,7 +210,7 @@ textarea, input, button { font-family: inherit; }
 .sf-gnome {
   position: absolute; z-index: 8; left: 12%;
   bottom: 34%;
-  display: flex; align-items: flex-end; gap: 8px; cursor: pointer; max-width: 74%;
+  display: flex; align-items: flex-end; gap: 8px; cursor: pointer; max-width: 60%;
   transform: translateX(-50%);
 }
 .sf-gnome > img {
@@ -322,17 +319,12 @@ textarea, input, button { font-family: inherit; }
 /* tablets + desktop: no mobile top bar, so the overlay starts higher */
 @media (min-width: 768px) {
   .sf-garden-top { padding-top: 16px; }
-  /* desktop bg is exactly 3:2 (1536x1024). The meadow box keeps that aspect and
-     fits INSIDE the stage (letterboxing with sky if the stage is wider), centred
-     on the bottom — so the composition never distorts and stays static. */
-  .sf-plot {
-    aspect-ratio: 3 / 2;
-    width: 100%; height: auto;
-    max-height: none;          /* fill the stage width; top goes under the level bar */
-    left: 50%; bottom: 0; transform: translateX(-50%);
-  }
-  /* tree + gnome as % of the meadow box (matches the sandbox) */
-  .sf-garden-tree { left: 51%; bottom: 31%; width: 18%; }
-  .sf-gnome { left: 17%; bottom: 33%; }
-  .sf-gnome > img { width: clamp(56px, 8%, 88px); }
+  /* desktop bg fills the FULL stage width, anchored bottom (no side gaps).
+     Its 3:2 shape means the top is cropped under the level bar. */
+  .sf-plot { position: absolute; inset: 0; left: 0; right: 0; transform: none; }
+  .sf-plot-img { object-fit: cover; object-position: 50% 100%; }
+  /* tree + gnome as % of the full stage */
+  .sf-garden-tree { left: 50%; bottom: 30%; width: 15%; }
+  .sf-gnome { left: 11%; bottom: 30%; }
+  .sf-gnome > img { width: clamp(56px, 7%, 84px); }
 }

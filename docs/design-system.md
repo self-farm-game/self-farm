@@ -276,3 +276,13 @@ known fixed width); mobile = 9:19 box filling the fixed 390-wide frame edge-to-e
 (fixes the "звужено" side gaps). Verified in DOM replicas at tall/wide/phone
 viewports: identical composition, only scale differs.
 
+### Garden scene v14 — bg fills full stage width (no side gaps), gnome visible
+Dropped the centred aspect-box approach (it left side gaps and pushed the gnome
+off-screen). Now `.sf-plot` spans the FULL stage (`inset:0`) on both formats and the
+bg is `object-fit: cover; object-position: 50% 100%` — edge-to-edge, anchored bottom,
+top cropped under the level bar. Tree/gnome are % of the full stage, verified in the
+real fixed-frame structure (1200×800 desktop w/ 236px sidebar; 390×844 mobile):
+- desktop: tree left 50% / bottom 30% / width 15%; gnome left 11% / bottom 30%.
+- mobile: tree left 49% / bottom 25% / width 26%; gnome left 12% / bottom 34%.
+Gnome now sits fully visible under the left tree; mobile meadow fills the whole width.
+
