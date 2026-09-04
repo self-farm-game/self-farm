@@ -239,3 +239,14 @@ mobile). Bumped from 5 to 8 clouds (reusing the 5 sprites) with evenly-spread
 negative delays so the tall narrow portrait sky always has clouds in view rather
 than looking sparse. Verified motion via multi-frame headless capture.
 
+### Garden scene v11 — FIX: cover-fit so the scene stays static
+Bug on live (not sandbox): the bg used width:112% + height:auto, but the game's
+.sf-stage is (frame − 236px sidebar) × height — a different, variable aspect than
+the 1000×667 sandbox device. The tall bg overflowed and showed a mismatched crop
+(double circle, scattered objects). Fixed by rendering the bg with
+`object-fit: cover; object-position: 50% 100%` filling the stage — the composition
+stays STATIC and undistorted at any window size, only cropping edges, and swaps to
+the mobile bg below 768px. Removed leftover `.sf-plot{height:clamp}` override, the
+duplicate `.sf-plot-img` block, and the unused `.sf-decor-frame`. Verified in a DOM
+replica (frame+sidebar+stage) across narrow/wide desktop and phone widths.
+

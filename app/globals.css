@@ -204,15 +204,10 @@ textarea, input, button { font-family: inherit; }
 /* meadow texture (with stone circle baked in), bottom-anchored, fills width */
 .sf-plot { position: absolute; left: 0; right: 0; bottom: 0; top: 0; overflow: hidden; }
 .sf-plot-img {
-  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
-  width: 112%; height: auto; max-width: none;
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 100%;  /* fill stage, crop edges, keep bottom */
   image-rendering: pixelated; display: block;
-}
-/* decor frame (bushes/lantern in the corners), overlaid on top */
-.sf-decor-frame {
-  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
-  width: 112%; height: auto; max-width: none; z-index: 7;
-  image-rendering: pixelated; display: block; pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) { .sf-drift { animation: none; } }
 
@@ -323,7 +318,6 @@ textarea, input, button { font-family: inherit; }
 
 /* short phones: trim the scene, clamp the line to 2 rows — never scroll */
 @media (max-height: 680px) {
-  .sf-plot { height: clamp(210px, 58%, 520px); }
   .sf-garden-bottom { padding: 9px 16px 10px; }
   .sf-gnome-bubble p { -webkit-line-clamp: 2; font-size: 12px; }
 }
@@ -331,8 +325,7 @@ textarea, input, button { font-family: inherit; }
 @media (min-width: 768px) {
   .sf-garden-top { padding-top: 16px; }
   /* landscape scene: meadow + decor fill the width; tree sits in the circle */
-  .sf-plot-img { width: 100%; }
-  .sf-garden-tree { left: 51%; bottom: 33%; width: 18%; }
+  .sf-garden-tree { left: 51%; bottom: 31%; width: 18%; }
   .sf-gnome { left: 17%; bottom: 33%; }
   .sf-gnome > img { width: clamp(56px, 8%, 88px); }
 }
