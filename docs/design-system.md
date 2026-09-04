@@ -250,3 +250,15 @@ the mobile bg below 768px. Removed leftover `.sf-plot{height:clamp}` override, t
 duplicate `.sf-plot-img` block, and the unused `.sf-decor-frame`. Verified in a DOM
 replica (frame+sidebar+stage) across narrow/wide desktop and phone widths.
 
+### Garden scene v12 — meadow box keeps the bg's exact aspect (like the sandbox)
+The live bug was that `.sf-stage` (frame minus 236px sidebar) is NOT 3:2, so a
+width- or cover-fitted bg mismatched. Fix mirrors the sandbox exactly: `.sf-plot`
+is now a fixed-ASPECT box (mobile `853/1807`, desktop `3/2`) that fits inside the
+stage and is centred on the bottom; the bg is `object-fit: fill` inside it (no
+distortion because the box already matches the bg aspect). Tree/gnome are % of
+this box, so their positions are locked to the circle regardless of window size.
+The 3:2 frame + `min(1080px,96vw,144vh)` keeps the whole window locked to its
+aspect and scaling uniformly (letterboxed by the page bg), so resizing the browser
+never reshapes the scene — it only scales. Verified in a DOM replica across
+narrow/wide desktop and phone widths: identical composition every time.
+

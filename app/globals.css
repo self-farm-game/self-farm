@@ -200,13 +200,19 @@ textarea, input, button { font-family: inherit; }
   .sf-only-mobile { display: none; }
 }
 
-/* ===== GARDEN SCENE (mobile-first; desktop overrides in @media below) ===== */
-/* meadow texture (with stone circle baked in), bottom-anchored, fills width */
-.sf-plot { position: absolute; left: 0; right: 0; bottom: 0; top: 0; overflow: hidden; }
+/* ===== GARDEN SCENE — the meadow box keeps the bg's exact aspect (like the
+   sandbox device), so nothing distorts and tree/gnome %s stay locked ===== */
+/* MOBILE bg is ~9:19 (853x1807). The box fills the stage height, centred. */
+.sf-plot {
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  height: 100%;
+  aspect-ratio: 853 / 1807;   /* mobile bg aspect */
+  overflow: visible;
+}
 .sf-plot-img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  object-fit: cover; object-position: 50% 100%;  /* fill stage, crop edges, keep bottom */
+  object-fit: fill;           /* box already matches aspect → no distortion */
   image-rendering: pixelated; display: block;
 }
 @media (prefers-reduced-motion: reduce) { .sf-drift { animation: none; } }
@@ -324,7 +330,16 @@ textarea, input, button { font-family: inherit; }
 /* tablets + desktop: no mobile top bar, so the overlay starts higher */
 @media (min-width: 768px) {
   .sf-garden-top { padding-top: 16px; }
-  /* landscape scene: meadow + decor fill the width; tree sits in the circle */
+  /* desktop bg is exactly 3:2 (1536x1024). The meadow box keeps that aspect and
+     fits INSIDE the stage (letterboxing with sky if the stage is wider), centred
+     on the bottom — so the composition never distorts and stays static. */
+  .sf-plot {
+    aspect-ratio: 3 / 2;
+    width: 100%; height: auto;
+    max-height: 100%;
+    left: 50%; bottom: 0; transform: translateX(-50%);
+  }
+  /* tree + gnome as % of the meadow box (matches the sandbox) */
   .sf-garden-tree { left: 51%; bottom: 31%; width: 18%; }
   .sf-gnome { left: 17%; bottom: 33%; }
   .sf-gnome > img { width: clamp(56px, 8%, 88px); }
