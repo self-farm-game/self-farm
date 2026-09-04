@@ -46,11 +46,13 @@ textarea, input, button { font-family: inherit; }
 /* ---- game window framing ---- */
 .sf-frame {
   position: relative;
-  width: 390px;
-  height: 820px;
-  max-height: calc(100vh - 48px);
-  border-radius: 46px;
-  padding: 11px;
+  /* fixed design size (set by JS per device); scaled uniformly to fit viewport */
+  width: var(--sf-dw, 1200px);
+  height: var(--sf-dh, 800px);
+  transform: scale(var(--sf-scale, 1));
+  transform-origin: center center;
+  border-radius: 28px;
+  padding: 0;
   background: linear-gradient(150deg, #2a2336, #15121f);
   box-shadow: 0 0 0 2px #3a3550, 0 30px 80px rgba(0, 0, 0, 0.7);
   flex-shrink: 0;
@@ -97,11 +99,9 @@ textarea, input, button { font-family: inherit; }
 @media (max-width: 767px) {
   .sf-field { padding: 0; }
   .sf-frame {
-    width: 100vw;
-    height: 100vh;
-    max-height: none;
+    width: var(--sf-dw, 390px);
+    height: var(--sf-dh, 844px);
     border-radius: 0;
-    padding: 0;
     box-shadow: none;
   }
   .sf-inner { border-radius: 0; }
@@ -133,15 +133,7 @@ textarea, input, button { font-family: inherit; }
 @media (min-width: 768px) {
   /* Fixed landscape window with a locked 3:2 aspect. It scales as a whole
      (uniformly) to fit the viewport, so it never reshapes fluidly per-axis. */
-  .sf-frame {
-    /* one controlling size → aspect-ratio derives the other axis, so the whole
-       window scales uniformly and never reshapes fluidly */
-    width: min(1080px, 96vw, 144vh);
-    height: auto;
-    aspect-ratio: 3 / 2;
-    max-height: none;
-    border-radius: 28px;
-  }
+  /* frame size is fixed (1200x800) and scaled by JS; nothing here overrides it */
   .sf-inner { border-radius: 20px; }
 
   .sf-side {
@@ -205,14 +197,14 @@ textarea, input, button { font-family: inherit; }
 /* MOBILE bg is ~9:19 (853x1807). The box fills the stage height, centred. */
 .sf-plot {
   position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
-  height: 100%;
-  aspect-ratio: 853 / 1807;   /* mobile bg aspect */
+  height: 100%; width: auto;
+  aspect-ratio: 853 / 1807;   /* mobile bg aspect → fills the fixed-width frame */
   overflow: visible;
 }
 .sf-plot-img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  object-fit: fill;           /* box already matches aspect → no distortion */
+  object-fit: fill;           /* box matches aspect → no distortion */
   image-rendering: pixelated; display: block;
 }
 @media (prefers-reduced-motion: reduce) { .sf-drift { animation: none; } }
@@ -336,7 +328,7 @@ textarea, input, button { font-family: inherit; }
   .sf-plot {
     aspect-ratio: 3 / 2;
     width: 100%; height: auto;
-    max-height: 100%;
+    max-height: none;          /* fill the stage width; top goes under the level bar */
     left: 50%; bottom: 0; transform: translateX(-50%);
   }
   /* tree + gnome as % of the meadow box (matches the sandbox) */

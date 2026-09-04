@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useGame } from "@/lib/store/game";
 import BottomNav from "./BottomNav";
@@ -39,6 +39,31 @@ export default function GameShell({ children }: { children: React.ReactNode }) {
     const id = setInterval(f, 30000);
     return () => clearInterval(id);
   }, []);
+
+  // Lock the game window to a fixed design size and scale it uniformly to fit
+  // the viewport. Resizing the browser only changes the scale — the layout,
+  // proportions and every element stay pixel-locked in place.
+  const frameRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const fit = () => {
+      const el = frameRef.current;
+      if (!el) return;
+      const isPhone = window.matchMedia("(max-width: 767px)").matches;
+      const DW = isPhone ? 390 : 1200;
+      const DH = isPhone ? 844 : 800;
+      const margin = isPhone ? 0 : 24;
+      const scale = Math.min(
+        (window.innerWidth - margin * 2) / DW,
+        (window.innerHeight - margin * 2) / DH,
+      );
+      el.style.setProperty("--sf-dw", DW + "px");
+      el.style.setProperty("--sf-dh", DH + "px");
+      el.style.setProperty("--sf-scale", String(isPhone ? Math.max(scale, 1e-3) : scale));
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
   // onboarding and the initial redirect render full-bleed with their own bg
   const bare = pathname === "/onboarding" || pathname === "/";
 
@@ -48,7 +73,7 @@ export default function GameShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="sf-field">
-      <div className="sf-frame">
+      <div className="sf-frame" ref={frameRef}>
         <div className="sf-inner">
           {loading ? (
             <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#0c0a16", color: "#8a7fb0", fontSize: 13, letterSpacing: 2 }}>

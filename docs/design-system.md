@@ -262,3 +262,17 @@ aspect and scaling uniformly (letterboxed by the page bg), so resizing the brows
 never reshapes the scene — it only scales. Verified in a DOM replica across
 narrow/wide desktop and phone widths: identical composition every time.
 
+### Window v13 — fixed design size + uniform scale (proportions locked)
+Per user request: the game window must NEVER change proportions on browser resize.
+Implemented a scale-to-fit: the frame is a FIXED design size (desktop 1200×800,
+mobile 390×844) set in GameShell; a JS effect computes
+`scale = min((vw-2m)/DW, (vh-2m)/DH)` and applies `transform: scale()` to `.sf-frame`
+(transform-origin center). Everything inside is pixel-locked — resizing only changes
+the scale, centred with the page bg as letterbox. No `aspect-ratio`/`vw`/`vh` on the
+frame anymore.
+Scene: `.sf-plot` desktop = 3:2 box filling stage width (gnome at 17% now sits under
+the left tree, fully visible — the sidebar no longer clips it because the stage is a
+known fixed width); mobile = 9:19 box filling the fixed 390-wide frame edge-to-edge
+(fixes the "звужено" side gaps). Verified in DOM replicas at tall/wide/phone
+viewports: identical composition, only scale differs.
+
