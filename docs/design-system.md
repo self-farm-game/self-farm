@@ -286,3 +286,13 @@ real fixed-frame structure (1200×800 desktop w/ 236px sidebar; 390×844 mobile)
 - mobile: tree left 49% / bottom 25% / width 26%; gnome left 12% / bottom 34%.
 Gnome now sits fully visible under the left tree; mobile meadow fills the whole width.
 
+### Garden scene v15 — desktop width-fill (no artifact), gnome placed on scene
+Desktop `object-fit: cover` mis-cropped (stage 964x726 ≈1.33 vs bg 1.5) and showed
+the dirt-circle twice at the top. Fixed: desktop bg now WIDTH-FILLS and sits on the
+bottom (`width:100%; height:auto; bottom:0`), sky gradient above — one clean scene
+like the sandbox. Mobile keeps `cover` (bg is taller than the stage, fills fine).
+Tree/gnome are plain absolute % of the stage (not tied to any box):
+- desktop: tree 50%/22%/15%; gnome 12%/20%.
+- mobile: tree 49%/25%/26%; gnome 12%/34%.
+Verified in real fixed-frame replicas: gnome fully visible both formats, no artifacts.
+

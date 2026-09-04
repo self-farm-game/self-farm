@@ -319,12 +319,16 @@ textarea, input, button { font-family: inherit; }
 /* tablets + desktop: no mobile top bar, so the overlay starts higher */
 @media (min-width: 768px) {
   .sf-garden-top { padding-top: 16px; }
-  /* desktop bg fills the FULL stage width, anchored bottom (no side gaps).
-     Its 3:2 shape means the top is cropped under the level bar. */
-  .sf-plot { position: absolute; inset: 0; left: 0; right: 0; transform: none; }
-  .sf-plot-img { object-fit: cover; object-position: 50% 100%; }
-  /* tree + gnome as % of the full stage */
-  .sf-garden-tree { left: 50%; bottom: 30%; width: 15%; }
-  .sf-gnome { left: 11%; bottom: 30%; }
+  /* desktop bg: fill the full stage WIDTH, sit on the bottom; sky shows above.
+     No cover (which mis-crops the taller stage) — width-fill keeps one clean scene. */
+  .sf-plot { position: absolute; inset: 0; }
+  .sf-plot-img {
+    position: absolute; left: 0; right: 0; bottom: 0; top: auto;
+    width: 100%; height: auto;
+    object-fit: fill;   /* width-fill, natural height, bottom-anchored */
+  }
+  /* tree + gnome placed directly on the scene (% of the stage) */
+  .sf-garden-tree { left: 50%; bottom: 22%; width: 15%; }
+  .sf-gnome { left: 12%; bottom: 20%; }
   .sf-gnome > img { width: clamp(56px, 7%, 84px); }
 }
