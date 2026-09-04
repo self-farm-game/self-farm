@@ -40,11 +40,14 @@ const parchShadow =
 
 // 5 cloud sprites drifting across the sky on slightly random tracks
 const CLOUDS = [
-  { v: 1, top: 8, w: 120, dur: 66, delay: 0, op: 0.95 },
-  { v: 2, top: 16, w: 90, dur: 84, delay: -30, op: 0.85 },
-  { v: 3, top: 24, w: 140, dur: 58, delay: -50, op: 0.9 },
-  { v: 4, top: 12, w: 80, dur: 92, delay: -12, op: 0.8 },
-  { v: 5, top: 30, w: 70, dur: 74, delay: -66, op: 0.8 },
+  { v: 1, top: 6, w: 120, dur: 58, delay: 0, op: 0.95 },
+  { v: 3, top: 11, w: 140, dur: 52, delay: -14, op: 0.9 },
+  { v: 2, top: 16, w: 90, dur: 66, delay: -26, op: 0.85 },
+  { v: 4, top: 9, w: 80, dur: 72, delay: -38, op: 0.8 },
+  { v: 5, top: 21, w: 70, dur: 60, delay: -8, op: 0.8 },
+  { v: 2, top: 26, w: 100, dur: 64, delay: -48, op: 0.8 },
+  { v: 1, top: 14, w: 78, dur: 78, delay: -60, op: 0.75 },
+  { v: 3, top: 31, w: 110, dur: 56, delay: -33, op: 0.7 },
 ];
 
 export default function Garden() {
@@ -147,7 +150,8 @@ export default function Garden() {
     const lines = BOMBOM_LINES[state.lang] || BOMBOM_LINES.en;
     const line = lines[state.bombomIdx % lines.length];
     // each stage fills a bit more of the scene than the last one
-    const fit = ["50%", "58%", "66%", "74%", "82%", "88%", "92%", "96%", "98%", "100%"][Math.min(10, lvl.levelNum) - 1];
+    // tree grows bigger each stage: scale multiplier applied to the base width
+    const growScale = [0.42, 0.5, 0.58, 0.66, 0.74, 0.82, 0.88, 0.93, 0.97, 1.0][Math.min(10, lvl.levelNum) - 1];
     return (
       <div className="sf-screen sf-garden">
         {/* ---- the scene: takes whatever height the UI leaves ---- */}
@@ -173,11 +177,14 @@ export default function Garden() {
 
           {/* static meadow with the stone circle (all decor baked in) */}
           <div className="sf-plot">
+            {/* full background (meadow + decor baked in) — per orientation */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/sprites/garden/plot.png" alt="" className="sf-plot-img" />
+            <img src="/assets/sprites/garden/bg-mobile.png" alt="" className="sf-plot-img sf-only-mobile" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/assets/sprites/garden/bg-desktop.png" alt="" className="sf-plot-img sf-only-desktop" />
             {/* the tree, planted on the stone circle */}
             <div className="sf-garden-tree">
-              <div className="sf-tree-fit" style={{ height: fit }}>
+              <div className="sf-tree-fit" style={{ transform: `scale(${growScale})`, transformOrigin: "50% 100%" }}>
                 <div className="sf-garden-shadow" />
                 <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
               </div>
@@ -196,6 +203,7 @@ export default function Garden() {
                 <p>{line}</p>
               </div>
             </div>
+
           </div>
 
           {/* ---- top overlay: level bar + inventory ---- */}

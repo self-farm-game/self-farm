@@ -1,0 +1,66 @@
+<!DOCTYPE html><html lang="uk"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Self-Farm · пісочниця</title>
+<!-- Міняй значення в :root, онови сторінку. Кнопки вгорі: формат + стадія дерева.
+     Дерево більшає зі стадією (growScale). -->
+<style>
+:root{
+  --sky-top:#5aa6dc;--sky-mid:#9ed3f0;--sky-bottom:#cdeafc;
+  --cloud-speed:70s;--cloud-scale:1;--cloud-opacity:.9;
+  /* ДЕСКТОП: коло ≈51%/66% */
+  --d-bg-w:100%; --d-tree-w:18%; --d-tree-b:33%; --d-tree-x:51%; --d-gnome-w:8%; --d-gnome-b:33%; --d-gnome-x:17%;
+  /* ТЕЛЕФОН: коло ≈49%/74% */
+  --m-bg-w:100%; --m-tree-w:26%; --m-tree-b:25%; --m-tree-x:49%; --m-gnome-w:13%; --m-gnome-b:34%; --m-gnome-x:12%;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#14121c;color:#cfc4e6;font-family:system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.bar button{background:#2c2150;color:#e7dcff;border:2px solid #4a3a6e;border-radius:10px;padding:8px 15px;font-weight:700;cursor:pointer}
+.bar button.on{background:#5a4a8a;border-color:#7a6ab0}
+.device{position:relative;background:#1c1530;border-radius:26px;box-shadow:0 0 0 3px #3a3550,0 24px 60px rgba(0,0,0,.6);overflow:hidden;flex-shrink:0}
+.device.phone{width:390px;height:820px}.device.desktop{width:1000px;height:667px}
+.stage{position:absolute;inset:0;overflow:hidden;background:linear-gradient(180deg,var(--sky-top),#74b8e6 30%,var(--sky-mid) 52%,#c3e6f6 66%,var(--sky-bottom) 74%)}
+.clouds{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.cloud{position:absolute;left:-30%;image-rendering:pixelated;opacity:var(--cloud-opacity);animation:drift linear infinite;filter:drop-shadow(0 3px 4px rgba(80,110,150,.18))}
+@keyframes drift{from{transform:translateX(0) scale(var(--cloud-scale))}to{transform:translateX(180vw) scale(var(--cloud-scale))}}
+.cloud.c1{top:6%;width:120px;animation-duration:calc(var(--cloud-speed)*.83)}
+.cloud.c2{top:16%;width:90px;animation-duration:calc(var(--cloud-speed)*.94);animation-delay:-26s}
+.cloud.c3{top:11%;width:140px;animation-duration:calc(var(--cloud-speed)*.74);animation-delay:-14s}
+.cloud.c4{top:9%;width:80px;animation-duration:calc(var(--cloud-speed)*1.03);animation-delay:-38s}
+.cloud.c5{top:21%;width:70px;animation-duration:calc(var(--cloud-speed)*.85);animation-delay:-8s}
+.cloud.c6{top:26%;width:100px;animation-duration:calc(var(--cloud-speed)*.9);animation-delay:-48s}
+.cloud.c7{top:14%;width:78px;animation-duration:calc(var(--cloud-speed)*1.1);animation-delay:-60s}
+.cloud.c8{top:31%;width:110px;animation-duration:calc(var(--cloud-speed)*.8);animation-delay:-33s}
+.bg{position:absolute;left:50%;bottom:0;transform:translateX(-50%);height:auto;image-rendering:pixelated;display:block;z-index:5}
+.tree{position:absolute;transform:translateX(-50%);z-index:6;image-rendering:pixelated}
+.tree .fit{transform-origin:50% 100%;display:flex;align-items:flex-end;justify-content:center}
+.tree img{width:100%;display:block;filter:drop-shadow(0 6px 5px rgba(0,0,0,.35))}
+.gnome{position:absolute;transform:translateX(-50%);z-index:8;image-rendering:pixelated}
+.gnome img{width:100%;display:block;filter:drop-shadow(0 4px 4px rgba(0,0,0,.4))}
+.device.desktop .bg{width:var(--d-bg-w)} .device.phone .bg{width:var(--m-bg-w)}
+.device.desktop .tree{width:var(--d-tree-w);bottom:var(--d-tree-b);left:var(--d-tree-x)}
+.device.phone .tree{width:var(--m-tree-w);bottom:var(--m-tree-b);left:var(--m-tree-x)}
+.device.desktop .gnome{width:var(--d-gnome-w);bottom:var(--d-gnome-b);left:var(--d-gnome-x)}
+.device.phone .gnome{width:var(--m-gnome-w);bottom:var(--m-gnome-b);left:var(--m-gnome-x)}
+.device.desktop .m-only{display:none}.device.phone .d-only{display:none}
+</style></head><body>
+<div class="bar">
+  <button id="bp" class="on" onclick="setMode('phone')">📱 Телефон</button>
+  <button id="bd" onclick="setMode('desktop')">🖥️ Десктоп</button>
+  <span style="margin-left:12px">Стадія:</span><button onclick="setStage(-1)">−</button><span id="sl">5</span><button onclick="setStage(1)">+</button>
+</div>
+<div id="dev" class="device phone"><div class="stage">
+  <div class="clouds"><img class="cloud c1" src="public/assets/sprites/garden/cloud-1.png"><img class="cloud c2" src="public/assets/sprites/garden/cloud-2.png"><img class="cloud c3" src="public/assets/sprites/garden/cloud-3.png"><img class="cloud c4" src="public/assets/sprites/garden/cloud-4.png"><img class="cloud c5" src="public/assets/sprites/garden/cloud-5.png"><img class="cloud c6" src="public/assets/sprites/garden/cloud-2.png"><img class="cloud c7" src="public/assets/sprites/garden/cloud-1.png"><img class="cloud c8" src="public/assets/sprites/garden/cloud-3.png"></div>
+  <img class="bg d-only" src="public/assets/sprites/garden/bg-desktop.png">
+  <img class="bg m-only" src="public/assets/sprites/garden/bg-mobile.png">
+  <div class="tree"><div class="fit" id="fit"><img id="tree" src="public/assets/sprites/tree/stage-5.png"></div></div>
+  <div class="gnome"><img src="public/assets/sprites/garden/BomBom.png"></div>
+</div></div>
+<script>
+var GROW=[0.42,0.5,0.58,0.66,0.74,0.82,0.88,0.93,0.97,1.0];
+function setMode(m){var d=document.getElementById('dev');d.className='device '+m;bp.classList.toggle('on',m=='phone');bd.classList.toggle('on',m=='desktop')}
+var stage=5;
+function apply(){document.getElementById('sl').textContent=stage;document.getElementById('tree').src='public/assets/sprites/tree/stage-'+stage+'.png';document.getElementById('fit').style.transform='scale('+GROW[stage-1]+')'}
+function setStage(x){stage=Math.max(1,Math.min(10,stage+x));apply()}
+apply();
+</script></body></html>

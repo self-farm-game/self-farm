@@ -210,3 +210,32 @@ desktop (`min-width:768px`) overrides:
 - portrait: plot 112%, tree bottom 27% / width 22%, gnome 4%/15%.
 - desktop: plot 100%, tree bottom 42% / width 15%, gnome 16%/23%.
 
+
+### Garden scene v9 — dedicated per-orientation textures (final)
+User supplied clean, separate textures per format. Wired in directly:
+- `meadow-desktop.png` / `meadow-mobile.png` — full meadow with stone circle
+  (circles centred ≈ 47%/65% desktop, 48%/68% mobile). Bottom-anchored, fill width.
+- `decor-desktop.png` / `decor-mobile.png` — corner frame (tree+lantern+bushes),
+  transparent centre, overlaid on z-index 7.
+Both meadow+decor render for both formats; `.sf-only-mobile/.sf-only-desktop`
+show the right pair per breakpoint. Positions tuned via the render harness:
+- mobile: meadow 112%, tree bottom 22% / width 22% / x 48%, gnome 26% / x 12%.
+- desktop: meadow 100%, tree bottom 33% / width 13% / x 47%, gnome 31% / x 19%.
+Old plot.png + extracted dekor pieces removed.
+
+### Garden scene v10 — single baked background + growing tree
+User supplied complete backgrounds (meadow + decor together, transparent sky):
+`bg-desktop.png` (1536×1024, circle ≈51%/66%) and `bg-mobile.png` (853×1807,
+circle ≈49%/74%). Scene layers now: sky gradient → Stars → drifting clouds →
+`bg-*` (per orientation) → tree in the circle → gnome on the grass. The separate
+meadow/decor textures and plot.png were removed.
+TREE GROWS: per-stage `growScale` (0.42→1.0 across the 10 stages) is applied as a
+`transform: scale()` on `.sf-tree-fit` (origin 50% 100%, so the base stays planted
+in the dirt). Tree base width: 26% mobile, 18% desktop; positioned at the circle.
+
+### Clouds on mobile
+Clouds drift on BOTH formats (same `sf-cloud-drift` animation; not disabled on
+mobile). Bumped from 5 to 8 clouds (reusing the 5 sprites) with evenly-spread
+negative delays so the tall narrow portrait sky always has clouds in view rather
+than looking sparse. Verified motion via multi-frame headless capture.
+
