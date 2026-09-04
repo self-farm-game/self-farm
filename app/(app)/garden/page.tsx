@@ -158,7 +158,7 @@ export default function Garden() {
         <div className="sf-stage">
           {/* sky gradient */}
           <div className="sf-garden-sky" />
-          {/* drifting clouds (5 variations, staggered tracks) */}
+          {/* drifting clouds */}
           <div className="sf-clouds" aria-hidden>
             {CLOUDS.map((c, i) => (
               // eslint-disable-next-line @next/next/no-img-element
@@ -175,34 +175,22 @@ export default function Garden() {
             <Stars n={8} seed={11} area={42} />
           </div>
 
-          {/* static meadow with the stone circle (all decor baked in) */}
+          {/* meadow (one texture, transparent sky) → tree → gnome */}
           <div className="sf-plot">
-            {/* MOBILE: bg covers the stage; tree/gnome are % of the stage */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/assets/sprites/garden/bg-mobile.png" alt="" className="sf-plot-img sf-only-mobile" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/assets/sprites/garden/bg-desktop.png" alt="" className="sf-plot-img sf-only-desktop" />
 
-            {/* DESKTOP: bg + tree share one box (bg's own 3:2 frame), so the tree
-                always lands on the circle regardless of stage height */}
-            <div className="sf-bgbox sf-only-desktop">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/assets/sprites/garden/bg-desktop.png" alt="" className="sf-bgbox-img" />
-              <div className="sf-garden-tree sf-tree-desktop">
-                <div className="sf-tree-fit" style={{ transform: `scale(${growScale})`, transformOrigin: "50% 100%" }}>
-                  <div className="sf-garden-shadow" />
-                  <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
-                </div>
-              </div>
-            </div>
-
-            {/* MOBILE tree (relative to stage) */}
-            <div className="sf-garden-tree sf-tree-mobile">
+            {/* the tree, planted on the stone circle (grows with each stage) */}
+            <div className="sf-garden-tree">
               <div className="sf-tree-fit" style={{ transform: `scale(${growScale})`, transformOrigin: "50% 100%" }}>
                 <div className="sf-garden-shadow" />
                 <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
               </div>
             </div>
 
-            {/* Бомбом sits on the meadow (like the reference) */}
+            {/* Бомбом on the grass */}
             <div
               className="sf-gnome"
               onClick={() => { nextBombom(); play("tap"); }}
@@ -215,7 +203,6 @@ export default function Garden() {
                 <p>{line}</p>
               </div>
             </div>
-
           </div>
 
           {/* ---- top overlay: level bar + inventory ---- */}

@@ -322,3 +322,11 @@ both times. (Mobile keeps stage-relative tree; its bg covers the stage so the ci
 position is stable there.) The tree must stay a separate sprite so it can grow per
 stage — only its placement was wrong, now anchored to the bg.
 
+### Garden scene v19 — cleaned: ONE bg, ONE tree, ONE gnome
+Removed all the duplication I'd introduced (the bgbox + a separate desktop tree AND
+mobile tree = two trees on screen). Scene is now flat and simple, exactly as asked:
+sky gradient + clouds + stars behind → one meadow img (`.sf-plot-img`, mobile cover /
+desktop width-fill) → one `.sf-garden-tree` (grows via scale) → one `.sf-gnome`.
+Desktop tree at left 51% / bottom 30% sits on the circle (stage height is fixed by
+the uniform-scale window, so a fixed % is stable). No bgbox, no per-format tree.
+
