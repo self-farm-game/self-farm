@@ -296,3 +296,18 @@ Tree/gnome are plain absolute % of the stage (not tied to any box):
 - mobile: tree 49%/25%/26%; gnome 12%/34%.
 Verified in real fixed-frame replicas: gnome fully visible both formats, no artifacts.
 
+### Garden scene v16 — tree actually ON the circle (desktop)
+The 'two circles' was a placement bug, not the texture (bg has one circle). On the
+width-filled desktop stage (964x726, bg drawn 964x643 bottom-anchored, 83px sky on
+top) the bg circle lands at x=51% / bottom=30%. The tree was at bottom:22% — 8% too
+low, sitting on the path below the ring. Moved tree to 51%/28% (trunk in the dirt)
+and gnome to 12%/26%. Verified: single circle, tree planted in it, gnome visible.
+
+### Garden scene v17 — gnome + bubble no longer clipped
+Root cause: `.sf-gnome` had `transform: translateX(-50%)`, shifting the whole
+gnome+bubble flex group left by half its width — the gnome slid under the sidebar
+and the bubble's left edge went off-screen (text cut). Removed the transform and
+anchored the gnome by its LEFT edge: mobile `left:4%; right:6%`, desktop
+`left:4%; max-width:46%`. Verified in the real fixed-frame (with sidebar): gnome
+fully visible and the full Бомбом line readable, both formats.
+

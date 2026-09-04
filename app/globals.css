@@ -208,10 +208,9 @@ textarea, input, button { font-family: inherit; }
 
 /* gnome sits on the grass with his speech bubble */
 .sf-gnome {
-  position: absolute; z-index: 8; left: 12%;
-  bottom: 34%;
-  display: flex; align-items: flex-end; gap: 8px; cursor: pointer; max-width: 60%;
-  transform: translateX(-50%);
+  position: absolute; z-index: 8; left: 4%; right: 6%;
+  bottom: 30%;
+  display: flex; align-items: flex-end; gap: 8px; cursor: pointer;
 }
 .sf-gnome > img {
   width: clamp(48px, 14vw, 92px); height: auto; flex-shrink: 0; display: block;
@@ -328,7 +327,7 @@ textarea, input, button { font-family: inherit; }
     object-fit: fill;   /* width-fill, natural height, bottom-anchored */
   }
   /* tree + gnome placed directly on the scene (% of the stage) */
-  .sf-garden-tree { left: 50%; bottom: 22%; width: 15%; }
-  .sf-gnome { left: 12%; bottom: 20%; }
+  .sf-garden-tree { left: 51%; bottom: 28%; width: 15%; }
+  .sf-gnome { left: 4%; right: auto; bottom: 24%; max-width: 46%; }
   .sf-gnome > img { width: clamp(56px, 7%, 84px); }
 }
