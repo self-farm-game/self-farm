@@ -311,3 +311,14 @@ anchored the gnome by its LEFT edge: mobile `left:4%; right:6%`, desktop
 `left:4%; max-width:46%`. Verified in the real fixed-frame (with sidebar): gnome
 fully visible and the full Бомбом line readable, both formats.
 
+### Garden scene v18 — tree LOCKED to the circle (bg-relative, not stage-relative)
+The "two circles" was always one texture circle + the tree sprite landing BELOW it,
+because the tree was positioned as % of the STAGE whose height varies (level bar,
+nav). Fix: on desktop the bg and the tree now live in ONE box `.sf-bgbox` (the bg's
+own 3:2 frame, width-100%, bottom-anchored). The tree is % of THAT box
+(`.sf-tree-desktop` left 51% / bottom 30%), so it sits on the circle no matter how
+tall the stage is. Verified at two different nav heights — tree stays on the circle
+both times. (Mobile keeps stage-relative tree; its bg covers the stage so the circle
+position is stable there.) The tree must stay a separate sprite so it can grow per
+stage — only its placement was wrong, now anchored to the bg.
+

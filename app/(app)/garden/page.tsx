@@ -177,13 +177,25 @@ export default function Garden() {
 
           {/* static meadow with the stone circle (all decor baked in) */}
           <div className="sf-plot">
-            {/* full background (meadow + decor baked in) — per orientation */}
+            {/* MOBILE: bg covers the stage; tree/gnome are % of the stage */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/assets/sprites/garden/bg-mobile.png" alt="" className="sf-plot-img sf-only-mobile" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/sprites/garden/bg-desktop.png" alt="" className="sf-plot-img sf-only-desktop" />
-            {/* the tree, planted on the stone circle */}
-            <div className="sf-garden-tree">
+
+            {/* DESKTOP: bg + tree share one box (bg's own 3:2 frame), so the tree
+                always lands on the circle regardless of stage height */}
+            <div className="sf-bgbox sf-only-desktop">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/assets/sprites/garden/bg-desktop.png" alt="" className="sf-bgbox-img" />
+              <div className="sf-garden-tree sf-tree-desktop">
+                <div className="sf-tree-fit" style={{ transform: `scale(${growScale})`, transformOrigin: "50% 100%" }}>
+                  <div className="sf-garden-shadow" />
+                  <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
+                </div>
+              </div>
+            </div>
+
+            {/* MOBILE tree (relative to stage) */}
+            <div className="sf-garden-tree sf-tree-mobile">
               <div className="sf-tree-fit" style={{ transform: `scale(${growScale})`, transformOrigin: "50% 100%" }}>
                 <div className="sf-garden-shadow" />
                 <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
