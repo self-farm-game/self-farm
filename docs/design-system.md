@@ -339,3 +339,14 @@ two meadows / two circles. Fixed with 2-class selectors `.sf-plot-img.sf-only-*`
 (higher specificity) placed after the base rule, so exactly ONE bg shows per format.
 Verified: single meadow, single circle, one tree, one gnome.
 
+### Tree v5 — new 6-stage sprites + instruction stays during quest
+- Replaced the 10 tree frames with 6 new hand-made sprites (sprout → apple oak),
+  cropped to content (soil at the bottom edge so bases align on the circle), kept
+  at native aspect (no distortion), downscaled uniformly to ~520px. Growth is now
+  6 stages (`xp.ts`), `growScale` = [.5 .62 .74 .86 .94 1]. Tree base width bumped
+  (desktop 20%, mobile 32%) since the new art reads smaller; hollow map trimmed to
+  stages 5–6.
+- Quest execution: the `quest_active` screen now KEEPS the numbered instruction
+  steps visible in a parchment card above the "Submit" button, instead of only a
+  generic line — so the person can follow the steps while doing the quest.
+

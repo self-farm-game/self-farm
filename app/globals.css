@@ -232,7 +232,7 @@ textarea, input, button { font-family: inherit; }
   position: absolute; z-index: 6;
   left: 49%; transform: translateX(-50%);
   bottom: 25%;
-  width: 26%;
+  width: 32%;
   display: flex; align-items: flex-end; justify-content: center;
   pointer-events: none;
 }
@@ -319,7 +319,7 @@ textarea, input, button { font-family: inherit; }
   /* desktop bg: width-fill, sit on the bottom, sky above (one clean scene) */
   .sf-plot-img { object-fit: fill; height: auto; top: auto; bottom: 0; }
   /* single tree, on the circle */
-  .sf-garden-tree { left: 51%; bottom: 30%; width: 15%; }
+  .sf-garden-tree { left: 50%; bottom: 30%; width: 20%; }
   /* gnome anchored by its left edge so it + bubble stay on-screen */
   .sf-gnome { left: 4%; right: auto; bottom: 24%; max-width: 46%; }
   .sf-gnome > img { width: clamp(56px, 7%, 84px); }

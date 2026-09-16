@@ -151,7 +151,7 @@ export default function Garden() {
     const line = lines[state.bombomIdx % lines.length];
     // each stage fills a bit more of the scene than the last one
     // tree grows bigger each stage: scale multiplier applied to the base width
-    const growScale = [0.42, 0.5, 0.58, 0.66, 0.74, 0.82, 0.88, 0.93, 0.97, 1.0][Math.min(10, lvl.levelNum) - 1];
+    const growScale = [0.5, 0.62, 0.74, 0.86, 0.94, 1.0][Math.min(6, lvl.levelNum) - 1];
     return (
       <div className="sf-screen sf-garden">
         {/* ---- the scene: takes whatever height the UI leaves ---- */}
@@ -486,16 +486,30 @@ export default function Garden() {
   /* ---------------- QUEST ACTIVE ---------------- */
   if (flow === "quest_active") {
     return (
-      <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+      <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <div style={{ fontSize: 13, letterSpacing: 3, color: "#9a8fc0", textTransform: "uppercase" }}>квест активний</div>
-        <div style={{ fontSize: 72, margin: "18px 0", animation: "sf-float 4s ease-in-out infinite" }}>{q.icon}</div>
-        <div style={{ fontSize: 26, color: "#f4ecd6", fontWeight: 700, textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{q.title}</div>
-        <div style={{ fontSize: 34, color: "#ffd98a", fontWeight: 700, margin: "18px 0 6px", letterSpacing: 2 }}>{fmt(timer)}</div>
+        <div style={{ fontSize: 56, margin: "12px 0 6px", animation: "sf-float 4s ease-in-out infinite" }}>{q.icon}</div>
+        <div style={{ fontSize: 22, color: "#f4ecd6", fontWeight: 700, textShadow: "0 3px 0 rgba(0,0,0,.35)", textAlign: "center" }}>{q.title}</div>
+        <div style={{ fontSize: 30, color: "#ffd98a", fontWeight: 700, margin: "12px 0 6px", letterSpacing: 2 }}>{fmt(timer)}</div>
         <div style={{ width: 200, height: 10, borderRadius: 6, background: "rgba(0,0,0,.3)", boxShadow: "inset 0 0 0 2px #2a1a0e", overflow: "hidden" }}>
           <div style={{ height: "100%", width: 100 - (timer / 120) * 100 + "%", background: "linear-gradient(180deg,#7bbf5a,#4f9a3a)", transition: "width 1s linear" }} />
         </div>
-        <div style={{ fontSize: 15, lineHeight: 1.5, color: "#b9aecb", fontStyle: "italic", margin: "26px 0", maxWidth: 260 }}>
-          Не треба робити ідеально.<br />Просто повернись, коли зробиш.
+
+        {/* the instruction stays visible while doing the quest */}
+        <div style={{ width: "100%", maxWidth: 340, marginTop: 20, borderRadius: 16, padding: "16px 16px 18px", background: parchCard, boxShadow: parchShadow }}>
+          <div style={{ fontSize: 12, color: "#7a5836", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 10, textAlign: "center" }}>що робити</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {q.steps.map((s, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <div style={{ width: 22, height: 22, flexShrink: 0, borderRadius: 6, background: "linear-gradient(180deg,#7a5128,#5a3618)", boxShadow: "inset 0 1px 0 rgba(255,220,160,.4), 0 0 0 2px #3a2410", color: "#ffe6b8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>{i + 1}</div>
+                <div style={{ fontSize: 14, color: "#3a2616", lineHeight: 1.35, paddingTop: 1 }}>{s}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ fontSize: 13, lineHeight: 1.5, color: "#b9aecb", fontStyle: "italic", margin: "18px 0", maxWidth: 260, textAlign: "center" }}>
+          Не треба робити ідеально. Просто повернись, коли зробиш.
         </div>
         <div style={{ width: "100%" }}>
           <WoodButton big onClick={() => { play("complete"); go("quest_complete"); }}>{t(L, "quest.submit")}</WoodButton>
