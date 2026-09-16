@@ -217,12 +217,41 @@ textarea, input, button { font-family: inherit; }
   animation: sf-float 6s ease-in-out infinite;
 }
 .sf-gnome-bubble {
-  flex: 1; min-width: 0; margin-bottom: 18px;
-  background: rgba(245, 241, 230, 0.92);
-  border-radius: 13px; padding: 8px 12px 9px;
-  box-shadow: 0 0 0 3px #241a32, 3px 5px 0 rgba(0,0,0,.28);
+  position: relative;
+  flex: 1; min-width: 0; margin-bottom: 22px;
+  /* semi-transparent bubble */
+  background: rgba(246, 242, 232, 0.60);
+  backdrop-filter: blur(2px);
+  padding: 9px 13px 10px;
+  color: #241a32;
+  /* pixel-art "stepped corner" border built from layered box-shadows:
+     an inset frame + an outer blocky outline offset in 1px steps → square pixel look */
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 2px rgba(36, 26, 50, 0.9),
+    0 0 0 4px rgba(246, 242, 232, 0.35),
+    0 5px 0 2px rgba(0, 0, 0, 0.22);
 }
-.sf-gnome-bubble .sf-bombom-name { color: #6a5f88; }
+/* speech-bubble tail: small stepped pixel triangle pointing down-left to the gnome */
+.sf-gnome-bubble::before {
+  content: "";
+  position: absolute;
+  left: 16px; bottom: -8px;
+  width: 0; height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 10px solid rgba(36, 26, 50, 0.9);   /* outline layer */
+}
+.sf-gnome-bubble::after {
+  content: "";
+  position: absolute;
+  left: 18px; bottom: -4px;
+  width: 0; height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 8px solid rgba(246, 242, 232, 0.60);  /* fill layer over outline */
+}
+.sf-gnome-bubble .sf-bombom-name { color: #463c64; }
 .sf-gnome-bubble p {
   margin: 0; font-size: 12.5px; line-height: 1.4; color: #2b2230;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
@@ -231,7 +260,7 @@ textarea, input, button { font-family: inherit; }
   /* base = full-grown size; per-stage scale (inline) shrinks it as it grows */
   position: absolute; z-index: 6;
   left: 49%; transform: translateX(-50%);
-  bottom: 25%;
+  bottom: 22%;
   width: 32%;
   display: flex; align-items: flex-end; justify-content: center;
   pointer-events: none;
@@ -319,7 +348,7 @@ textarea, input, button { font-family: inherit; }
   /* desktop bg: width-fill, sit on the bottom, sky above (one clean scene) */
   .sf-plot-img { object-fit: fill; height: auto; top: auto; bottom: 0; }
   /* single tree, on the circle */
-  .sf-garden-tree { left: 50%; bottom: 30%; width: 20%; }
+  .sf-garden-tree { left: 50%; bottom: 24%; width: 20%; }
   /* gnome anchored by its left edge so it + bubble stay on-screen */
   .sf-gnome { left: 4%; right: auto; bottom: 24%; max-width: 46%; }
   .sf-gnome > img { width: clamp(56px, 7%, 84px); }

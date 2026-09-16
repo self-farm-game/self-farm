@@ -350,3 +350,13 @@ Verified: single meadow, single circle, one tree, one gnome.
   steps visible in a parchment card above the "Submit" button, instead of only a
   generic line — so the person can follow the steps while doing the quest.
 
+### Garden scene v21 — new circle-less meadow + speech-bubble redesign
+- Replaced bg-desktop/bg-mobile with new textures that have NO stone circle — just
+  a clean meadow (grass, framing trees + lanterns, forest, flowers, sign). The tree
+  now plants directly on the grass (its own soil mound blends in); lowered the tree
+  (desktop bottom 24%, mobile 22%) so it sits grounded in the foreground.
+- Бомбом's speech bubble redesigned: semi-transparent (rgba .60 + backdrop blur),
+  blocky pixel-art outline (layered box-shadows, tiny 2px radius — square feel), and
+  a stepped speech-bubble TAIL (::before outline + ::after fill triangle) pointing
+  down-left to the gnome. Readable over the meadow.
+
