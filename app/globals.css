@@ -174,7 +174,7 @@ textarea, input, button { font-family: inherit; }
 /* drifting clouds */
 .sf-clouds { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .sf-drift {
-  position: absolute; left: -30%;
+  position: absolute;   /* left comes from the inline style (static fallback) */
   image-rendering: pixelated;
   animation-name: sf-cloud-drift; animation-timing-function: linear; animation-iteration-count: infinite;
   filter: drop-shadow(0 3px 4px rgba(80,110,150,.18));
@@ -209,7 +209,7 @@ textarea, input, button { font-family: inherit; }
 
 /* gnome sits on the grass with his speech bubble */
 .sf-gnome {
-  position: absolute; z-index: 8; left: 4%; right: 6%;
+  position: absolute; z-index: 8; left: 4%; right: 30%;
   bottom: 30%;
   display: flex; align-items: flex-end; gap: 8px; cursor: pointer;
 }
@@ -354,6 +354,6 @@ textarea, input, button { font-family: inherit; }
   /* single tree, on the circle */
   .sf-garden-tree { left: 50%; bottom: 24%; width: 20%; }
   /* gnome anchored by its left edge so it + bubble stay on-screen */
-  .sf-gnome { left: 4%; right: auto; bottom: 24%; max-width: 46%; }
+  .sf-gnome { left: 4%; right: auto; bottom: 26%; max-width: 36%; }
   .sf-gnome > img { width: clamp(56px, 7%, 84px); }
 }

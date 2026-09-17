@@ -372,3 +372,15 @@ Verified: single meadow, single circle, one tree, one gnome.
   and the whole element carries `opacity: .82` — so the drop-shadow outline follows the
   stepped silhouette and the bubble still reads as semi-transparent.
 
+### v23 — THE real "no clouds" cause: prefers-reduced-motion
+`.sf-drift` had `left: -30%` as its base position and relied on the keyframes to move
+it into view. But `@media (prefers-reduced-motion: reduce) { .sf-drift { animation:
+none } }` kills the animation — so on any machine with "reduce motion" enabled (a
+common Windows/macOS setting) every cloud stayed parked at -30%, i.e. completely
+outside `.sf-clouds` (overflow:hidden) → NO clouds at all, which is exactly what the
+user saw while local renders looked fine.
+Fix: each cloud now carries a static `left` (spread 6%–88%) from the CLOUDS array as
+its base position; the animation overrides it when motion is allowed. Verified with
+Playwright `reduced_motion="reduce"`: 8 clouds visible across the sky. Clouds were
+also enlarged/opacified so they read clearly against the bright sky.
+

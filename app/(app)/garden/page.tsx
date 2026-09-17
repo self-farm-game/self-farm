@@ -40,14 +40,16 @@ const parchShadow =
 
 // 5 cloud sprites drifting across the sky on slightly random tracks
 const CLOUDS = [
-  { v: 1, top: 6, w: 120, dur: 58, delay: 0, op: 0.95 },
-  { v: 3, top: 11, w: 140, dur: 52, delay: -14, op: 0.9 },
-  { v: 2, top: 16, w: 90, dur: 66, delay: -26, op: 0.85 },
-  { v: 4, top: 9, w: 80, dur: 72, delay: -38, op: 0.8 },
-  { v: 5, top: 21, w: 70, dur: 60, delay: -8, op: 0.8 },
-  { v: 2, top: 26, w: 100, dur: 64, delay: -48, op: 0.8 },
-  { v: 1, top: 14, w: 78, dur: 78, delay: -60, op: 0.75 },
-  { v: 3, top: 31, w: 110, dur: 56, delay: -33, op: 0.7 },
+  // `left` is the STATIC fallback position (used when the OS asks for reduced
+  // motion, so the clouds are still visible instead of parked off-screen)
+  { v: 1, top: 5,  left: 6,  w: 190, dur: 58, delay: 0,   op: 1 },
+  { v: 3, top: 12, left: 30, w: 220, dur: 52, delay: -14, op: 0.98 },
+  { v: 2, top: 19, left: 58, w: 150, dur: 66, delay: -26, op: 0.95 },
+  { v: 4, top: 8,  left: 78, w: 130, dur: 72, delay: -38, op: 0.9 },
+  { v: 5, top: 24, left: 14, w: 120, dur: 60, delay: -8,  op: 0.9 },
+  { v: 2, top: 30, left: 44, w: 165, dur: 64, delay: -48, op: 0.85 },
+  { v: 1, top: 16, left: 68, w: 125, dur: 78, delay: -60, op: 0.85 },
+  { v: 3, top: 34, left: 88, w: 175, dur: 56, delay: -33, op: 0.8 },
 ];
 
 export default function Garden() {
@@ -151,7 +153,7 @@ export default function Garden() {
     const line = lines[state.bombomIdx % lines.length];
     // each stage fills a bit more of the scene than the last one
     // tree grows bigger each stage: scale multiplier applied to the base width
-    const growScale = [0.5, 0.62, 0.74, 0.86, 0.94, 1.0][Math.min(6, lvl.levelNum) - 1];
+    const growScale = [0.30, 0.45, 0.62, 0.80, 0.92, 1.0][Math.min(6, lvl.levelNum) - 1];
     return (
       <div className="sf-screen sf-garden">
         {/* ---- the scene: takes whatever height the UI leaves ---- */}
@@ -167,7 +169,7 @@ export default function Garden() {
                 src={`/assets/sprites/garden/cloud-${c.v}.png`}
                 alt=""
                 className="sf-drift"
-                style={{ top: `${c.top}%`, width: `${c.w}px`, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, opacity: c.op }}
+                style={{ top: `${c.top}%`, left: `${c.left}%`, width: `${c.w}px`, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, opacity: c.op }}
               />
             ))}
           </div>
