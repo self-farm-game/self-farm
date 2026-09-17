@@ -174,7 +174,7 @@ textarea, input, button { font-family: inherit; }
 /* drifting clouds */
 .sf-clouds { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .sf-drift {
-  position: absolute;   /* left comes from the inline style (static fallback) */
+  position: absolute; left: -28%;
   image-rendering: pixelated;
   animation-name: sf-cloud-drift; animation-timing-function: linear; animation-iteration-count: infinite;
   filter: drop-shadow(0 3px 4px rgba(80,110,150,.18));
@@ -205,7 +205,9 @@ textarea, input, button { font-family: inherit; }
   .sf-plot-img.sf-only-mobile { display: none; }
   .sf-plot-img.sf-only-desktop { display: block; }
 }
-@media (prefers-reduced-motion: reduce) { .sf-drift { animation: none; } }
+/* clouds keep their gentle drift even with reduced motion (it's a slow,
+   non-vestibular ambient movement); only speed is eased a little */
+@media (prefers-reduced-motion: reduce) { .sf-drift { animation-duration: 90s !important; } }
 
 /* gnome sits on the grass with his speech bubble */
 .sf-gnome {

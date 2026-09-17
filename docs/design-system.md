@@ -391,3 +391,13 @@ also restored to the earlier values. The ONLY cloud change kept: each cloud has 
 `left` start position (so it is visible even when the OS reduces motion, which was the
 reason the sky looked empty) and a calm, noticeable drift (42–56s per crossing).
 
+### v25 — clouds actually DRIFT (the real cause)
+`@media (prefers-reduced-motion: reduce) { .sf-drift { animation: none } }` was killing
+the cloud animation outright. On a machine with the OS "reduce motion" setting on (the
+user's case) the clouds therefore either sat off-screen (empty sky) or, after the static
+fallback, hung motionless. Clouds are slow ambient drift, not a vestibular trigger, so
+they now KEEP animating under reduced motion (just eased to a 90s crossing).
+Setup: 4 clouds, one crossing ≈ 55s, negative delays spread across the cycle so only
+1–2 are inside the sky at any moment and the rest wait off-screen. Verified with
+Playwright `reduced_motion="reduce"`: positions advanced 9% of the sky in 5s.
+

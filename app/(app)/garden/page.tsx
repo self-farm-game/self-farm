@@ -40,15 +40,12 @@ const parchShadow =
 
 // 5 cloud sprites drifting across the sky on slightly random tracks
 const CLOUDS = [
-  // `left` is the starting spot (and the static position if the OS reduces motion)
-  { v: 1, top: 6,  left: 4,  w: 120, dur: 44, delay: 0,   op: 0.95 },
-  { v: 3, top: 11, left: 26, w: 140, dur: 50, delay: -12, op: 0.9 },
-  { v: 2, top: 16, left: 52, w: 90,  dur: 46, delay: -22, op: 0.85 },
-  { v: 4, top: 9,  left: 74, w: 80,  dur: 54, delay: -32, op: 0.8 },
-  { v: 5, top: 21, left: 12, w: 70,  dur: 48, delay: -6,  op: 0.8 },
-  { v: 2, top: 26, left: 40, w: 100, dur: 52, delay: -40, op: 0.8 },
-  { v: 1, top: 14, left: 64, w: 78,  dur: 56, delay: -50, op: 0.75 },
-  { v: 3, top: 31, left: 86, w: 110, dur: 42, delay: -28, op: 0.7 },
+  // one crossing ≈ 55s; the delays are spread across the cycle so only 1–2 clouds
+  // are in the sky at a time and the others are still off-screen waiting their turn
+  { v: 1, top: 7,  w: 130, dur: 55, delay: 0,   op: 0.95 },
+  { v: 3, top: 15, w: 150, dur: 62, delay: -16, op: 0.9 },
+  { v: 2, top: 11, w: 100, dur: 58, delay: -34, op: 0.85 },
+  { v: 5, top: 22, w: 85,  dur: 66, delay: -50, op: 0.8 },
 ];
 
 export default function Garden() {
@@ -168,7 +165,7 @@ export default function Garden() {
                 src={`/assets/sprites/garden/cloud-${c.v}.png`}
                 alt=""
                 className="sf-drift"
-                style={{ top: `${c.top}%`, left: `${c.left}%`, width: `${c.w}px`, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, opacity: c.op }}
+                style={{ top: `${c.top}%`, width: `${c.w}px`, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, opacity: c.op }}
               />
             ))}
           </div>
