@@ -360,3 +360,15 @@ Verified: single meadow, single circle, one tree, one gnome.
   a stepped speech-bubble TAIL (::before outline + ::after fill triangle) pointing
   down-left to the gnome. Readable over the meadow.
 
+### v22 — clouds visible again + bubble reshaped
+- CLOUDS BUG: drift animated `translateX(160vw)` — vw is the BROWSER viewport, but the
+  frame is a fixed 1200px box scaled by transform, so clouds flew far outside the scene
+  and were almost never on screen. Now the keyframes animate `left: -30% → 115%`
+  (container-relative), so they always cross the visible sky.
+- BUBBLE: shape is "square with pixel-rounded corners" via a clip-path polygon with a
+  2-step chamfer on each corner, and the speech ARROW is folded into the same polygon
+  pointing LEFT toward Бомбом (clip-path can't draw outside the box, so the arrow lives
+  inside it with extra left padding). Outline is crisp because the background is opaque
+  and the whole element carries `opacity: .82` — so the drop-shadow outline follows the
+  stepped silhouette and the bubble still reads as semi-transparent.
+

@@ -178,10 +178,13 @@ textarea, input, button { font-family: inherit; }
   image-rendering: pixelated;
   animation-name: sf-cloud-drift; animation-timing-function: linear; animation-iteration-count: infinite;
   filter: drop-shadow(0 3px 4px rgba(80,110,150,.18));
+  will-change: left;
 }
+/* drift across the SCENE (container-relative), not the browser viewport —
+   the frame is scaled, so vw-based travel sent clouds far off-screen */
 @keyframes sf-cloud-drift {
-  from { transform: translateX(0); }
-  to   { transform: translateX(160vw); }
+  from { left: -30%; }
+  to   { left: 115%; }
 }
 /* ===== GARDEN SCENE — the meadow box keeps the bg's exact aspect (like the
    sandbox device), so nothing distorts and tree/gnome %s stay locked ===== */
@@ -218,38 +221,39 @@ textarea, input, button { font-family: inherit; }
 }
 .sf-gnome-bubble {
   position: relative;
-  flex: 1; min-width: 0; margin-bottom: 22px;
-  /* semi-transparent bubble */
-  background: rgba(246, 242, 232, 0.60);
-  backdrop-filter: blur(2px);
-  padding: 9px 13px 10px;
+  flex: 1; min-width: 0; margin-bottom: 6px; margin-left: 10px;
+  /* semi-transparent, between round and square: pixel-stepped ("chamfered") corners */
+  background: #f6f2e8;            /* opaque → crisp outline */
+  opacity: 0.82;                  /* whole bubble is semi-transparent */
+  padding: 9px 13px 10px 26px;   /* extra left room for the arrow */
   color: #241a32;
-  /* pixel-art "stepped corner" border built from layered box-shadows:
-     an inset frame + an outer blocky outline offset in 1px steps → square pixel look */
-  border-radius: 2px;
-  box-shadow:
-    0 0 0 2px rgba(36, 26, 50, 0.9),
-    0 0 0 4px rgba(246, 242, 232, 0.35),
-    0 5px 0 2px rgba(0, 0, 0, 0.22);
+  border-radius: 0;
+  -webkit-clip-path: var(--sf-bub-shape);
+  clip-path: var(--sf-bub-shape);
+  /* blocky outline that FOLLOWS the stepped shape (drop-shadows respect clip-path) */
+  filter:
+    drop-shadow(2px 0 0 rgba(36,26,50,.9))
+    drop-shadow(-2px 0 0 rgba(36,26,50,.9))
+    drop-shadow(0 2px 0 rgba(36,26,50,.9))
+    drop-shadow(0 -2px 0 rgba(36,26,50,.9))
+    drop-shadow(0 4px 3px rgba(0,0,0,.28));
 }
-/* speech-bubble tail: small stepped pixel triangle pointing down-left to the gnome */
-.sf-gnome-bubble::before {
-  content: "";
-  position: absolute;
-  left: 16px; bottom: -8px;
-  width: 0; height: 0;
-  border-left: 9px solid transparent;
-  border-right: 9px solid transparent;
-  border-top: 10px solid rgba(36, 26, 50, 0.9);   /* outline layer */
-}
-.sf-gnome-bubble::after {
-  content: "";
-  position: absolute;
-  left: 18px; bottom: -4px;
-  width: 0; height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top: 8px solid rgba(246, 242, 232, 0.60);  /* fill layer over outline */
+:root {
+  /* 2-step pixel chamfer on every corner → "rounded, but pixel" */
+  /* body with 2-step pixel chamfer + a left-pointing arrow toward Бомбом,
+     all in ONE shape (clip-path cannot draw outside the element box) */
+  --sf-bub-shape: polygon(
+    20px 0, calc(100% - 6px) 0,
+    calc(100% - 6px) 3px, calc(100% - 3px) 3px,
+    calc(100% - 3px) 6px, 100% 6px,
+    100% calc(100% - 6px), calc(100% - 3px) calc(100% - 6px),
+    calc(100% - 3px) calc(100% - 3px), calc(100% - 6px) calc(100% - 3px),
+    calc(100% - 6px) 100%, 20px 100%,
+    20px calc(100% - 3px), 17px calc(100% - 3px),
+    17px calc(100% - 6px), 14px calc(100% - 6px),
+    14px calc(50% + 13px), 0 50%, 14px calc(50% - 13px),
+    14px 6px, 17px 6px, 17px 3px, 20px 3px
+  );
 }
 .sf-gnome-bubble .sf-bombom-name { color: #463c64; }
 .sf-gnome-bubble p {
