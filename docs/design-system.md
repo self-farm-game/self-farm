@@ -384,3 +384,10 @@ its base position; the animation overrides it when motion is allowed. Verified w
 Playwright `reduced_motion="reduce"`: 8 clouds visible across the sky. Clouds were
 also enlarged/opacified so they read clearly against the bright sky.
 
+### v24 — reverted tree, clouds only
+Rolled the tree back exactly as it was (sprites cropped with plain getbbox + width 520,
+growScale [0.5 .62 .74 .86 .94 1]) — no texture resizing anywhere. Cloud sizes/opacity
+also restored to the earlier values. The ONLY cloud change kept: each cloud has a static
+`left` start position (so it is visible even when the OS reduces motion, which was the
+reason the sky looked empty) and a calm, noticeable drift (42–56s per crossing).
+
