@@ -66,6 +66,9 @@ export default function GameShell({ children }: { children: React.ReactNode }) {
   }, []);
   // onboarding and the initial redirect render full-bleed with their own bg
   const bare = pathname === "/onboarding" || pathname === "/";
+  // /lab3d — 3D-пісочниця: той самий фіксований кадр вікна, але без навігації
+  // та без авторизації (це прототип, не частина гри).
+  const lab = pathname === "/lab3d";
 
   // auth gating: until ready show a tiny loader; if not signed in show the gate
   const loading = !auth.ready;
@@ -75,7 +78,9 @@ export default function GameShell({ children }: { children: React.ReactNode }) {
     <div className="sf-field">
       <div className="sf-frame" ref={frameRef}>
         <div className="sf-inner">
-          {loading ? (
+          {lab ? (
+            <div style={{ position: "absolute", inset: 0 }}>{children}</div>
+          ) : loading ? (
             <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#0c0a16", color: "#8a7fb0", fontSize: 13, letterSpacing: 2 }}>
               Self-Farm…
             </div>
