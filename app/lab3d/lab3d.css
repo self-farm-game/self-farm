@@ -255,10 +255,17 @@
 .l3-bottom {
   margin-top: auto;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 14px;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   padding-bottom: 4px;
+}
+.l3-hint {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: rgba(60, 40, 20, 0.5);
+  pointer-events: none;
 }
 
 /* ── бульбашка Бомбома ────────────────────────────────────── */
@@ -274,6 +281,21 @@
   pointer-events: none;
 }
 .l3-ui > .l3-bombom { pointer-events: none; }
+
+/* Бомбом заїхав у праву половину — розвертаємо бульбашку */
+.l3-bub-left .l3-bombom { transform: translate(calc(-100% - 14px), -100%); }
+.l3-bub-left .l3-bubble::before {
+  left: auto;
+  right: -13px;
+  border-right-color: transparent;
+  border-left-color: var(--l3-edge);
+}
+.l3-bub-left .l3-bubble::after {
+  left: auto;
+  right: -8px;
+  border-right-color: transparent;
+  border-left-color: rgba(253, 246, 230, 0.93);
+}
 .l3-bubble {
   position: relative;
   padding: 11px 15px;
@@ -493,7 +515,7 @@
   .l3-name { font-size: 13px; }
   .l3-pills { flex-direction: column; align-items: flex-end; gap: 6px; }
   .l3-pill { padding: 6px 11px; font-size: 12px; border-width: 2px; }
-  .l3-rail { right: 12px; top: auto; bottom: 108px; transform: none; gap: 8px; }
+  .l3-rail { right: 12px; top: auto; bottom: 208px; transform: none; gap: 8px; }
   .l3-tile { width: 50px; height: 50px; border-radius: 15px; }
   .l3-tile .l3-ico { font-size: 19px; }
   .l3-tile .l3-cap { display: none; }
@@ -503,10 +525,11 @@
     left: 12px;
     right: 12px;
     top: auto;
-    bottom: 104px;
+    bottom: 132px;
     max-width: none;
     transform: none;
   }
+  .l3-bub-left .l3-bombom { transform: none; }
   .l3-bubble { font-size: 12px; padding: 9px 12px; }
   .l3-bubble::before, .l3-bubble::after { display: none; }
   .l3-btn { font-size: 15px; padding: 12px 22px; }

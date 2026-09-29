@@ -196,114 +196,249 @@ function buildIsland(rng: () => number) {
   return { group: g, hill, R, rim };
 }
 
-/* ───────────────────────── дерево ───────────────────────── */
-type TreeSpec = { trunkH: number; trunkR: number; blobs: { x: number; y: number; z: number; r: number; c: number }[]; apples: number; hollow: boolean };
+/* ───────────────────────── дерево ─────────────────────────
+   Шість стадій — це шість РІЗНИХ силуетів, а не одне дерево в різних
+   масштабах: паросток із сім'ядолями → стебло з листочками → тонке
+   деревце з рідкою кроною → перша куляста крона з яблуками → щедре
+   дерево з дуплом → розлогий віковий дуб.                              */
 
-function treeSpec(stage: number): TreeSpec {
+const LEAF_A = 0x62b04a;
+const LEAF_B = 0x4f9a3d;
+const LEAF_C = 0x8ed05f;
+const STEM_GREEN = 0x84a852;
+
+export type TreeParts = {
+  group: THREE.Group;
+  canopy: THREE.Group;
+  hollow: THREE.Mesh | null;
+  runeMesh: THREE.Mesh | null;
+  topY: number;
+};
+
+function buildTree(stage: number, rng: () => number): TreeParts {
   const s = Math.max(1, Math.min(6, stage));
-  const table: TreeSpec[] = [
-    { trunkH: 0.32, trunkR: 0.055, apples: 0, hollow: false, blobs: [ { x: -0.1, y: 0.34, z: 0.02, r: 0.17, c: C.leafC }, { x: 0.12, y: 0.4, z: -0.04, r: 0.14, c: C.leafA } ] },
-    { trunkH: 0.8, trunkR: 0.1, apples: 0, hollow: false, blobs: [ { x: 0, y: 0.92, z: 0, r: 0.38, c: C.leafA }, { x: -0.22, y: 0.78, z: 0.14, r: 0.24, c: C.leafC } ] },
-    { trunkH: 1.45, trunkR: 0.16, apples: 0, hollow: false, blobs: [ { x: 0, y: 1.65, z: 0, r: 0.6, c: C.leafA }, { x: -0.42, y: 1.42, z: 0.2, r: 0.4, c: C.leafB }, { x: 0.4, y: 1.5, z: -0.16, r: 0.37, c: C.leafC } ] },
-    { trunkH: 2.0, trunkR: 0.22, apples: 5, hollow: false, blobs: [ { x: 0, y: 2.35, z: 0, r: 0.82, c: C.leafA }, { x: -0.68, y: 2.0, z: 0.26, r: 0.56, c: C.leafB }, { x: 0.66, y: 2.1, z: -0.22, r: 0.54, c: C.leafC }, { x: 0.1, y: 1.85, z: 0.6, r: 0.45, c: C.leafB } ] },
-    { trunkH: 2.5, trunkR: 0.3, apples: 9, hollow: true, blobs: [ { x: 0, y: 3.0, z: 0, r: 1.02, c: C.leafA }, { x: -0.92, y: 2.55, z: 0.3, r: 0.72, c: C.leafB }, { x: 0.9, y: 2.68, z: -0.28, r: 0.7, c: C.leafC }, { x: 0.15, y: 2.4, z: 0.8, r: 0.6, c: C.leafB }, { x: -0.2, y: 2.45, z: -0.85, r: 0.55, c: C.leafA } ] },
-    { trunkH: 3.1, trunkR: 0.42, apples: 13, hollow: true, blobs: [ { x: 0, y: 3.75, z: 0, r: 1.3, c: C.leafA }, { x: -1.24, y: 3.15, z: 0.36, r: 0.92, c: C.leafB }, { x: 1.2, y: 3.3, z: -0.34, r: 0.9, c: C.leafC }, { x: 0.2, y: 2.95, z: 1.05, r: 0.78, c: C.leafB }, { x: -0.28, y: 3.0, z: -1.1, r: 0.72, c: C.leafA }, { x: 0.6, y: 3.9, z: 0.5, r: 0.6, c: C.leafC } ] },
-  ];
-  return table[s - 1];
-}
-
-function buildTree(stage: number, rng: () => number) {
-  const spec = treeSpec(stage);
   const g = new THREE.Group();
   const canopy = new THREE.Group();
+  g.add(canopy);
+  let hollow: THREE.Mesh | null = null;
+  let runeMesh: THREE.Mesh | null = null;
+  let topY = 0.4;
 
-  // стовбур — трохи звужений і ледь нахилений
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(spec.trunkR * 0.72, spec.trunkR * 1.15, spec.trunkH, 7, 2),
-    flatMat(C.bark),
-  );
-  trunk.position.y = spec.trunkH / 2;
-  trunk.rotation.z = 0.035;
-  trunk.castShadow = true;
-  trunk.receiveShadow = true;
-  g.add(trunk);
+  /* ── цеглинки ── */
 
-  // коренева основа
-  if (stage >= 3) {
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2 + rng();
-      const root = new THREE.Mesh(new THREE.IcosahedronGeometry(spec.trunkR * 0.75, 0), flatMat(C.barkDark));
-      root.position.set(Math.cos(a) * spec.trunkR * 1.25, spec.trunkR * 0.25, Math.sin(a) * spec.trunkR * 1.25);
-      root.scale.set(1, 0.55, 1);
-      root.castShadow = true;
-      g.add(root);
-    }
-  }
+  // листок: сплюснутий ікосаедр, довгою віссю по X.
+  // yaw крутить його навколо стовбура, tilt піднімає зовнішній кінець.
+  const leaf = (x: number, y: number, z: number, size: number, color: number, yaw: number, tilt: number) => {
+    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(size, 0), flatMat(color));
+    m.scale.set(1.55, 0.26, 0.92);
+    m.position.set(x, y, z);
+    m.rotation.set(0, yaw, tilt);
+    m.castShadow = true;
+    canopy.add(m);
+    return m;
+  };
 
-  // гілки
-  if (stage >= 4) {
-    const n = stage === 4 ? 2 : stage === 5 ? 3 : 4;
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2 + 0.7;
-      const len = spec.trunkH * 0.42;
-      const br = new THREE.Mesh(new THREE.CylinderGeometry(spec.trunkR * 0.2, spec.trunkR * 0.42, len, 5), flatMat(C.bark));
-      br.position.set(Math.cos(a) * len * 0.35, spec.trunkH * 0.78, Math.sin(a) * len * 0.35);
-      br.rotation.set(Math.sin(a) * 0.75, 0, -Math.cos(a) * 0.75);
-      br.castShadow = true;
-      g.add(br);
-    }
-  }
+  // черешок — тонка гілочка від стовбура до листка
+  const petiole = (y: number, ang: number, len: number, color = STEM_GREEN) => {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, len, 4), flatMat(color));
+    p.geometry.translate(0, len / 2, 0);
+    p.position.set(0, y, 0);
+    p.rotation.set(Math.sin(ang) * 1.05, 0, -Math.cos(ang) * 1.05);
+    canopy.add(p);
+  };
 
-  // крона
-  for (const b of spec.blobs) {
-    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(b.r, 1), flatMat(b.c));
-    m.position.set(b.x, b.y, b.z);
+  const blob = (x: number, y: number, z: number, r: number, color: number, flat = 0.88) => {
+    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), flatMat(color));
+    m.position.set(x, y, z);
+    m.scale.set(1, flat, 1);
     m.rotation.set(rng() * 3, rng() * 3, rng() * 3);
-    m.scale.set(1, 0.86 + rng() * 0.2, 1);
     m.castShadow = true;
     m.receiveShadow = true;
     canopy.add(m);
-  }
+    return m;
+  };
 
-  // яблука
+  const trunk = (rTop: number, rBot: number, h: number, color = C.bark, seg = 8) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, seg, 3), flatMat(color));
+    m.position.y = h / 2;
+    m.castShadow = true;
+    m.receiveShadow = true;
+    g.add(m);
+    return m;
+  };
+
+  // гілка від стовбура; повертає координату кінчика
+  const branch = (fromY: number, ang: number, len: number, r: number, tilt: number) => {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.45, r, len, 5), flatMat(C.bark));
+    b.geometry.translate(0, len / 2, 0);
+    b.position.set(0, fromY, 0);
+    b.rotation.set(Math.sin(ang) * tilt, 0, -Math.cos(ang) * tilt);
+    b.castShadow = true;
+    g.add(b);
+    const dir = new THREE.Vector3(0, 1, 0).applyEuler(b.rotation).multiplyScalar(len);
+    return new THREE.Vector3(dir.x, fromY + dir.y, dir.z);
+  };
+
+  const roots = (n: number, rad: number, scale = 1) => {
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rng();
+      const rt = new THREE.Mesh(new THREE.IcosahedronGeometry(rad * 0.55 * scale, 0), flatMat(C.barkDark));
+      rt.position.set(Math.cos(a) * rad * 1.05, rad * 0.16, Math.sin(a) * rad * 1.05);
+      rt.scale.set(1, 0.5, 1);
+      rt.castShadow = true;
+      g.add(rt);
+    }
+  };
+
   const appleMat = flatMat(0xe0513f, { emissive: 0x2a0a06 });
-  for (let i = 0; i < spec.apples; i++) {
-    const host = spec.blobs[Math.floor(rng() * spec.blobs.length)];
-    const a = rng() * Math.PI * 2;
-    const p = rng() * Math.PI - Math.PI / 2;
-    const ap = new THREE.Mesh(new THREE.IcosahedronGeometry(Math.max(0.06, host.r * 0.12), 0), appleMat);
-    ap.position.set(
-      host.x + Math.cos(a) * Math.cos(p) * host.r * 0.95,
-      host.y + Math.sin(p) * host.r * 0.8,
-      host.z + Math.sin(a) * Math.cos(p) * host.r * 0.95,
-    );
-    canopy.add(ap);
-  }
-  g.add(canopy);
+  const apples = (n: number, hosts: THREE.Mesh[], size: number) => {
+    for (let i = 0; i < n; i++) {
+      const host = hosts[Math.floor(rng() * hosts.length)];
+      const a = rng() * Math.PI * 2;
+      const p = rng() * Math.PI - Math.PI / 2;
+      const hr = (host.geometry as THREE.IcosahedronGeometry).parameters.radius;
+      const ap = new THREE.Mesh(new THREE.IcosahedronGeometry(size, 0), appleMat);
+      ap.position.set(
+        host.position.x + Math.cos(a) * Math.cos(p) * hr * 0.95,
+        host.position.y + Math.sin(p) * hr * 0.78,
+        host.position.z + Math.sin(a) * Math.cos(p) * hr * 0.95,
+      );
+      canopy.add(ap);
+    }
+  };
 
-  // дупло
-  let hollow: THREE.Mesh | null = null;
-  let runeMesh: THREE.Mesh | null = null;
-  if (spec.hollow) {
-    const hy = spec.trunkH * 0.58;
-    const hr = spec.trunkR * 0.55;
+  const makeHollow = (hy: number, hr: number, tr: number) => {
     hollow = new THREE.Mesh(new THREE.SphereGeometry(hr, 10, 8), flatMat(0x2a1a10, { emissive: 0x120a06 }));
-    hollow.position.set(0, hy, spec.trunkR * 0.92);
+    hollow.position.set(0, hy, tr * 0.9);
     hollow.scale.set(1, 1.35, 0.55);
     g.add(hollow);
-
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(hr * 1.05, hr * 0.2, 5, 10), flatMat(C.barkDark));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(hr * 1.08, hr * 0.22, 5, 10), flatMat(C.barkDark));
     ring.position.copy(hollow.position);
     ring.scale.set(1, 1.35, 0.7);
     g.add(ring);
-
-    runeMesh = new THREE.Mesh(new THREE.OctahedronGeometry(hr * 0.62, 0), flatMat(0xffffff, { emissive: 0x000000 }));
-    runeMesh.position.set(0, hy, spec.trunkR * 1.02);
+    runeMesh = new THREE.Mesh(new THREE.OctahedronGeometry(hr * 0.6, 0), flatMat(0xffffff));
+    runeMesh.position.set(0, hy, tr * 1.02);
     runeMesh.visible = false;
     g.add(runeMesh);
+  };
+
+  /* ── стадії ── */
+
+  if (s === 1) {
+    // ПАРОСТОК: вигнуте стебельце і дві сім'ядолі, кори ще немає
+    const h = 0.2;
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.03, h, 5), flatMat(STEM_GREEN));
+    st.position.y = h / 2;
+    st.rotation.z = 0.14;
+    st.castShadow = true;
+    g.add(st);
+    // грудочка землі, з якої він щойно виліз
+    const mound = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), flatMat(0x8a6038));
+    mound.position.y = 0.015;
+    mound.scale.set(1, 0.4, 1);
+    g.add(mound);
+    leaf(-0.085, h + 0.03, 0.015, 0.072, LEAF_C, 0.15, -0.42);
+    leaf(0.085, h + 0.045, -0.02, 0.066, LEAF_A, Math.PI + 0.08, 0.42);
+    leaf(0.005, h + 0.1, 0.03, 0.045, LEAF_C, 1.5, -0.1);
+    topY = h + 0.16;
+  } else if (s === 2) {
+    // САДЖАНЕЦЬ: тонке стебло, окремі листочки по спіралі, крони ще немає
+    const h = 0.95;
+    const st = trunk(0.026, 0.055, h, 0x8d9f56, 6);
+    st.rotation.z = 0.04;
+    const n = 7;
+    for (let i = 0; i < n; i++) {
+      const f = 0.34 + (i / (n - 1)) * 0.6;
+      const a = i * 2.25;
+      const y = h * f;
+      petiole(y, a, 0.1);
+      const d = 0.13;
+      leaf(Math.cos(a) * d, y + 0.05, Math.sin(a) * d, 0.095 + rng() * 0.025, i % 2 ? LEAF_A : LEAF_C, -a, 0.3);
+    }
+    leaf(0.0, h + 0.06, 0.01, 0.1, LEAF_C, 0.6, 0.12);
+    leaf(0.05, h + 0.02, 0.06, 0.082, LEAF_A, 2.3, 0.26);
+    topY = h + 0.2;
+  } else if (s === 3) {
+    // МОЛОДЕ ДЕРЕВЦЕ: перша кора, три гілочки, рідка «прозора» крона
+    const h = 1.5;
+    trunk(0.065, 0.115, h);
+    roots(4, 0.115);
+    const tips: THREE.Vector3[] = [];
+    for (let i = 0; i < 3; i++) tips.push(branch(h * 0.6 + i * 0.2, i * 2.1 + 0.4, 0.44, 0.035, 0.9));
+    blob(0, h + 0.26, 0, 0.4, LEAF_A, 0.92);
+    tips.forEach((p, i) => blob(p.x * 1.12, p.y + 0.1, p.z * 1.12, 0.24 + rng() * 0.07, i % 2 ? LEAF_B : LEAF_C, 0.92));
+    for (let i = 0; i < 7; i++) {
+      const a = rng() * Math.PI * 2;
+      const rr = 0.28 + rng() * 0.3;
+      leaf(Math.cos(a) * rr, h + 0.1 + rng() * 0.5, Math.sin(a) * rr, 0.085, LEAF_C, -a, 0.22);
+    }
+    topY = h + 0.72;
+  } else if (s === 4) {
+    // ПЛІДНЕ ДЕРЕВО: справжній стовбур і перша куляста крона з яблуками
+    const h = 2.05;
+    trunk(0.135, 0.215, h);
+    roots(5, 0.215);
+    const tips: THREE.Vector3[] = [];
+    for (let i = 0; i < 4; i++) tips.push(branch(h * 0.66 + (i % 2) * 0.16, i * 1.6 + 0.5, 0.58, 0.05, 0.82));
+    const hosts = [blob(0, h + 0.46, 0, 0.8, LEAF_A, 0.9)];
+    tips.forEach((p, i) => hosts.push(blob(p.x * 1.05, p.y + 0.16, p.z * 1.05, 0.44 + rng() * 0.12, i % 2 ? LEAF_B : LEAF_C, 0.9)));
+    apples(6, hosts, 0.075);
+    topY = h + 1.3;
+  } else if (s === 5) {
+    // ЩЕДРЕ ДЕРЕВО: широка крона, багато яблук, зʼявляється дупло
+    const h = 2.5;
+    trunk(0.2, 0.3, h);
+    roots(6, 0.3);
+    const tips: THREE.Vector3[] = [];
+    for (let i = 0; i < 5; i++) tips.push(branch(h * 0.64 + (i % 3) * 0.17, i * 1.28 + 0.3, 0.74, 0.062, 0.8));
+    const hosts = [blob(0, h + 0.56, 0, 1.0, LEAF_A, 0.88)];
+    tips.forEach((p, i) => hosts.push(blob(p.x * 1.04, p.y + 0.2, p.z * 1.04, 0.56 + rng() * 0.16, i % 2 ? LEAF_B : LEAF_C, 0.88)));
+    apples(11, hosts, 0.085);
+    makeHollow(h * 0.54, 0.16, 0.27);
+    topY = h + 1.62;
+  } else {
+    // ВІКОВИЙ ДУБ: товстий кряжистий стовбур, розлога плеската крона, мох
+    const h = 2.95;
+    trunk(0.29, 0.42, h, C.bark, 9);
+    const flare = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.62, 0.5, 9, 1), flatMat(C.barkDark));
+    flare.position.y = 0.25;
+    flare.castShadow = true;
+    flare.receiveShadow = true;
+    g.add(flare);
+    roots(7, 0.5, 1.15);
+    const tips: THREE.Vector3[] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = i * 1.06 + 0.2;
+      const base = branch(h * 0.58 + (i % 3) * 0.22, a, 0.78, 0.085, 0.95);
+      // друге коліно — звідси «кряжистість»
+      const b2 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.055, 0.5, 5), flatMat(C.bark));
+      b2.geometry.translate(0, 0.25, 0);
+      b2.position.copy(base);
+      b2.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5);
+      b2.castShadow = true;
+      g.add(b2);
+      const d = new THREE.Vector3(0, 1, 0).applyEuler(b2.rotation).multiplyScalar(0.5);
+      tips.push(base.clone().add(d));
+    }
+    const hosts = [blob(0, h + 0.62, 0, 1.26, LEAF_A, 0.78)];
+    tips.forEach((p, i) => hosts.push(blob(p.x * 1.02, p.y + 0.22, p.z * 1.02, 0.62 + rng() * 0.26, i % 2 ? LEAF_B : LEAF_C, 0.8)));
+    apples(15, hosts, 0.09);
+    makeHollow(h * 0.5, 0.21, 0.37);
+    // мох на стовбурі
+    for (let i = 0; i < 5; i++) {
+      const a = rng() * Math.PI * 2;
+      const y = 0.4 + rng() * (h * 0.7);
+      const r = 0.29 + (0.42 - 0.29) * (1 - y / h);
+      const moss = new THREE.Mesh(new THREE.IcosahedronGeometry(0.1 + rng() * 0.06, 0), flatMat(0x5e8a3e));
+      moss.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+      moss.scale.set(0.9, 0.7, 0.35);
+      moss.rotation.y = -a;
+      g.add(moss);
+    }
+    topY = h + 2.0;
   }
 
-  return { group: g, canopy, hollow, runeMesh, spec };
+  return { group: g, canopy, hollow, runeMesh, topY };
 }
 
 /* ───────────────────────── декор ───────────────────────── */
@@ -633,9 +768,12 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
     const projV = new THREE.Vector3();
 
     /* дерево — перебудовується при зміні стадії */
+    // ранні стадії ледь-ледь збільшені, щоб паросток читався на екрані
+    const TREE_SCALE = [2.35, 1.9, 1.42, 1.26, 1.2, 1.18];
+    const treeScale = (s: number) => TREE_SCALE[Math.max(1, Math.min(6, s)) - 1];
     let tree = buildTree(stage, mulberry32(4242));
     tree.group.position.y = island.hill(0, 0) + 0.04;
-    tree.group.scale.setScalar(1.18);
+    tree.group.scale.setScalar(treeScale(stage));
     world.add(tree.group);
 
     const rebuildTree = (s: number) => {
@@ -646,10 +784,11 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
       });
       tree = buildTree(s, mulberry32(4242));
       tree.group.position.y = island.hill(0, 0) + 0.04;
-      tree.group.scale.setScalar(1.18);
+      tree.group.scale.setScalar(treeScale(s));
       world.add(tree.group);
       applyRune(currentRune);
       frameCamera(s);
+      resize(); // дистанція залежить від висоти дерева — перерахувати
     };
 
     let currentRune: string | null = runeColor ?? null;
@@ -666,34 +805,52 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
     };
     applyRune(currentRune);
 
-    /* камера підлаштовується під розмір дерева */
-    let camDist = 15;
-    let camHeight = 6.2;
+    /* Камера кадрує «коробку»: радіус viewR по горизонталі й від верхівки
+       дерева до viewBot знизу. На паростку коробка менша — камера ближче,
+       на дубі показуємо весь летючий острів разом із вістрям. */
+    let viewR = 7.3;
+    let viewBot = -5.6;
+    let treeTop = 4;
     const frameCamera = (s: number) => {
       const t = (Math.max(1, Math.min(6, s)) - 1) / 5;
-      camDist = 17.0 + t * 3.2;
-      camHeight = 6.8 + t * 2.4;
-      camTarget.set(0, -0.15 + t * 1.15, 0);
+      treeTop = tree.topY * tree.group.scale.y + island.hill(0, 0);
+      viewR = 6.3 + t * 1.0;
+      viewBot = -(4.4 + t * 1.2);
+      camTarget.set(0, (treeTop + viewBot) / 2, 0);
     };
     frameCamera(stage);
 
-    /* керування: обмежене обертання перетягуванням */
+    /* керування: вільний оберт на 360° по горизонталі + інерція.
+       Вертикаль лишається обмеженою, щоб не залізти під острів. */
     let yaw = 0.35;
     let pitch = 0;
     let targetYaw = 0.35;
     let targetPitch = 0;
+    let spin = 0; // залишкова кутова швидкість після відпускання
     let dragging = false;
-    let px = 0, py = 0, moved = 0;
-    const onDown = (e: PointerEvent) => { dragging = true; moved = 0; px = e.clientX; py = e.clientY; (e.target as Element).setPointerCapture?.(e.pointerId); };
+    let px = 0, py = 0, moved = 0, lastDx = 0;
+    const onDown = (e: PointerEvent) => {
+      dragging = true;
+      moved = 0;
+      lastDx = 0;
+      spin = 0;
+      px = e.clientX;
+      py = e.clientY;
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+    };
     const onMove = (e: PointerEvent) => {
       if (!dragging) return;
       const dx = e.clientX - px, dy = e.clientY - py;
       px = e.clientX; py = e.clientY;
       moved += Math.abs(dx) + Math.abs(dy);
-      targetYaw = THREE.MathUtils.clamp(targetYaw - dx * 0.006, -0.85, 1.55);
-      targetPitch = THREE.MathUtils.clamp(targetPitch + dy * 0.004, -0.22, 0.42);
+      lastDx = dx;
+      targetYaw -= dx * 0.007; // без обмежень — повний оберт
+      targetPitch = THREE.MathUtils.clamp(targetPitch + dy * 0.004, -0.3, 0.5);
     };
-    const onUp = () => { dragging = false; };
+    const onUp = () => {
+      if (dragging) spin = THREE.MathUtils.clamp(-lastDx * 0.007, -0.09, 0.09);
+      dragging = false;
+    };
     renderer.domElement.addEventListener("pointerdown", onDown);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -715,8 +872,8 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
     };
     renderer.domElement.addEventListener("click", onClick);
 
-    /* розмір — камера відсувається так, щоб острів завжди влазив цілком */
-    let fitMul = 1;
+    /* розмір — дистанція підбирається так, щоб коробка кадру влізла */
+    let fitDist = 18;
     let narrow = false;
     const resize = () => {
       const w = host.clientWidth || 1;
@@ -729,9 +886,9 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
       narrow = camera.aspect < 0.9;
       // на вузькому екрані даємо острову ледь-ледь вийти за краї — інакше він
       // висить крихітною цяткою посеред неба
-      const needH = (narrow ? 6.1 : 7.3) / (tanV * camera.aspect);
-      const needV = 5.8 / tanV; // піввисота: від крони до вістря знизу
-      fitMul = Math.max(needH, needV);
+      const needH = (narrow ? viewR * 0.84 : viewR) / (tanV * camera.aspect);
+      const needV = ((treeTop - viewBot) * 0.5) / tanV;
+      fitDist = Math.max(needH, needV);
     };
     const ro = new ResizeObserver(resize);
     ro.observe(host);
@@ -745,20 +902,26 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
       const t = clock.getElapsedTime();
       const dt = Math.min(clock.getDelta(), 0.05);
 
-      // ледь помітний ідл-дрейф камери
-      yaw += (targetYaw + Math.sin(t * 0.13) * 0.045 - yaw) * 0.06;
+      // інерція після відпускання + ледь помітний ідл-дрейф
+      if (!dragging && Math.abs(spin) > 0.0002) {
+        targetYaw += spin;
+        spin *= 0.94;
+      }
+      yaw += (targetYaw + Math.sin(t * 0.13) * 0.045 - yaw) * 0.08;
       pitch += (targetPitch - pitch) * 0.06;
-      const cd = Math.max(camDist, fitMul);
-      const ch = camHeight * (cd / camDist) * (narrow ? 0.66 : 1);
+      const cd = fitDist;
+      const ch = cd * (narrow ? 0.3 : 0.42);
       camera.position.set(
         Math.sin(yaw) * cd,
-        ch + pitch * 6 + Math.sin(t * 0.5) * 0.09,
+        camTarget.y + ch + pitch * cd * 0.35 + Math.sin(t * 0.5) * 0.09,
         Math.cos(yaw) * cd,
       );
       // на телефоні дивимось трохи вище — острів опускається в нижню половину,
       // а зверху лишається небо під HUD
       lookAt.copy(camTarget);
-      if (narrow) lookAt.y += 2.6;
+      // зсув рахуємо від видимої висоти кадру, а не від дистанції —
+      // інакше на телефоні (де камера далеко) острів з'їжджає геть униз
+      if (narrow) lookAt.y += cd * Math.tan((camera.fov * Math.PI) / 360) * 0.18;
       camera.lookAt(lookAt);
       // туман тримаємо відносно відстані камери, інакше на вузькому екрані
       // (де камера відʼїжджає далі) острів вицвітає
@@ -805,8 +968,11 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
         projV.project(camera);
         const w = host.clientWidth || 1;
         const h = host.clientHeight || 1;
-        root.style.setProperty("--l3-bx", ((projV.x * 0.5 + 0.5) * w).toFixed(1) + "px");
+        const sx = (projV.x * 0.5 + 0.5) * w;
+        root.style.setProperty("--l3-bx", sx.toFixed(1) + "px");
         root.style.setProperty("--l3-by", ((-projV.y * 0.5 + 0.5) * h).toFixed(1) + "px");
+        // біля правого краю бульбашка відкидається вліво, а хвостик — вправо
+        root.classList.toggle("l3-bub-left", sx > w * 0.55);
       }
 
       if (tree.runeMesh && tree.runeMesh.visible) {

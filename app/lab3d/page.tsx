@@ -137,6 +137,7 @@ export default function Lab3dPage() {
           <button className="l3-btn" onClick={() => setModal("checkin")}>
             Як ти зараз?
           </button>
+          <div className="l3-hint">⟲ тягни сад, щоб обернути</div>
         </div>
       </div>
 
