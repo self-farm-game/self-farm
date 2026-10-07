@@ -173,7 +173,7 @@ export default function Garden() {
           )}
           <div className="l3-hint">
             {canCheckin
-              ? "⟲ тягни сад, щоб обернути · хатинка клікається"
+              ? "⟲ тягни — оберт · колесо чи щипок — зум · тисни хатинку"
               : `лишилось пройти ${active.length} · XP у вікні: ${xpLeft}`}
           </div>
         </div>
@@ -227,7 +227,9 @@ export default function Garden() {
           foot={<button className="l3-btn l3-sm l3-btn-soft" onClick={close}>Пізніше</button>}
         >
           {active.length === 0 ? (
-            <div className="l3-intro">Стежок зараз немає. Тисни «Як ти зараз?» — і зʼявляться три.</div>
+            <div className="l3-intro">
+              Стежок зараз немає. Тисни «Як ти зараз?» — і зʼявляться три.
+            </div>
           ) : (
             active.map((q) => (
               <div key={q.id} className="l3-quest" onClick={() => startQuest(q)}>

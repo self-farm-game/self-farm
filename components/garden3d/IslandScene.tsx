@@ -222,7 +222,18 @@ function buildIsland(rng: () => number) {
     g.add(drip);
   }
 
-  return { group: g, hill, R, rim };
+  /** Справжній радіус краю під цим кутом (край навмисно нерівний). */
+  const rimRadius = (a: number) => {
+    const f = ((((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2)) * SEG;
+    const i0 = Math.floor(f) % SEG;
+    const i1 = (i0 + 1) % SEG;
+    const k = f - Math.floor(f);
+    const r0 = Math.hypot(rim[i0].x, rim[i0].z);
+    const r1 = Math.hypot(rim[i1].x, rim[i1].z);
+    return r0 + (r1 - r0) * k;
+  };
+
+  return { group: g, hill, R, rim, rimRadius };
 }
 
 /* ───────────────────────── дерево ─────────────────────────
@@ -791,34 +802,63 @@ function buildTerrain(
 
 function makeFlowTexture() {
   const c = document.createElement("canvas");
-  c.width = 32;
-  c.height = 256;
+  c.width = 64;
+  c.height = 512;
   const x = c.getContext("2d");
   if (!x) return new THREE.Texture();
-  x.fillStyle = "#86cdec";
-  x.fillRect(0, 0, 32, 256);
-  // світлі прожилки — саме вони «течуть»
-  for (let i = 0; i < 16; i++) {
-    const y = Math.random() * 256;
-    const h = 6 + Math.random() * 30;
+
+  // основа з легким вертикальним переходом — вода не однотонна
+  const base = x.createLinearGradient(0, 0, 0, 512);
+  base.addColorStop(0, "#7cc7e8");
+  base.addColorStop(0.45, "#8fd4ef");
+  base.addColorStop(1, "#6fbbe0");
+  x.fillStyle = base;
+  x.fillRect(0, 0, 64, 512);
+
+  // широкі світлі смуги — головний рух
+  for (let i = 0; i < 14; i++) {
+    const y = Math.random() * 512;
+    const h = 18 + Math.random() * 70;
     const g = x.createLinearGradient(0, y, 0, y + h);
     g.addColorStop(0, "rgba(255,255,255,0)");
-    g.addColorStop(0.5, `rgba(255,255,255,${0.3 + Math.random() * 0.45})`);
+    g.addColorStop(0.5, `rgba(255,255,255,${0.28 + Math.random() * 0.4})`);
     g.addColorStop(1, "rgba(255,255,255,0)");
     x.fillStyle = g;
-    x.fillRect(0, y, 32, h);
+    const w = 10 + Math.random() * 44;
+    x.fillRect(Math.random() * (64 - w), y, w, h);
   }
+
+  // дрібні прожилки — деталізація зблизька
+  for (let i = 0; i < 60; i++) {
+    const y = Math.random() * 512;
+    const h = 4 + Math.random() * 16;
+    const w = 1 + Math.random() * 4;
+    x.fillStyle = `rgba(255,255,255,${0.1 + Math.random() * 0.35})`;
+    x.fillRect(Math.random() * (64 - w), y, w, h);
+  }
+
+  // поодинокі темні жилки — тінь під гребенем хвилі
+  for (let i = 0; i < 18; i++) {
+    const y = Math.random() * 512;
+    const h = 3 + Math.random() * 10;
+    const w = 3 + Math.random() * 12;
+    x.fillStyle = `rgba(36,92,132,${0.1 + Math.random() * 0.22})`;
+    x.fillRect(Math.random() * (64 - w), y, w, h);
+  }
+
   // темніші краї, щоб стрічка читалась обʼємною
-  const e = x.createLinearGradient(0, 0, 32, 0);
-  e.addColorStop(0, "rgba(44,96,136,.5)");
+  const e = x.createLinearGradient(0, 0, 64, 0);
+  e.addColorStop(0, "rgba(40,92,132,.42)");
   e.addColorStop(0.5, "rgba(255,255,255,0)");
-  e.addColorStop(1, "rgba(44,96,136,.5)");
+  e.addColorStop(1, "rgba(40,92,132,.42)");
   x.fillStyle = e;
-  x.fillRect(0, 0, 32, 256);
+  x.fillRect(0, 0, 64, 512);
+
   const t = new THREE.CanvasTexture(c);
   t.wrapS = THREE.RepeatWrapping;
   t.wrapT = THREE.RepeatWrapping;
   t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
   return t;
 }
 
@@ -838,10 +878,13 @@ function buildWater(
   hill: (r: number, a: number) => number,
   R: number,
   tex: THREE.Texture,
+  rimRadius: (a: number) => number,
 ): WaterParts {
   const g = new THREE.Group();
   const A0 = SPRING_A; // напрямок, у який тече струмок
-  const RIM_R = R + 0.1;
+  // Русло має закінчуватись ТРОХИ ВСЕРЕДИНІ краю, інакше вода стирчить
+  // кутом за силует острова.
+  const RIM_R = rimRadius(A0) - 0.42;
 
   const at = (r: number, a: number) => new THREE.Vector3(Math.cos(a) * r, hill(r, a), Math.sin(a) * r);
   // шлях струмка: від чаші до краю, з легким вигином
@@ -1066,10 +1109,11 @@ function buildWater(
     }
   }
 
-  /* ── водоспад: товстий струмінь аж у самий низ ──
-     Два полотна один за одним (щільне ядро + ширший серпанок), щоб потік
-     мав товщину, а не був плоскою стрічкою. Донизу він не обривається —
-     лише трохи світлішає і виходить за кадр.                           */
+  /* ── водоспад: обʼємний, майже циліндричний ──
+     Замість двох площин — суцільна оболонка, протягнута вздовж падіння:
+     поперек потоку йде дуга, тому в ньому читається товщина, а краї
+     самі темніють до силуету. Попереду щільне ядро, позаду ширший
+     серпанок — разом дає обʼєм і трохи паралаксу.                       */
   const fallTex = tex.clone();
   fallTex.needsUpdate = true;
   fallTex.repeat.set(1, 3);
@@ -1080,12 +1124,16 @@ function buildWater(
   const outward = new THREE.Vector3(Math.cos(A0), 0, Math.sin(A0)).normalize();
   const fside = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), outward).normalize();
   {
-    const ROWS = 18;
+    const ROWS = 20;
+    const ARC = 9; // сегментів поперек потоку
     const H = 11.0; // падає далеко за нижню межу кадру
-    const sheet = (
-      halfW0: number,
+
+    /** Оболонка потоку: дуга завширшки `w` і завглибшки `w*depthK`. */
+    const shell = (
+      w0: number,
       grow: number,
-      depth: number,
+      depthK: number,
+      push: number,
       map: THREE.Texture,
       tint: THREE.Color,
       a0: number,
@@ -1098,21 +1146,31 @@ function buildWater(
       const idx: number[] = [];
       for (let k = 0; k <= ROWS; k++) {
         const t = k / ROWS;
-        const y = edge.y - t * H;
-        // спершу вилітає вперед, далі майже прямовисно
-        const out = Math.sin(Math.min(1, t * 2.4) * Math.PI * 0.5) * 0.62 + depth;
-        const w = halfW0 + t * grow;
+        // спершу вилітає вперед по дузі, далі майже прямовисно
+        const out = Math.sin(Math.min(1, t * 2.4) * Math.PI * 0.5) * 0.5 + push;
+        const w = w0 + t * grow;
         const c = edge.clone().addScaledVector(outward, out);
-        c.y = y;
-        const l = c.clone().addScaledVector(fside, w);
-        const r2 = c.clone().addScaledVector(fside, -w);
-        const alpha = a0 + (a1 - a0) * Math.min(1, t * 1.15) ** 1.3;
-        pos.push(l.x, l.y, l.z, r2.x, r2.y, r2.z);
-        uv.push(0, t * 2.2, 1, t * 2.2);
-        col.push(tint.r, tint.g, tint.b, alpha, tint.r, tint.g, tint.b, alpha);
+        c.y = edge.y - t * H;
+        for (let m = 0; m <= ARC; m++) {
+          const ang = -Math.PI / 2 + (m / ARC) * Math.PI; // -90°…+90°
+          const v = c
+            .clone()
+            .addScaledVector(fside, Math.sin(ang) * w)
+            .addScaledVector(outward, Math.cos(ang) * w * depthK);
+          pos.push(v.x, v.y, v.z);
+          uv.push(m / ARC, t * 2.2);
+          // циліндричне затінення: центр яскравий, боки темніші й прозоріші
+          const face = Math.cos(ang); // 1 по центру, 0 по краях
+          const shade = 0.58 + 0.42 * face;
+          const fade = a0 + (a1 - a0) * Math.min(1, t * 1.15) ** 1.3;
+          col.push(tint.r * shade, tint.g * shade, tint.b * shade, fade * (0.35 + 0.65 * face));
+        }
         if (k < ROWS) {
-          const a = k * 2;
-          idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+          const row = k * (ARC + 1);
+          const next = (k + 1) * (ARC + 1);
+          for (let m = 0; m < ARC; m++) {
+            idx.push(row + m, next + m, row + m + 1, row + m + 1, next + m, next + m + 1);
+          }
         }
       }
       const geo = new THREE.BufferGeometry();
@@ -1134,20 +1192,38 @@ function buildWater(
       m.renderOrder = order;
       g.add(m);
     };
-    // ширший серпанок позаду
-    sheet(0.52, 0.5, -0.1, fallTexBack, new THREE.Color(0xd3eefb), 0.5, 0.26, 3);
-    // щільне ядро попереду
-    sheet(0.36, 0.26, 0.06, fallTex, new THREE.Color(0xffffff), 1.0, 0.6, 4);
+
+    // серпанок позаду — ширший, повільніший, напівпрозорий
+    shell(0.56, 0.46, 0.5, -0.12, fallTexBack, new THREE.Color(0xd9f0fb), 0.46, 0.24, 3);
+    // щільне ядро
+    shell(0.38, 0.24, 0.72, 0.05, fallTex, new THREE.Color(0xffffff), 1.0, 0.62, 4);
+
+    // кам'яний поріг: вода зривається з каменю, а не з трави
+    for (let i = 0; i < 6; i++) {
+      const u = (i / 5 - 0.5) * 1.25;
+      const s = 0.16 + rng() * 0.11;
+      const lip = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), flatMat(rng() > 0.5 ? 0x8d8478 : 0x756d62));
+      lip.position
+        .copy(edge)
+        .addScaledVector(fside, u)
+        .addScaledVector(outward, 0.12 + rng() * 0.16);
+      lip.position.y -= 0.05 + Math.abs(u) * 0.06;
+      lip.rotation.set(rng() * 3, rng() * 3, rng() * 3);
+      lip.scale.set(1.25, 0.7, 1);
+      lip.castShadow = true;
+      lip.receiveShadow = true;
+      g.add(lip);
+    }
 
     // піна на зламі
-    const foamMat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xcfe9f6, transparent: true, opacity: 0.75 });
-    for (let i = 0; i < 7; i++) {
+    const foamMat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xcfe9f6, transparent: true, opacity: 0.78 });
+    for (let i = 0; i < 8; i++) {
       const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.07 + rng() * 0.06, 0), foamMat);
       f.position
         .copy(edge)
-        .addScaledVector(fside, (rng() - 0.5) * 0.7)
-        .addScaledVector(outward, 0.02 + rng() * 0.16);
-      f.position.y += (rng() - 0.5) * 0.08 + 0.04;
+        .addScaledVector(fside, (rng() - 0.5) * 0.72)
+        .addScaledVector(outward, rng() * 0.2);
+      f.position.y += (rng() - 0.5) * 0.08 + 0.05;
       f.scale.set(1.4, 0.65, 1);
       g.add(f);
     }
@@ -1396,7 +1472,7 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
     world.add(decor.group);
 
     const flowTex = makeFlowTexture();
-    const water = buildWater(rng, island.hill, island.R, flowTex);
+    const water = buildWater(rng, island.hill, island.R, flowTex, island.rimRadius);
     world.add(water.group);
 
     const hut = buildHut(rng, island.hill, island.R);
@@ -1490,16 +1566,48 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
     let spin = 0; // залишкова кутова швидкість після відпускання
     let dragging = false;
     let px = 0, py = 0, moved = 0, lastDx = 0;
+
+    /* зум: колесо на десктопі, щипок двома пальцями на телефоні.
+       1 — «усе влазить», менше — ближче, більше — далі. */
+    const ZOOM_MIN = 0.45;
+    const ZOOM_MAX = 2.4;
+    let zoom = 1;
+    let targetZoom = 1;
+    const pointers = new Map<number, { x: number; y: number }>();
+    let pinchDist = 0;
+
     const onDown = (e: PointerEvent) => {
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+      if (pointers.size === 2) {
+        // почався щипок — обертання на паузу
+        dragging = false;
+        const [a, b] = [...pointers.values()];
+        pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+        return;
+      }
       dragging = true;
       moved = 0;
       lastDx = 0;
       spin = 0;
       px = e.clientX;
       py = e.clientY;
-      (e.target as Element).setPointerCapture?.(e.pointerId);
     };
+
     const onMove = (e: PointerEvent) => {
+      if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size >= 2) {
+        const [a, b] = [...pointers.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinchDist > 0 && d > 0) {
+          targetZoom = THREE.MathUtils.clamp(targetZoom * (pinchDist / d), ZOOM_MIN, ZOOM_MAX);
+        }
+        pinchDist = d;
+        moved = 999; // після щипка клік не рахуємо
+        return;
+      }
+
       if (!dragging) return;
       const dx = e.clientX - px, dy = e.clientY - py;
       px = e.clientX; py = e.clientY;
@@ -1508,13 +1616,27 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
       targetYaw -= dx * 0.007; // без обмежень — повний оберт
       targetPitch = THREE.MathUtils.clamp(targetPitch + dy * 0.004, -0.3, 0.5);
     };
-    const onUp = () => {
-      if (dragging) spin = THREE.MathUtils.clamp(-lastDx * 0.007, -0.09, 0.09);
-      dragging = false;
+
+    const onUp = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      if (pointers.size < 2) pinchDist = 0;
+      if (dragging && pointers.size === 0) {
+        spin = THREE.MathUtils.clamp(-lastDx * 0.007, -0.09, 0.09);
+      }
+      if (pointers.size === 0) dragging = false;
     };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const step = Math.exp(THREE.MathUtils.clamp(e.deltaY, -120, 120) * 0.0016);
+      targetZoom = THREE.MathUtils.clamp(targetZoom * step, ZOOM_MIN, ZOOM_MAX);
+    };
+
     renderer.domElement.addEventListener("pointerdown", onDown);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
 
     /* клік по хатинці / дуплу / дереву + курсор-рука над ними */
     const ray = new THREE.Raycaster();
@@ -1581,7 +1703,8 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
       }
       yaw += (targetYaw + Math.sin(t * 0.13) * 0.045 - yaw) * 0.08;
       pitch += (targetPitch - pitch) * 0.06;
-      const cd = fitDist;
+      zoom += (targetZoom - zoom) * 0.12;
+      const cd = fitDist * zoom;
       const ch = cd * (narrow ? 0.3 : 0.42);
       camera.position.set(
         Math.sin(yaw) * cd,
@@ -1593,7 +1716,7 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
       lookAt.copy(camTarget);
       // зсув рахуємо від видимої висоти кадру, а не від дистанції —
       // інакше на телефоні (де камера далеко) острів з'їжджає геть униз
-      if (narrow) lookAt.y += cd * Math.tan((camera.fov * Math.PI) / 360) * 0.18;
+      if (narrow) lookAt.y += fitDist * Math.tan((camera.fov * Math.PI) / 360) * 0.18;
       camera.lookAt(lookAt);
       // туман тримаємо відносно відстані камери, інакше на вузькому екрані
       // (де камера відʼїжджає далі) острів вицвітає
@@ -1689,6 +1812,8 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
       renderer.domElement.removeEventListener("pointermove", onHover);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      renderer.domElement.removeEventListener("wheel", onWheel);
       scene.traverse((o) => {
         const m = o as THREE.Mesh;
         if (m.geometry) m.geometry.dispose();

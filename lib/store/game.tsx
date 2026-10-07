@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { JournalDay } from "@/lib/mock-data/content";
 import { DROP_POOL } from "@/lib/mock-data/items";
+import { QUEST_BY_ID } from "@/lib/mock-data/quests-v2";
 import { setMuted as setSoundMuted } from "@/lib/sound/sound";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import {
@@ -67,6 +68,8 @@ export interface GameState {
   questLog: QuestLogEntry[]; // останні проходження (обрізається до 300)
   lang: "en" | "uk" | "uk_raw"; // UI language ("uk_raw" = uncensored Бомбом)
   doneToday: { id: string; title: string; icon: string; time: string }[]; // finished on dayKey
+  /** пройдене в ПОТОЧНОМУ наборі (скидається кожним чек-іном) */
+  iterationDone: { id: string; title: string; icon: string; time: string; outcome: string }[];
 }
 
 // Pre-beta: every visitor starts from zero (no DB/auth yet — state lives in
@@ -98,6 +101,7 @@ const SEED: GameState = {
   questLog: [],
   lang: "uk",
   doneToday: [],
+  iterationDone: [],
 };
 
 const KEY = "self-farm-state-v1";
@@ -160,6 +164,20 @@ interface Ctx {
   }) => SessionResult;
 }
 
+/**
+ * Приводить старе збереження до поточної версії гри.
+ *
+ * Найважливіше: у наборі могли лишитись id квестів зі старого каталогу.
+ * Такі id ніде не знаходяться, набір виглядає «непорожнім», чек-ін
+ * лишається закритим — і гравець назавжди застрягає без кнопки
+ * «Як ти зараз?». Тому невідомі id просто викидаємо.
+ */
+function migrate(s: GameState): GameState {
+  const ids = (s.activeQuestIds || []).filter((id) => !!QUEST_BY_ID[id]);
+  if (ids.length === (s.activeQuestIds || []).length) return s;
+  return { ...s, activeQuestIds: ids, activeStates: ids.length ? s.activeStates : [] };
+}
+
 const GameContext = createContext<Ctx | null>(null);
 
 export const QUESTS_PER_CHECKIN = 3; // matched quests unlocked by each check-in
@@ -200,7 +218,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const isToday = state.dayKey === todayKey();
   const dailyDone = isToday ? state.dailyDone : 0;
   // NEW model: a check-in is allowed only when the active set is fully cleared.
-  const activeLeft = (state.activeQuestIds || []).length;
+  const activeLeft = (state.activeQuestIds || []).filter((id) => !!QUEST_BY_ID[id]).length;
   const canCheckin = activeLeft === 0;
   // 3h XP window: only XP_WINDOW_CAP quests earn XP inside it
   const xpWindowActive = Date.now() - (state.xpWindowStart || 0) < XP_WINDOW_MS;
@@ -219,7 +237,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       let initial: GameState = SEED;
       try {
         const raw = localStorage.getItem(KEY);
-        if (raw) initial = { ...SEED, ...JSON.parse(raw) };
+        if (raw) initial = migrate({ ...SEED, ...JSON.parse(raw) });
       } catch {}
       setState(initial);
       setHydrated(true);
@@ -239,14 +257,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           try {
             const raw = localStorage.getItem(`${KEY}:${user.id}`);
             if (raw) {
-              initial = { ...SEED, ...JSON.parse(raw) };
+              initial = migrate({ ...SEED, ...JSON.parse(raw) });
               hadLocal = true;
             }
           } catch {}
           setState(initial);
           try {
             const remote = await loadRemote(user.id);
-            if (remote && !hadLocal) setState({ ...SEED, ...remote });
+            if (remote && !hadLocal) setState(migrate({ ...SEED, ...remote } as GameState));
             else if (!remote) await saveRemote(user.id, initial);
             else await saveRemote(user.id, initial);
           } catch {}
@@ -330,7 +348,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // Register a mood check-in. Allowed only when the previous set is cleared.
   // Opens a fresh 3h XP window if none is currently running.
   const openCheckin = (stateKeys: string[], questIds: string[], mood?: string) => {
-    if ((stateRef.current.activeQuestIds || []).length > 0) return; // finish the set first
+    // рахуємо лише ВІДОМІ квести: набір зі «сміттєвих» id не має тримати
+    // гравця в заручниках
+    const live = (stateRef.current.activeQuestIds || []).filter((id) => !!QUEST_BY_ID[id]);
+    if (live.length > 0) return; // finish the set first
     setState((s) => {
       const tk = todayKey();
       const rolledDone = s.dayKey === tk ? s.doneToday : [];
@@ -342,6 +363,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         doneToday: rolledDone,
         activeStates: stateKeys,
         activeQuestIds: questIds,
+        iterationDone: [],
         currentMood: mood ?? s.currentMood ?? null,
         lastCheckinAt: now,
         activeUntil: now + XP_WINDOW_MS,
@@ -448,6 +470,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         dailyDone,
         doneToday,
         activeQuestIds,
+        iterationDone: input.questId
+          ? [...(s.iterationDone || []), { ...doneEntry, outcome: input.outcome || "same" }]
+          : s.iterationDone || [],
         xpWindowStart,
         xpInWindow,
         questStats,

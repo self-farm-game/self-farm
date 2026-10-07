@@ -736,3 +736,13 @@
   .l3-ui { padding-top: 56px; }
   .l3-pills { display: none; }
 }
+
+/* підказка має лишатись одним рядком навіть на вузькому екрані */
+.l3-hint {
+  max-width: 100%;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 767px) { .l3-hint { font-size: 10px; } }

@@ -1,50 +1,54 @@
 "use client";
 /**
- * Книга стежок — повний каталог 44 квестів, згрупований за станом.
- * Це довідник, а не місце, де квест запускають: запуск завжди через Сад,
- * бо стежка має сенс лише під конкретний стан «тут і зараз».
+ * Квести — ТІЛЬКИ поточний набір: що лишилось пройти і що вже пройдено
+ * після останнього чек-іну. Повного каталогу тут навмисно немає: стежка
+ * має сенс під конкретний стан, а не як список на вибір.
  *
- * Біля кожного квесту — твоя власна статистика: скільки разів проходив
- * і наскільки часто це допомагало. Та сама цифра впливає на підбір.
+ * Запуск завжди через Сад — тут лише видно, що саме зараз відкрито.
  */
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/store/game";
-import { MOODS, QUESTS, type MoodKey, type Quest } from "@/lib/mock-data/quests-v2";
-import { statWeight } from "@/lib/utils/quest-picker";
+import { MOOD_BY_KEY, OUTCOMES, QUEST_BY_ID, type Quest } from "@/lib/mock-data/quests-v2";
 import { ScreenTitle } from "@/components/ui/primitives";
 import { play } from "@/lib/sound/sound";
 
 const parch = "linear-gradient(180deg,#d8bf94,#c8a878)";
 const parchShadow = "inset 0 2px 0 rgba(255,245,220,.5), 0 0 0 3px #6a4a2c, 0 0 0 5px #2a1a0e";
 
+const OUT_ICON: Record<string, string> = Object.fromEntries(OUTCOMES.map((o) => [o.key, o.icon]));
+const OUT_LABEL: Record<string, string> = Object.fromEntries(OUTCOMES.map((o) => [o.key, o.label]));
+
 export default function Questbook() {
   const router = useRouter();
   const { state, canCheckin } = useGame();
-  const [open, setOpen] = useState<MoodKey | null>(null);
   const [detail, setDetail] = useState<Quest | null>(null);
 
-  const byMood = useMemo(() => {
-    const m = new Map<MoodKey, Quest[]>();
-    for (const q of QUESTS) {
-      const arr = m.get(q.mood) || [];
-      arr.push(q);
-      m.set(q.mood, arr);
-    }
-    return m;
-  }, []);
+  const active = useMemo(
+    () => (state.activeQuestIds || []).map((id) => QUEST_BY_ID[id]).filter(Boolean) as Quest[],
+    [state.activeQuestIds],
+  );
+  const done = state.iterationDone || [];
+  const mood = state.currentMood ? MOOD_BY_KEY[state.currentMood] : null;
+  const total = active.length + done.length;
 
-  const totalRuns = Object.values(state.questStats || {}).reduce((a, s) => a + s.runs, 0);
-  const totalHelped = Object.values(state.questStats || {}).reduce((a, s) => a + s.helped, 0);
+  const goGarden = () => {
+    play("select");
+    router.push("/garden");
+  };
 
   return (
     <div className="sf-screen" style={{ padding: "52px 16px 18px", minHeight: "100%" }}>
-      <ScreenTitle title="Книга стежок" sub="44 маленькі пригоди на різні стани" />
+      <ScreenTitle
+        title="Квести"
+        sub={mood ? `набір під стан «${mood.label}»` : "поточний набір стежок"}
+      />
 
+      {/* шапка набору */}
       <div
         style={{
           borderRadius: 16,
-          padding: "13px 16px",
+          padding: "14px 16px",
           marginBottom: 14,
           background: parch,
           boxShadow: parchShadow,
@@ -53,23 +57,44 @@ export default function Questbook() {
           lineHeight: 1.45,
         }}
       >
-        {totalRuns === 0 ? (
-          <>Стежки відкриваються в Саду — там, де ти кажеш, як тобі зараз. Тут вони просто лежать усі разом.</>
+        {total === 0 ? (
+          <>Набору зараз немає. Скажи в Саду, як тобі, — і зʼявляться три стежки.</>
         ) : (
           <>
-            Пройдено <b>{totalRuns}</b>, допомогло <b>{totalHelped}</b>. Гра памʼятає це й
-            наступного разу пропонує те, що тобі заходить.
+            Пройдено <b>{done.length}</b> з <b>{total}</b>.{" "}
+            {active.length === 0
+              ? "Набір закрито — у Саду відкрився новий чек-ін."
+              : `Лишилось ${active.length}.`}
           </>
         )}
+        {total > 0 && (
+          <div
+            style={{
+              marginTop: 10,
+              height: 11,
+              borderRadius: 999,
+              background: "rgba(90,60,30,.35)",
+              overflow: "hidden",
+              boxShadow: "inset 0 2px 3px rgba(80,50,20,.4)",
+            }}
+          >
+            <div
+              style={{
+                width: `${Math.round((done.length / total) * 100)}%`,
+                height: "100%",
+                borderRadius: 999,
+                background: "linear-gradient(180deg,#9ee06a,#5aa832)",
+                transition: "width .4s cubic-bezier(.22,1,.36,1)",
+              }}
+            />
+          </div>
+        )}
         <div
-          onClick={() => {
-            play("select");
-            router.push("/garden");
-          }}
+          onClick={goGarden}
           style={{
-            marginTop: 10,
+            marginTop: 12,
             display: "inline-block",
-            padding: "8px 16px",
+            padding: "9px 17px",
             borderRadius: 11,
             cursor: "pointer",
             fontWeight: 700,
@@ -79,92 +104,100 @@ export default function Questbook() {
             boxShadow: "inset 0 2px 0 rgba(255,255,255,.5), 0 3px 0 #3f7a25",
           }}
         >
-          {canCheckin ? "У Сад → «Як ти зараз?»" : "У Сад → до стежок"}
+          {canCheckin ? "У Сад → «Як ти зараз?»" : "У Сад → проходити"}
         </div>
       </div>
 
-      {MOODS.map((m) => {
-        const list = byMood.get(m.key) || [];
-        const isOpen = open === m.key;
-        return (
-          <div key={m.key} style={{ marginBottom: 10 }}>
-            <div
-              onClick={() => {
-                play("select");
-                setOpen(isOpen ? null : m.key);
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "12px 15px",
-                borderRadius: 14,
-                cursor: "pointer",
-                background: isOpen ? "linear-gradient(180deg,#6a4a2c,#4a2f18)" : "rgba(60,42,24,.55)",
-                boxShadow: isOpen
-                  ? "inset 0 2px 0 rgba(255,220,160,.3), 0 0 0 2px #2a1a0e"
-                  : "inset 0 0 0 2px rgba(150,110,70,.4)",
-              }}
-            >
-              <span style={{ fontSize: 20 }}>{m.icon}</span>
-              <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: "#f3d9a8" }}>{m.label}</span>
-              <span style={{ fontSize: 12, color: "#c9a878" }}>{list.length}</span>
-              <span style={{ fontSize: 12, color: "#c9a878" }}>{isOpen ? "▴" : "▾"}</span>
-            </div>
-
-            {isOpen && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-                {list.map((q) => {
-                  const st = state.questStats?.[q.id];
-                  const w = statWeight(st);
-                  return (
-                    <div
-                      key={q.id}
-                      onClick={() => {
-                        play("tap");
-                        setDetail(q);
-                      }}
-                      style={{
-                        display: "flex",
-                        gap: 11,
-                        alignItems: "flex-start",
-                        padding: "11px 13px",
-                        borderRadius: 13,
-                        cursor: "pointer",
-                        background: parch,
-                        boxShadow: "inset 0 2px 0 rgba(255,245,220,.45), 0 0 0 2px #6a4a2c",
-                      }}
-                    >
-                      <span style={{ fontSize: 20, lineHeight: 1 }}>{q.icon}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#3f2a16" }}>{q.title}</div>
-                        <div style={{ fontSize: 11.5, color: "#7a5836", marginTop: 2, lineHeight: 1.35 }}>
-                          {q.duration} · {q.intensity} · +{q.xp} XP
-                        </div>
-                        {st && st.runs > 0 && (
-                          <div
-                            style={{
-                              fontSize: 11,
-                              marginTop: 4,
-                              fontWeight: 700,
-                              color: w > 0.05 ? "#3f7a25" : w < -0.05 ? "#9a4a2c" : "#7a5836",
-                            }}
-                          >
-                            пройдено {st.runs} · допомогло {st.helped}
-                            {w > 0.05 ? " · заходить" : w < -0.05 ? " · не твоє" : ""}
-                          </div>
-                        )}
-                      </div>
-                      <span style={{ fontSize: 10, color: "#8a6a44", flexShrink: 0 }}>{q.vid}</span>
-                    </div>
-                  );
-                })}
+      {/* активні */}
+      {active.length > 0 && (
+        <>
+          <Section title="Відкрито" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+            {active.map((q) => (
+              <div
+                key={q.id}
+                onClick={() => {
+                  play("tap");
+                  setDetail(q);
+                }}
+                style={{
+                  display: "flex",
+                  gap: 11,
+                  alignItems: "flex-start",
+                  padding: "12px 14px",
+                  borderRadius: 14,
+                  cursor: "pointer",
+                  background: parch,
+                  boxShadow: "inset 0 2px 0 rgba(255,245,220,.45), 0 0 0 2px #6a4a2c",
+                }}
+              >
+                <span style={{ fontSize: 22, lineHeight: 1 }}>{q.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 700, color: "#3f2a16" }}>{q.title}</div>
+                  <div style={{ fontSize: 12, color: "#5c4228", marginTop: 3, lineHeight: 1.4 }}>{q.intro}</div>
+                  <div style={{ fontSize: 11.5, color: "#7a5836", marginTop: 5 }}>
+                    {q.duration} · {q.intensity} · +{q.xp} XP · {q.steps.length} кроки
+                  </div>
+                </div>
               </div>
-            )}
+            ))}
           </div>
-        );
-      })}
+        </>
+      )}
 
+      {/* пройдене в цьому наборі */}
+      {done.length > 0 && (
+        <>
+          <Section title="Пройдено в цьому наборі" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {done.map((d, i) => (
+              <div
+                key={d.id + i}
+                style={{
+                  display: "flex",
+                  gap: 11,
+                  alignItems: "center",
+                  padding: "11px 14px",
+                  borderRadius: 13,
+                  background: "rgba(60,42,24,.5)",
+                  boxShadow: "inset 0 0 0 2px rgba(150,110,70,.35)",
+                }}
+              >
+                <span style={{ fontSize: 19, opacity: 0.85 }}>{d.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: "#e8d5ad" }}>{d.title}</div>
+                  <div style={{ fontSize: 11.5, color: "#b89a6e" }}>
+                    {d.time} · {OUT_LABEL[d.outcome] || d.outcome}
+                  </div>
+                </div>
+                <span style={{ fontSize: 17 }}>{OUT_ICON[d.outcome] || "·"}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {total === 0 && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: "18px 16px",
+            borderRadius: 16,
+            textAlign: "center",
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: "#a99fc8",
+            background: "rgba(60,48,86,.35)",
+            boxShadow: "inset 0 0 0 2px rgba(150,120,200,.2)",
+          }}
+        >
+          Тут буде видно, що саме відкрито зараз і що ти вже пройшов.
+          <br />
+          Нічого не губиться — усі проходження лишаються в Журналі.
+        </div>
+      )}
+
+      {/* деталі квесту */}
       {detail && (
         <div
           onClick={() => setDetail(null)}
@@ -218,26 +251,6 @@ export default function Questbook() {
               </div>
             ))}
 
-            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.3, color: "#7a5836", margin: "14px 0 7px" }}>
-              перевірка
-            </div>
-            {detail.check.map((c, i) => (
-              <div key={i} style={{ fontSize: 13, lineHeight: 1.45, marginBottom: 5 }}>• {c}</div>
-            ))}
-
-            <div
-              style={{
-                marginTop: 14,
-                padding: "11px 13px",
-                borderRadius: 12,
-                background: "linear-gradient(180deg,#f3df9f,#e3c56e)",
-                boxShadow: "inset 0 2px 0 rgba(255,255,255,.6)",
-              }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 700 }}>🏆 «{detail.reward}»</div>
-              <div style={{ fontSize: 12, color: "#6b5420", marginTop: 3 }}>{detail.rewardNote}</div>
-            </div>
-
             {detail.warning && (
               <div style={{ marginTop: 10, fontSize: 11.5, lineHeight: 1.4, color: "#6b4a16" }}>
                 ⚠ {detail.warning}
@@ -245,14 +258,52 @@ export default function Questbook() {
             )}
 
             <div
+              onClick={goGarden}
+              style={{
+                marginTop: 15,
+                textAlign: "center",
+                padding: "11px 16px",
+                borderRadius: 12,
+                cursor: "pointer",
+                fontWeight: 700,
+                fontSize: 14,
+                color: "#1f3c10",
+                background: "linear-gradient(180deg,#a5e072,#63ab38)",
+                boxShadow: "inset 0 2px 0 rgba(255,255,255,.5), 0 3px 0 #3f7a25",
+              }}
+            >
+              Пройти в Саду →
+            </div>
+            <div
               onClick={() => setDetail(null)}
-              style={{ marginTop: 14, textAlign: "center", fontSize: 13, color: "#7a5836", cursor: "pointer" }}
+              style={{ marginTop: 11, textAlign: "center", fontSize: 13, color: "#7a5836", cursor: "pointer" }}
             >
               Закрити
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function Section({ title }: { title: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        margin: "18px 0 9px",
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 1.4,
+        textTransform: "uppercase",
+        color: "#a98b5c",
+      }}
+    >
+      {title}
+      <span style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(169,139,92,.3)" }} />
     </div>
   );
 }
