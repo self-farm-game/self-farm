@@ -54,11 +54,16 @@ const SPRING_A = 1.02;
 const SPRING_R = 3.15;
 const HUT_A = -1.35;
 const HUT_R = 4.15;
+/** Скеля позаду дерева — з основного ракурсу вона дає силует і глибину. */
+const CLIFF_A = -2.5;
+const CLIFF_R = 4.5;
 
 /** Точка русла (0 — джерело, 1 — злам над прірвою), лише XZ. */
 function streamXZ(t: number, R: number): [number, number] {
   const r = SPRING_R + t * (R + 0.1 - SPRING_R);
-  const a = SPRING_A + Math.sin(t * Math.PI) * 0.17;
+  // згин у першій половині; далі русло йде строго по радіусу,
+  // тобто підходить до краю під прямим кутом
+  const a = SPRING_A + Math.sin(Math.min(1, t * 1.7) * Math.PI) * 0.19;
   return [Math.cos(a) * r, Math.sin(a) * r];
 }
 
@@ -68,7 +73,10 @@ function makeBlocker(R: number) {
   for (let i = 0; i <= 22; i++) pts.push(streamXZ(i / 22, R));
   const hx = Math.cos(HUT_A) * HUT_R;
   const hz = Math.sin(HUT_A) * HUT_R;
+  const cx = Math.cos(CLIFF_A) * CLIFF_R;
+  const cz = Math.sin(CLIFF_A) * CLIFF_R;
   return (x: number, z: number) => {
+    if (Math.hypot(x - cx, z - cz) < 1.8) return true;
     if (Math.hypot(x - hx, z - hz) < 1.35) return true;
     for (const [px, pz] of pts) if (Math.hypot(x - px, z - pz) < 0.9) return true;
     return false;
@@ -89,8 +97,13 @@ function buildIsland(rng: () => number) {
   const rim: THREE.Vector3[] = [];
   for (let i = 0; i < SEG; i++) {
     const a = (i / SEG) * Math.PI * 2;
-    const rr = R + (rng() - 0.5) * 0.55;
-    rim.push(new THREE.Vector3(Math.cos(a) * rr, -0.15 + (rng() - 0.5) * 0.18, Math.sin(a) * rr));
+    // Біля місця витоку край навмисно рівний: інакше вода зривається
+    // з рваного зрізу й це читається як помилка геометрії.
+    const d = Math.abs(Math.atan2(Math.sin(a - SPRING_A), Math.cos(a - SPRING_A)));
+    const calm = d < 0.5 ? 1 - d / 0.5 : 0;
+    const k = 1 - calm * 0.92;
+    const rr = R + (rng() - 0.5) * 0.55 * k;
+    rim.push(new THREE.Vector3(Math.cos(a) * rr, -0.15 + (rng() - 0.5) * 0.18 * k, Math.sin(a) * rr));
   }
 
   // висота галявини: дуже пологий пагорб, центр рівний під дерево
@@ -260,6 +273,12 @@ function buildTree(stage: number, rng: () => number): TreeParts {
   const g = new THREE.Group();
   const canopy = new THREE.Group();
   g.add(canopy);
+  // Маленьке дерево губиться серед трави й каміння, тому його листя
+  // світиться саме по собі. З ростом підсвітка сходить нанівець —
+  // дорослому дубу вона вже не потрібна.
+  const glowK = s <= 2 ? 0.3 : s === 3 ? 0.17 : s === 4 ? 0.07 : 0;
+  const leafMat = (color: number) =>
+    flatMat(color, glowK > 0 ? { emissive: new THREE.Color(color).multiplyScalar(glowK) } : {});
   let hollow: THREE.Mesh | null = null;
   let runeMesh: THREE.Mesh | null = null;
   let topY = 0.4;
@@ -269,7 +288,7 @@ function buildTree(stage: number, rng: () => number): TreeParts {
   // листок: сплюснутий ікосаедр, довгою віссю по X.
   // yaw крутить його навколо стовбура, tilt піднімає зовнішній кінець.
   const leaf = (x: number, y: number, z: number, size: number, color: number, yaw: number, tilt: number) => {
-    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(size, 0), flatMat(color));
+    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(size, 0), leafMat(color));
     m.scale.set(1.55, 0.26, 0.92);
     m.position.set(x, y, z);
     m.rotation.set(0, yaw, tilt);
@@ -288,7 +307,7 @@ function buildTree(stage: number, rng: () => number): TreeParts {
   };
 
   const blob = (x: number, y: number, z: number, r: number, color: number, flat = 0.88) => {
-    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), flatMat(color));
+    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), leafMat(color));
     m.position.set(x, y, z);
     m.scale.set(1, flat, 1);
     m.rotation.set(rng() * 3, rng() * 3, rng() * 3);
@@ -367,7 +386,7 @@ function buildTree(stage: number, rng: () => number): TreeParts {
   if (s === 1) {
     // ПАРОСТОК: вигнуте стебельце і дві сім'ядолі, кори ще немає
     const h = 0.2;
-    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.03, h, 5), flatMat(STEM_GREEN));
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.03, h, 5), leafMat(STEM_GREEN));
     st.position.y = h / 2;
     st.rotation.z = 0.14;
     st.castShadow = true;
@@ -890,7 +909,7 @@ function buildWater(
   // шлях струмка: від чаші до краю, з легким вигином
   const path = (t: number) => {
     const r = SPRING_R + t * (RIM_R - SPRING_R);
-    const a = A0 + Math.sin(t * Math.PI) * 0.17;
+    const a = A0 + Math.sin(Math.min(1, t * 1.7) * Math.PI) * 0.19;
     const p = at(r, a);
     p.y += 0.055 - t * 0.12; // ближче до краю русло трохи врізається
     return p;
@@ -1198,21 +1217,39 @@ function buildWater(
     // щільне ядро
     shell(0.38, 0.24, 0.72, 0.05, fallTex, new THREE.Color(0xffffff), 1.0, 0.62, 4);
 
-    // кам'яний поріг: вода зривається з каменю, а не з трави
-    for (let i = 0; i < 6; i++) {
-      const u = (i / 5 - 0.5) * 1.25;
-      const s = 0.16 + rng() * 0.11;
-      const lip = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), flatMat(rng() > 0.5 ? 0x8d8478 : 0x756d62));
-      lip.position
-        .copy(edge)
-        .addScaledVector(fside, u)
-        .addScaledVector(outward, 0.12 + rng() * 0.16);
-      lip.position.y -= 0.05 + Math.abs(u) * 0.06;
-      lip.rotation.set(rng() * 3, rng() * 3, rng() * 3);
-      lip.scale.set(1.25, 0.7, 1);
-      lip.castShadow = true;
-      lip.receiveShadow = true;
-      g.add(lip);
+    /* Камʼяний поріг. Раніше вода просто обривалась на нерівному краю
+       галявини й це читалось як кривий зріз. Тепер є плита, з якої вона
+       зривається, і два «щічні» камені з боків — злам виглядає навмисним. */
+    {
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.24, 0.86), flatMat(0x8d8478));
+      slab.position.copy(edge).addScaledVector(outward, -0.1);
+      slab.position.y -= 0.17;
+      slab.rotation.y = -A0;
+      slab.rotation.x = 0.07; // ледь нахилена вперед — вода стікає
+      slab.castShadow = true;
+      slab.receiveShadow = true;
+      g.add(slab);
+
+      const under = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.34, 0.66), flatMat(0x6f675c));
+      under.position.copy(slab.position).addScaledVector(outward, -0.12);
+      under.position.y -= 0.24;
+      under.rotation.y = -A0;
+      g.add(under);
+
+      // щічні камені обабіч жолоба
+      for (const dir of [1, -1]) {
+        const cheek = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), flatMat(dir > 0 ? 0x9d9488 : 0x7f776c));
+        cheek.position
+          .copy(edge)
+          .addScaledVector(fside, dir * 0.62)
+          .addScaledVector(outward, -0.02);
+        cheek.position.y += 0.05;
+        cheek.rotation.set(rng() * 3, rng() * 3, rng() * 3);
+        cheek.scale.set(1, 0.8, 1.1);
+        cheek.castShadow = true;
+        cheek.receiveShadow = true;
+        g.add(cheek);
+      }
     }
 
     // піна на зламі
@@ -1376,6 +1413,186 @@ function buildHut(rng: () => number, hill: (r: number, a: number) => number, R: 
   return { group: g, window: win, smoke, light };
 }
 
+/* ───────────────────── підсвічування дерева ─────────────────────
+   Дерево — головне в саду, але на тлі трави, каміння й кущів воно
+   губиться, а паросток не видно взагалі. Тому воно світиться саме:
+   мʼяке сяйво за ним, світлова пляма на землі, тепле точкове світло
+   і кілька іскор, що піднімаються. Усе адитивне, тож працює і на
+   яскравому небі, і в тіні.                                      */
+
+function makeGlowTexture() {
+  const c = document.createElement("canvas");
+  c.width = 128;
+  c.height = 128;
+  const x = c.getContext("2d");
+  if (!x) return new THREE.Texture();
+  const g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,226,0.85)");
+  g.addColorStop(0.18, "rgba(226,255,186,0.46)");
+  g.addColorStop(0.45, "rgba(170,236,150,0.17)");
+  g.addColorStop(0.75, "rgba(150,226,140,0.05)");
+  g.addColorStop(1, "rgba(150,226,140,0)");
+  x.fillStyle = g;
+  x.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+export type GlowParts = {
+  group: THREE.Group;
+  aura: THREE.Sprite;
+  halo: THREE.Mesh;
+  light: THREE.PointLight;
+  sparks: THREE.Points;
+};
+
+function buildTreeGlow(treeTop: number, groundY: number, tex: THREE.Texture, rng: () => number): GlowParts {
+  const g = new THREE.Group();
+  const h = Math.max(0.5, treeTop - groundY); // висота самого дерева
+  // маленьке дерево підсвічуємо відносно сильніше — інакше паростка не знайти
+  const reach = Math.min(6.4, Math.max(2.7, h * 1.25));
+  // чим менше дерево, тим сильніша підсвітка: паросток інакше не знайти
+  const small = THREE.MathUtils.clamp(1 - h / 3, 0, 1);
+
+  // сяйво за деревом (спрайт завжди дивиться в камеру)
+  const aura = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: tex,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      opacity: 0.55,
+    }),
+  );
+  aura.userData.base = 0.4 + small * 0.4;
+  aura.position.set(0, groundY + h * 0.45, 0);
+  aura.scale.setScalar(reach);
+  aura.renderOrder = 1;
+  g.add(aura);
+
+  // світлова пляма на землі
+  const halo = new THREE.Mesh(
+    new THREE.CircleGeometry(reach * 0.46, 24),
+    new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      opacity: 0.4,
+    }),
+  );
+  halo.userData.base = 0.32 + small * 0.26;
+  halo.rotation.x = -Math.PI / 2;
+  halo.position.y = groundY + 0.06;
+  halo.renderOrder = 1;
+  g.add(halo);
+
+  // тепле точкове світло — підсвічує стовбур і траву навколо
+  const light = new THREE.PointLight(0xdcffb0, 0.85, reach * 1.5, 2);
+  light.userData.base = 0.8 + small * 0.6;
+  light.position.set(0, groundY + h * 0.55, 0);
+  g.add(light);
+
+  // іскри, що піднімаються
+  const n = 22;
+  const pos = new Float32Array(n * 3);
+  const seed: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = rng() * Math.PI * 2;
+    const r = (0.3 + rng() * 0.7) * reach * 0.3;
+    pos[i * 3] = Math.cos(a) * r;
+    pos[i * 3 + 1] = groundY + rng() * h;
+    pos[i * 3 + 2] = Math.sin(a) * r;
+    seed.push(rng());
+  }
+  const sg = new THREE.BufferGeometry();
+  sg.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  const sparks = new THREE.Points(
+    sg,
+    new THREE.PointsMaterial({
+      color: 0xfff2a8,
+      size: Math.max(0.055, h * 0.035),
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true,
+    }),
+  );
+  sparks.userData.base = pos.slice();
+  sparks.userData.seed = seed;
+  sparks.userData.h = h;
+  sparks.userData.ground = groundY;
+  g.add(sparks);
+
+  return { group: g, aura, halo, light, sparks };
+}
+
+/* ───────────────────── скеля на задньому боці ─────────────────────
+   Орієнтир позаду дерева: з основного ракурсу вона дає силует і
+   глибину, а острів перестає виглядати пласким диском.             */
+
+function buildCliff(rng: () => number, hill: (r: number, a: number) => number): THREE.Group {
+  const g = new THREE.Group();
+  g.position.set(Math.cos(CLIFF_A) * CLIFF_R, hill(CLIFF_R, CLIFF_A), Math.sin(CLIFF_A) * CLIFF_R);
+  g.rotation.y = -CLIFF_A;
+
+  const STONE = [0x8d8478, 0x7a7166, 0x9a9287, 0x6d655b];
+
+  // три плити одна на одній, зі зсувом — виходить уступчаста скеля
+  let y = -0.1;
+  let w = 1.15;
+  const layers = 4;
+  for (let k = 0; k < layers; k++) {
+    const h = 0.52 - k * 0.07;
+    const slab = new THREE.Mesh(
+      new THREE.CylinderGeometry(w * 0.84, w, h, 6 + (k % 2)),
+      flatMat(STONE[k % STONE.length]),
+    );
+    slab.position.set((rng() - 0.5) * w * 0.28, y + h / 2, (rng() - 0.5) * w * 0.22);
+    slab.rotation.y = rng() * Math.PI;
+    slab.rotation.z = (rng() - 0.5) * 0.08;
+    slab.castShadow = true;
+    slab.receiveShadow = true;
+    g.add(slab);
+    y += h * 0.93;
+    w *= 0.79;
+  }
+
+  // гострий вершок
+  const peak = new THREE.Mesh(new THREE.ConeGeometry(w * 1.05, 0.62, 6), flatMat(0x9a9287));
+  peak.position.set((rng() - 0.5) * 0.14, y + 0.28, (rng() - 0.5) * 0.14);
+  peak.rotation.y = rng() * Math.PI;
+  peak.castShadow = true;
+  g.add(peak);
+
+  // трава й мох на поличках
+  for (let i = 0; i < 5; i++) {
+    const a = rng() * Math.PI * 2;
+    const rr = 0.45 + rng() * 0.55;
+    const moss = new THREE.Mesh(new THREE.IcosahedronGeometry(0.17 + rng() * 0.12, 0), flatMat(rng() > 0.5 ? 0x5e8a3e : 0x4f9a3d));
+    moss.position.set(Math.cos(a) * rr, 0.25 + rng() * 1.1, Math.sin(a) * rr);
+    moss.scale.set(1, 0.45, 1);
+    g.add(moss);
+  }
+
+  // валуни в основі
+  for (let i = 0; i < 4; i++) {
+    const a = rng() * Math.PI * 2;
+    const s = 0.22 + rng() * 0.22;
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), flatMat(STONE[Math.floor(rng() * STONE.length)]));
+    b.position.set(Math.cos(a) * (1.1 + rng() * 0.5), s * 0.5, Math.sin(a) * (1.1 + rng() * 0.5));
+    b.rotation.set(rng() * 3, rng() * 3, rng() * 3);
+    b.scale.y = 0.7;
+    b.castShadow = true;
+    b.receiveShadow = true;
+    g.add(b);
+  }
+
+  return g;
+}
+
 /* ───────────────────────── хмари ───────────────────────── */
 function buildClouds(rng: () => number) {
   const g = new THREE.Group();
@@ -1478,6 +1695,8 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
     const hut = buildHut(rng, island.hill, island.R);
     world.add(hut.group);
 
+    world.add(buildCliff(rng, island.hill));
+
     const clouds = buildClouds(mulberry32(777));
     scene.add(clouds.group);
 
@@ -1508,10 +1727,15 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
     // ранні стадії ледь-ледь збільшені, щоб паросток читався на екрані
     const TREE_SCALE = [2.35, 1.9, 1.42, 1.26, 1.2, 1.18];
     const treeScale = (s: number) => TREE_SCALE[Math.max(1, Math.min(6, s)) - 1];
+    const glowTex = makeGlowTexture();
+    const groundY = island.hill(0, 0);
     let tree = buildTree(stage, mulberry32(4242));
-    tree.group.position.y = island.hill(0, 0) + 0.04;
+    tree.group.position.y = groundY + 0.04;
     tree.group.scale.setScalar(treeScale(stage));
     world.add(tree.group);
+
+    let glow = buildTreeGlow(tree.topY * treeScale(stage) + groundY, groundY, glowTex, mulberry32(99));
+    world.add(glow.group);
 
     const rebuildTree = (s: number) => {
       world.remove(tree.group);
@@ -1520,9 +1744,17 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
         if (m.geometry) m.geometry.dispose();
       });
       tree = buildTree(s, mulberry32(4242));
-      tree.group.position.y = island.hill(0, 0) + 0.04;
+      tree.group.position.y = groundY + 0.04;
       tree.group.scale.setScalar(treeScale(s));
       world.add(tree.group);
+
+      world.remove(glow.group);
+      glow.group.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.geometry) m.geometry.dispose();
+      });
+      glow = buildTreeGlow(tree.topY * treeScale(s) + groundY, groundY, glowTex, mulberry32(99));
+      world.add(glow.group);
       applyRune(currentRune);
       frameCamera(s);
       resize(); // дистанція залежить від висоти дерева — перерахувати
@@ -1569,7 +1801,7 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
 
     /* зум: колесо на десктопі, щипок двома пальцями на телефоні.
        1 — «усе влазить», менше — ближче, більше — далі. */
-    const ZOOM_MIN = 0.45;
+    const ZOOM_MIN = 0.34;
     const ZOOM_MAX = 2.4;
     let zoom = 1;
     let targetZoom = 1;
@@ -1705,17 +1937,21 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
       pitch += (targetPitch - pitch) * 0.06;
       zoom += (targetZoom - zoom) * 0.12;
       const cd = fitDist * zoom;
+      // Чим ближче зум — тим вище ціль: наближаємось до САМОГО дерева, а не
+      // до його коріння. При zoom = 1 кадр лишається таким, як був.
+      const zt = THREE.MathUtils.clamp((1 - zoom) / (1 - ZOOM_MIN), 0, 1);
+      const focusY = groundY + (treeTop - groundY) * 0.52;
+      const tgtY = THREE.MathUtils.lerp(camTarget.y, focusY, zt);
       const ch = cd * (narrow ? 0.3 : 0.42);
       camera.position.set(
         Math.sin(yaw) * cd,
-        camTarget.y + ch + pitch * cd * 0.35 + Math.sin(t * 0.5) * 0.09,
+        tgtY + ch + pitch * cd * 0.35 + Math.sin(t * 0.5) * 0.09,
         Math.cos(yaw) * cd,
       );
       // на телефоні дивимось трохи вище — острів опускається в нижню половину,
-      // а зверху лишається небо під HUD
-      lookAt.copy(camTarget);
-      // зсув рахуємо від видимої висоти кадру, а не від дистанції —
-      // інакше на телефоні (де камера далеко) острів з'їжджає геть униз
+      // а зверху лишається небо під HUD. Зсув рахуємо від видимої висоти кадру,
+      // а не від дистанції, інакше при зумі острів «возить».
+      lookAt.set(0, tgtY, 0);
       if (narrow) lookAt.y += fitDist * Math.tan((camera.fov * Math.PI) / 360) * 0.18;
       camera.lookAt(lookAt);
       // туман тримаємо відносно відстані камери, інакше на вузькому екрані
@@ -1776,6 +2012,26 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
           const cycle = ((t * sp + seed[i]) % (Math.PI * 2)) / (Math.PI * 2);
           pa.setY(i, base[i * 3 + 1] - cycle * amp * 2 + amp);
           pa.setX(i, base[i * 3] + Math.sin(t * 0.8 + seed[i]) * 0.12);
+        }
+        pa.needsUpdate = true;
+      }
+
+      // ── сяйво дерева: дихає, іскри піднімаються й зникають ──
+      {
+        const pulse = 0.82 + Math.sin(t * 0.9) * 0.18;
+        (glow.aura.material as THREE.SpriteMaterial).opacity = (glow.aura.userData.base as number) * pulse;
+        (glow.halo.material as THREE.MeshBasicMaterial).opacity = (glow.halo.userData.base as number) * pulse;
+        glow.light.intensity = (glow.light.userData.base as number) * pulse;
+        const pa = glow.sparks.geometry.attributes.position as THREE.BufferAttribute;
+        const base = glow.sparks.userData.base as Float32Array;
+        const seed = glow.sparks.userData.seed as number[];
+        const hh = glow.sparks.userData.h as number;
+        const gy = glow.sparks.userData.ground as number;
+        for (let i = 0; i < seed.length; i++) {
+          const u = (seed[i] + t * 0.11) % 1;
+          pa.setY(i, gy + u * (hh + 0.8));
+          pa.setX(i, base[i * 3] * (1 + u * 0.5) + Math.sin(t * 0.7 + seed[i] * 9) * 0.07);
+          pa.setZ(i, base[i * 3 + 2] * (1 + u * 0.5));
         }
         pa.needsUpdate = true;
       }
