@@ -886,7 +886,6 @@ export type WaterParts = {
   streamTex: THREE.Texture;
   fallTex: THREE.Texture;
   fallTexBack: THREE.Texture;
-  bubbles: THREE.Object3D[];
   spray: THREE.Points;
   mist: THREE.Points;
   springY: number;
@@ -900,256 +899,204 @@ function buildWater(
   rimRadius: (a: number) => number,
 ): WaterParts {
   const g = new THREE.Group();
-  const A0 = SPRING_A; // напрямок, у який тече струмок
-  // Русло має закінчуватись ТРОХИ ВСЕРЕДИНІ краю, інакше вода стирчить
-  // кутом за силует острова.
-  const RIM_R = rimRadius(A0) - 0.42;
+  const A0 = SPRING_A;
+  // Русло доходить майже до самого краю: вода має переливатись через
+  // зелений край, а не зриватись з якоїсь конструкції під ним.
+  const RIM_R = rimRadius(A0) - 0.06;
+  const HEAD_R = SPRING_R - 0.45; // початок — ніс басейну
 
   const at = (r: number, a: number) => new THREE.Vector3(Math.cos(a) * r, hill(r, a), Math.sin(a) * r);
-  // шлях струмка: від чаші до краю, з легким вигином
   const path = (t: number) => {
-    const r = SPRING_R + t * (RIM_R - SPRING_R);
+    const r = HEAD_R + t * (RIM_R - HEAD_R);
+    // згин у першій половині, далі строго по радіусу — до краю під прямим кутом
     const a = A0 + Math.sin(Math.min(1, t * 1.7) * Math.PI) * 0.19;
     const p = at(r, a);
-    p.y += 0.055 - t * 0.12; // ближче до краю русло трохи врізається
+    p.y += 0.055 - t * 0.12;
     return p;
   };
 
-  const springPos = path(0);
+  /**
+   * Півширина води вздовж усього шляху — ОДНА функція на все.
+   * Саме вона робить джерело, струмок і злам одним тілом: басейн — це
+   * просто місце, де стрічка ширша, а не окремий круглий диск.
+   */
+  const hw = (t: number) => {
+    const pool = 0.56 * Math.exp(-Math.pow((t - 0.09) / 0.075, 2)); // лінза басейну
+    const chan = 0.3 + 0.26 * t; // русло, що трохи розширюється до краю
+    // округлий ніс замість обрубаного торця; smoothstep, щоб не було кута
+    const u = Math.min(1, t / 0.07);
+    const nose = u * u * (3 - 2 * u);
+    return (chan + pool) * nose;
+  };
 
-  /* ── чаша джерела ── */
-  {
-    // невисокий пагорб, з якого джерело й б'є
-    const knoll = new THREE.Mesh(new THREE.SphereGeometry(1.4, 9, 4, 0, Math.PI * 2, 0, Math.PI / 2), flatMat(0x6bb244));
-    // верхівка пагорба має лишитись НИЖЧЕ дзеркала води, інакше він її ховає
-    knoll.position.set(springPos.x, springPos.y - 0.36, springPos.z);
-    knoll.scale.set(1, 0.21, 0.9);
-    knoll.receiveShadow = true;
-    knoll.castShadow = true;
-    g.add(knoll);
+  const springPos = path(0.09);
+  const BED_UP = 0.03;
+  const WATER_UP = 0.19;
 
-    const n = 9;
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2;
-      // з боку струмка каміння нижче — там вода переливається
-      const towards = Math.cos(a - A0);
-      if (towards > 0.6) continue; // лишаємо відкритий жолоб на витік
-      const s = 0.16 + rng() * 0.1;
-      const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), flatMat(rng() > 0.5 ? 0x9d9488 : 0x7f776c));
-      rock.position.set(
-        springPos.x + Math.cos(a) * 0.74,
-        springPos.y + (towards > 0.75 ? -0.04 : 0.08) + s * 0.2,
-        springPos.z + Math.sin(a) * 0.74,
-      );
-      rock.rotation.set(rng() * 3, rng() * 3, rng() * 3);
-      rock.scale.y = 0.75;
-      rock.castShadow = true;
-      rock.receiveShadow = true;
-      g.add(rock);
-    }
-    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.58, 0.22, 12), flatMat(0x6f6659));
-    bowl.position.set(springPos.x, springPos.y - 0.02, springPos.z);
-    bowl.receiveShadow = true;
-    const disc = new THREE.Mesh(
-      new THREE.CircleGeometry(0.66, 16),
-      new THREE.MeshLambertMaterial({
-        color: 0x8fd4ef,
-        emissive: 0x1b5876,
-        transparent: true,
-        opacity: 0.88,
-      }),
-    );
-    disc.rotation.x = -Math.PI / 2;
-    disc.position.set(springPos.x, springPos.y + 0.105, springPos.z);
-    g.add(bowl, disc);
-  }
+  const up = new THREE.Vector3(0, 1, 0);
+  const frame = (t: number) => {
+    const p = path(t);
+    const q = path(Math.min(1, t + 0.01));
+    const side = new THREE.Vector3().crossVectors(up, q.clone().sub(p).normalize()).normalize();
+    return { p, side };
+  };
 
-  /* ── бульбашки, якими джерело «б'є» ── */
-  const bubbles: THREE.Object3D[] = [];
-  {
-    const bm = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x9fd8ef, transparent: true, opacity: 0.85 });
-    for (let i = 0; i < 5; i++) {
-      const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.045 + rng() * 0.035, 0), bm);
-      b.position.set(springPos.x + (rng() - 0.5) * 0.3, springPos.y + 0.09, springPos.z + (rng() - 0.5) * 0.3);
-      b.userData.base = b.position.y;
-      b.userData.phase = rng() * Math.PI * 2;
-      bubbles.push(b);
-      g.add(b);
-    }
-  }
-
-  /* ── русло: кам'яні береги, темне дно, а зверху — прозора вода ──
-     Острів не можна «прорізати» (сітка галявини надто велика), тому
-     канал піднятий: по боках лежать валуни-береги, між ними темне мокре
-     дно, і вже над ним — напівпрозоре полотно води. Крізь нього видно
-     дно, і струмок читається об'ємним, а не наліпленою стрічкою.      */
   const streamTex = tex.clone();
   streamTex.needsUpdate = true;
   streamTex.repeat.set(1, 4);
 
-  const BED_UP = 0.03; // дно трохи над землею
-  const WATER_UP = 0.19; // поверхня води — ось ця різниця і є «глибина»
+  const SEG = 40;
+
+  /* ── дно: та сама форма, лише трохи ширша й темніша ── */
   {
-    const SEG = 26;
-    const up = new THREE.Vector3(0, 1, 0);
-    const frame = (t: number) => {
-      const p = path(t);
-      const q = path(Math.min(1, t + 0.01));
-      const side = new THREE.Vector3().crossVectors(up, q.clone().sub(p).normalize()).normalize();
-      return { p, side };
-    };
-
-    // ── дно
-    {
-      const pos: number[] = [];
-      const col: number[] = [];
-      const idx: number[] = [];
-      const dark = new THREE.Color(0x4e4336);
-      const mid = new THREE.Color(0x6b5c47);
-      for (let i = 0; i <= SEG; i++) {
-        const t = i / SEG;
-        const { p, side } = frame(t);
-        const w = 0.34 + t * 0.26;
-        const l = p.clone().addScaledVector(side, w);
-        const c = p.clone();
-        const r2 = p.clone().addScaledVector(side, -w);
-        l.y += BED_UP;
-        c.y += BED_UP - 0.04;
-        r2.y += BED_UP;
-        pos.push(l.x, l.y, l.z, c.x, c.y, c.z, r2.x, r2.y, r2.z);
-        col.push(mid.r, mid.g, mid.b, dark.r, dark.g, dark.b, mid.r, mid.g, mid.b);
-        if (i < SEG) {
-          const a = i * 3;
-          idx.push(a, a + 3, a + 1, a + 1, a + 3, a + 4, a + 1, a + 4, a + 2, a + 2, a + 4, a + 5);
-        }
+    const pos: number[] = [];
+    const col: number[] = [];
+    const idx: number[] = [];
+    const dark = new THREE.Color(0x4a4034);
+    const mid = new THREE.Color(0x6b5c47);
+    for (let i = 0; i <= SEG; i++) {
+      const t = i / SEG;
+      const { p, side } = frame(t);
+      const w = hw(t) + 0.11;
+      const l = p.clone().addScaledVector(side, w);
+      const c = p.clone();
+      const r2 = p.clone().addScaledVector(side, -w);
+      l.y += BED_UP;
+      c.y += BED_UP - 0.05;
+      r2.y += BED_UP;
+      pos.push(l.x, l.y, l.z, c.x, c.y, c.z, r2.x, r2.y, r2.z);
+      col.push(mid.r, mid.g, mid.b, dark.r, dark.g, dark.b, mid.r, mid.g, mid.b);
+      if (i < SEG) {
+        const a = i * 3;
+        idx.push(a, a + 3, a + 1, a + 1, a + 3, a + 4, a + 1, a + 4, a + 2, a + 2, a + 4, a + 5);
       }
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-      geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
-      geo.setIndex(idx);
-      geo.computeVertexNormals();
-      const bed = new THREE.Mesh(geo, flatMat(0xffffff, { vertexColors: true, side: THREE.DoubleSide }));
-      bed.receiveShadow = true;
-      g.add(bed);
     }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    const bed = new THREE.Mesh(geo, flatMat(0xffffff, { vertexColors: true, side: THREE.DoubleSide }));
+    bed.receiveShadow = true;
+    g.add(bed);
+  }
 
-    // ── вода: центр темніший і щільніший, краї світліші й прозоріші
-    {
-      const pos: number[] = [];
-      const uv: number[] = [];
-      const col: number[] = [];
-      const idx: number[] = [];
-      const deep = new THREE.Color(0x4ea6cf);
-      const shallow = new THREE.Color(0xc2ecfb);
-      for (let i = 0; i <= SEG; i++) {
-        const t = i / SEG;
-        const { p, side } = frame(t);
-        const w = 0.3 + t * 0.24;
-        const pts = [-w, -w * 0.45, 0, w * 0.45, w];
-        for (let k = 0; k < pts.length; k++) {
-          const edge = Math.abs(pts[k]) / w;
-          const v = p.clone().addScaledVector(side, pts[k]);
-          // краї опускаємо майже до дна — так вода змикається з берегом,
-          // а не висить над травою прозорими клаптями
-          v.y += BED_UP + (WATER_UP - BED_UP) * (1 - edge) ** 0.7;
-          pos.push(v.x, v.y, v.z);
-          uv.push((pts[k] / w) * 0.5 + 0.5, t);
-          const c = shallow.clone().lerp(deep, 1 - edge);
-          col.push(c.r, c.g, c.b, 0.42 + (1 - edge) * 0.42);
-        }
-        if (i < SEG) {
-          const a = i * 5;
-          for (let k = 0; k < 4; k++) {
-            idx.push(a + k, a + k + 5, a + k + 1, a + k + 1, a + k + 5, a + k + 6);
-          }
+  /* ── вода: одне суцільне полотно від басейну до зриву ── */
+  {
+    const pos: number[] = [];
+    const uv: number[] = [];
+    const col: number[] = [];
+    const idx: number[] = [];
+    const deep = new THREE.Color(0x4ea6cf);
+    const shallow = new THREE.Color(0xc2ecfb);
+    for (let i = 0; i <= SEG; i++) {
+      const t = i / SEG;
+      const { p, side } = frame(t);
+      const w = hw(t);
+      const lanes = [-1, -0.45, 0, 0.45, 1];
+      for (const k of lanes) {
+        const edgeK = Math.abs(k);
+        const v = p.clone().addScaledVector(side, k * w);
+        // краї змикаються з дном, центр піднятий — звідси обʼєм
+        v.y += BED_UP + (WATER_UP - BED_UP) * Math.pow(1 - edgeK, 0.7);
+        pos.push(v.x, v.y, v.z);
+        uv.push(k * 0.5 + 0.5, t);
+        const c = shallow.clone().lerp(deep, 1 - edgeK);
+        col.push(c.r, c.g, c.b, 0.44 + (1 - edgeK) * 0.42);
+      }
+      if (i < SEG) {
+        const a = i * 5;
+        for (let k = 0; k < 4; k++) {
+          idx.push(a + k, a + k + 5, a + k + 1, a + k + 1, a + k + 5, a + k + 6);
         }
       }
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-      geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
-      geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 4));
-      geo.setIndex(idx);
-      geo.computeVertexNormals();
-      const mat = new THREE.MeshBasicMaterial({
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 4));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    const stream = new THREE.Mesh(
+      geo,
+      new THREE.MeshBasicMaterial({
         map: streamTex,
         transparent: true,
         vertexColors: true,
         depthWrite: false,
         side: THREE.DoubleSide,
-      });
-      const stream = new THREE.Mesh(geo, mat);
-      stream.renderOrder = 3;
-      g.add(stream);
-    }
+      }),
+    );
+    stream.renderOrder = 3;
+    g.add(stream);
+  }
 
-    // ── береги: валуни обабіч, густіше ближче до зламу
-    for (let i = 3; i <= 30; i += 2) {
-      const t = i / 30;
-      const { p, side } = frame(t);
-      const w = 0.34 + t * 0.26;
-      for (const dir of [1, -1]) {
-        if (rng() > 0.52) continue; // берег навмисно нерівний і місцями відкритий
-        const s = 0.13 + rng() * 0.14;
-        const rock = new THREE.Mesh(
-          new THREE.IcosahedronGeometry(s, 0),
-          flatMat(rng() > 0.55 ? 0x9d9488 : 0x7a7166),
-        );
-        rock.position
-          .copy(p)
-          .addScaledVector(side, dir * (w + s * 0.55 + rng() * 0.08));
-        rock.position.y += s * 0.42;
-        rock.rotation.set(rng() * 3, rng() * 3, rng() * 3);
-        rock.scale.y = 0.72 + rng() * 0.3;
-        rock.castShadow = true;
-        rock.receiveShadow = true;
-        g.add(rock);
-      }
-      // трава, що звисає над водою
-      if (rng() > 0.45) {
-        const dir = rng() > 0.5 ? 1 : -1;
-        const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.26, 4), flatMat(0x5ea23c));
-        tuft.position.copy(p).addScaledVector(side, dir * (w + 0.14));
-        tuft.position.y += 0.13;
-        tuft.rotation.z = -dir * 0.3;
-        g.add(tuft);
-      }
-    }
-
-    // ── камінці, що стирчать із самої води (видно, що вона має глибину)
-    for (let i = 0; i < 7; i++) {
-      const t = 0.12 + rng() * 0.76;
-      const { p, side } = frame(t);
-      const s = 0.07 + rng() * 0.06;
-      const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), flatMat(0x8a8176));
-      rock.position.copy(p).addScaledVector(side, (rng() - 0.5) * 0.3);
-      rock.position.y += WATER_UP * 0.65;
+  /* ── береги: ті самі камені вздовж усієї води, без окремого «кільця
+     джерела». Біля зриву їх немає — там вода просто йде через край. ── */
+  for (let i = 1; i <= 34; i += 2) {
+    const t = i / 38; // до ~0.9, далі чисто
+    const { p, side } = frame(t);
+    const w = hw(t);
+    for (const dir of [1, -1]) {
+      if (rng() > 0.55) continue;
+      const s = 0.13 + rng() * 0.15;
+      const rock = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(s, 0),
+        flatMat(rng() > 0.55 ? 0x9d9488 : 0x7a7166),
+      );
+      rock.position.copy(p).addScaledVector(side, dir * (w + s * 0.5 + rng() * 0.08));
+      rock.position.y += s * 0.4;
       rock.rotation.set(rng() * 3, rng() * 3, rng() * 3);
+      rock.scale.y = 0.72 + rng() * 0.3;
+      rock.castShadow = true;
+      rock.receiveShadow = true;
       g.add(rock);
+    }
+    if (rng() > 0.5) {
+      const dir = rng() > 0.5 ? 1 : -1;
+      const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.26, 4), flatMat(0x5ea23c));
+      tuft.position.copy(p).addScaledVector(side, dir * (w + 0.13));
+      tuft.position.y += 0.13;
+      tuft.rotation.z = -dir * 0.3;
+      g.add(tuft);
     }
   }
 
-  /* ── водоспад: обʼємний, майже циліндричний ──
-     Замість двох площин — суцільна оболонка, протягнута вздовж падіння:
-     поперек потоку йде дуга, тому в ньому читається товщина, а краї
-     самі темніють до силуету. Попереду щільне ядро, позаду ширший
-     серпанок — разом дає обʼєм і трохи паралаксу.                       */
+  // камінці у воді — лише в руслі, не в басейні й не біля зриву
+  for (let i = 0; i < 6; i++) {
+    const t = 0.25 + rng() * 0.55;
+    const { p, side } = frame(t);
+    const s = 0.07 + rng() * 0.06;
+    const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), flatMat(0x8a8176));
+    rock.position.copy(p).addScaledVector(side, (rng() - 0.5) * 0.28);
+    rock.position.y += WATER_UP * 0.6;
+    rock.rotation.set(rng() * 3, rng() * 3, rng() * 3);
+    g.add(rock);
+  }
+
+  /* ── водоспад: продовження тієї самої стрічки ──
+     Починається рівно на кромці й на тій самій висоті, що й поверхня
+     струмка, тієї ж ширини. Ніяких плит, порогів і піни — вода просто
+     переливається через край і падає.                                 */
   const fallTex = tex.clone();
   fallTex.needsUpdate = true;
   fallTex.repeat.set(1, 3);
   const fallTexBack = tex.clone();
   fallTexBack.needsUpdate = true;
   fallTexBack.repeat.set(1, 2);
+
   const edge = path(1);
   const outward = new THREE.Vector3(Math.cos(A0), 0, Math.sin(A0)).normalize();
-  const fside = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), outward).normalize();
+  const fside = new THREE.Vector3().crossVectors(up, outward).normalize();
+  const topY = edge.y + WATER_UP * 0.8;
+  const topW = hw(1);
   {
     const ROWS = 20;
-    const ARC = 9; // сегментів поперек потоку
-    const H = 11.0; // падає далеко за нижню межу кадру
+    const ARC = 9;
+    const H = 11.0;
 
-    /** Оболонка потоку: дуга завширшки `w` і завглибшки `w*depthK`. */
     const shell = (
-      w0: number,
+      wMul: number,
       grow: number,
       depthK: number,
       push: number,
@@ -1165,21 +1112,20 @@ function buildWater(
       const idx: number[] = [];
       for (let k = 0; k <= ROWS; k++) {
         const t = k / ROWS;
-        // спершу вилітає вперед по дузі, далі майже прямовисно
-        const out = Math.sin(Math.min(1, t * 2.4) * Math.PI * 0.5) * 0.5 + push;
-        const w = w0 + t * grow;
+        // ледь помітна дуга на початку — далі прямовисно вздовж острова
+        const out = Math.sin(Math.min(1, t * 3) * Math.PI * 0.5) * 0.16 + push;
+        const w = topW * wMul + t * grow;
         const c = edge.clone().addScaledVector(outward, out);
-        c.y = edge.y - t * H;
+        c.y = topY - t * H;
         for (let m = 0; m <= ARC; m++) {
-          const ang = -Math.PI / 2 + (m / ARC) * Math.PI; // -90°…+90°
+          const ang = -Math.PI / 2 + (m / ARC) * Math.PI;
           const v = c
             .clone()
             .addScaledVector(fside, Math.sin(ang) * w)
             .addScaledVector(outward, Math.cos(ang) * w * depthK);
           pos.push(v.x, v.y, v.z);
           uv.push(m / ARC, t * 2.2);
-          // циліндричне затінення: центр яскравий, боки темніші й прозоріші
-          const face = Math.cos(ang); // 1 по центру, 0 по краях
+          const face = Math.cos(ang);
           const shade = 0.58 + 0.42 * face;
           const fade = a0 + (a1 - a0) * Math.min(1, t * 1.15) ** 1.3;
           col.push(tint.r * shade, tint.g * shade, tint.b * shade, fade * (0.35 + 0.65 * face));
@@ -1212,65 +1158,21 @@ function buildWater(
       g.add(m);
     };
 
-    // серпанок позаду — ширший, повільніший, напівпрозорий
-    shell(0.56, 0.46, 0.5, -0.12, fallTexBack, new THREE.Color(0xd9f0fb), 0.46, 0.24, 3);
-    // щільне ядро
-    shell(0.38, 0.24, 0.72, 0.05, fallTex, new THREE.Color(0xffffff), 1.0, 0.62, 4);
-
-    /* Камʼяний поріг. Раніше вода просто обривалась на нерівному краю
-       галявини й це читалось як кривий зріз. Тепер є плита, з якої вона
-       зривається, і два «щічні» камені з боків — злам виглядає навмисним. */
-    {
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.24, 0.86), flatMat(0x8d8478));
-      slab.position.copy(edge).addScaledVector(outward, -0.1);
-      slab.position.y -= 0.17;
-      slab.rotation.y = -A0;
-      slab.rotation.x = 0.07; // ледь нахилена вперед — вода стікає
-      slab.castShadow = true;
-      slab.receiveShadow = true;
-      g.add(slab);
-
-      const under = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.34, 0.66), flatMat(0x6f675c));
-      under.position.copy(slab.position).addScaledVector(outward, -0.12);
-      under.position.y -= 0.24;
-      under.rotation.y = -A0;
-      g.add(under);
-
-      // щічні камені обабіч жолоба
-      for (const dir of [1, -1]) {
-        const cheek = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), flatMat(dir > 0 ? 0x9d9488 : 0x7f776c));
-        cheek.position
-          .copy(edge)
-          .addScaledVector(fside, dir * 0.62)
-          .addScaledVector(outward, -0.02);
-        cheek.position.y += 0.05;
-        cheek.rotation.set(rng() * 3, rng() * 3, rng() * 3);
-        cheek.scale.set(1, 0.8, 1.1);
-        cheek.castShadow = true;
-        cheek.receiveShadow = true;
-        g.add(cheek);
-      }
-    }
-
-    // піна на зламі
-    const foamMat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xcfe9f6, transparent: true, opacity: 0.78 });
-    for (let i = 0; i < 8; i++) {
-      const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.07 + rng() * 0.06, 0), foamMat);
-      f.position
-        .copy(edge)
-        .addScaledVector(fside, (rng() - 0.5) * 0.72)
-        .addScaledVector(outward, rng() * 0.2);
-      f.position.y += (rng() - 0.5) * 0.08 + 0.05;
-      f.scale.set(1.4, 0.65, 1);
-      g.add(f);
-    }
+    shell(1.08, 0.95, 0.5, -0.1, fallTexBack, new THREE.Color(0xd9f0fb), 0.44, 0.18, 3);
+    shell(0.98, 0.55, 0.72, 0.0, fallTex, new THREE.Color(0xffffff), 1.0, 0.5, 4);
   }
 
-  /* ── бризки біля зламу і туман знизу ── */
-  const mkPoints = (n: number, make: (i: number) => [number, number, number], size: number, color: number, opacity: number) => {
+  /* ── туман уздовж падіння ── */
+  const mkPoints = (
+    n: number,
+    make: () => [number, number, number],
+    size: number,
+    color: number,
+    opacity: number,
+  ) => {
     const arr = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
-      const [x, y, z] = make(i);
+      const [x, y, z] = make();
       arr[i * 3] = x;
       arr[i * 3 + 1] = y;
       arr[i * 3 + 2] = z;
@@ -1288,29 +1190,29 @@ function buildWater(
   };
 
   const spray = mkPoints(
-    42,
+    30,
     () => [
-      edge.x + (rng() - 0.5) * 0.6 + outward.x * rng() * 0.4,
-      edge.y - rng() * 2.2,
-      edge.z + (rng() - 0.5) * 0.6 + outward.z * rng() * 0.4,
+      edge.x + (rng() - 0.5) * 0.7 + outward.x * rng() * 0.35,
+      topY - 0.2 - rng() * 2.2,
+      edge.z + (rng() - 0.5) * 0.7 + outward.z * rng() * 0.35,
     ],
-    0.07,
+    0.065,
     0xffffff,
-    0.75,
+    0.6,
   );
   const mist = mkPoints(
-    34,
+    30,
     () => [
-      edge.x + (rng() - 0.5) * 1.5 + outward.x * (0.3 + rng() * 0.7),
-      edge.y - 1.6 - rng() * 2.6,
-      edge.z + (rng() - 0.5) * 1.5 + outward.z * (0.3 + rng() * 0.7),
+      edge.x + (rng() - 0.5) * 1.4 + outward.x * (0.2 + rng() * 0.6),
+      topY - 1.8 - rng() * 2.8,
+      edge.z + (rng() - 0.5) * 1.4 + outward.z * (0.2 + rng() * 0.6),
     ],
-    0.16,
+    0.15,
     0xdff1fb,
-    0.4,
+    0.34,
   );
 
-  return { group: g, streamTex, fallTex, fallTexBack, bubbles, spray, mist, springY: springPos.y };
+  return { group: g, streamTex, fallTex, fallTexBack, spray, mist, springY: springPos.y };
 }
 
 /* ───────────────────────── хатинка Бомбома ─────────────────────────
@@ -1991,16 +1893,10 @@ export default function IslandScene({ stage, runeColor, onTreeClick, onHollowCli
         pos.needsUpdate = true;
       }
 
-      // ── вода: текстури повзуть, бульбашки підстрибують ──
+      // ── вода: текстури повзуть уздовж усієї стрічки ──
       water.streamTex.offset.y -= dt * 0.5;
       water.fallTex.offset.y -= dt * 1.6;
       water.fallTexBack.offset.y -= dt * 1.05;
-      for (const b of water.bubbles) {
-        const ph = (b.userData.phase as number) || 0;
-        const k = (Math.sin(t * 2.2 + ph) + 1) / 2;
-        b.position.y = (b.userData.base as number) + k * 0.13;
-        b.scale.setScalar(0.6 + k * 0.6);
-      }
       for (const pts of [water.spray, water.mist]) {
         const pa = pts.geometry.attributes.position as THREE.BufferAttribute;
         const base = pts.userData.base as Float32Array;
