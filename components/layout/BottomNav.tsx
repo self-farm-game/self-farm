@@ -1,4 +1,5 @@
 "use client";
+/** Нижня навігація на телефоні — те саме темне скло. */
 import { usePathname, useRouter } from "next/navigation";
 import { NAV } from "@/lib/mock-data/content";
 import { useGame } from "@/lib/store/game";
@@ -13,25 +14,9 @@ export default function BottomNav() {
   const active = NAV.find((n) => pathname.startsWith(n.href))?.id ?? "garden";
 
   return (
-    <div
-      className="sf-bottomnav"
-      style={{
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 74,
-        zIndex: 30,
-        background: "linear-gradient(180deg,#5d3f24,#3a2410)",
-        boxShadow: "inset 0 3px 0 rgba(255,220,160,.25), 0 -2px 0 #2a1a0e",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-around",
-        padding: "0 8px",
-      }}
-    >
+    <div className="sf-bottomnav">
       {NAV.map((n) => {
-        const isActive = active === n.id;
+        const on = active === n.id;
         return (
           <div
             key={n.id}
@@ -47,36 +32,31 @@ export default function BottomNav() {
               gap: 3,
               cursor: "pointer",
               userSelect: "none",
-              transform: isActive ? "translateY(-3px)" : "none",
               transition: "transform .12s",
+              transform: on ? "translateY(-2px)" : "none",
             }}
           >
             <div
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 20,
-                background: isActive
-                  ? "radial-gradient(circle,#7bbf5a,#3f6a2a)"
-                  : "radial-gradient(circle,#5a3f24,#3a2410)",
-                boxShadow: isActive
-                  ? "inset 0 1px 0 rgba(255,255,255,.3), 0 0 0 2px #2a1a0e, 0 0 12px rgba(120,200,90,.5)"
-                  : "inset 0 1px 0 rgba(255,220,160,.2), 0 0 0 2px #2a1a0e",
-                color: isActive ? "#fff" : "#c9a878",
+                width: 38,
+                height: 38,
+                borderRadius: 13,
+                display: "grid",
+                placeItems: "center",
+                fontSize: 18,
+                background: on ? "rgba(134,198,124,.22)" : "rgba(0,0,0,.26)",
+                border: "1px solid " + (on ? "rgba(134,198,124,.42)" : "var(--g-line-soft)"),
+                boxShadow: on ? "0 0 16px rgba(134,198,124,.3)" : "none",
               }}
             >
               {n.icon}
             </div>
             <div
               style={{
-                fontSize: 10,
-                color: isActive ? "#ffe6b8" : "#9a7f5a",
+                fontSize: 9.5,
+                color: on ? "var(--g-ink)" : "var(--g-ink-3)",
                 fontWeight: 600,
-                letterSpacing: 0.5,
+                letterSpacing: 0.4,
               }}
             >
               {t(L, "tab." + n.id)}

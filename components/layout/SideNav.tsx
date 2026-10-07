@@ -1,4 +1,5 @@
 "use client";
+/** Бічна навігація — те саме темне скло, що й спливаючі вікна. */
 import { usePathname, useRouter } from "next/navigation";
 import { NAV } from "@/lib/mock-data/content";
 import { useGame } from "@/lib/store/game";
@@ -16,81 +17,91 @@ export default function SideNav() {
 
   return (
     <aside className="sf-side">
-      {/* wordmark */}
-      <div style={{ padding: "4px 6px 16px", borderBottom: "2px solid rgba(0,0,0,.25)", marginBottom: 14 }}>
-        <div style={{ fontSize: 22, color: "#ffe6b8", fontWeight: 700, letterSpacing: 0.5, textShadow: "0 2px 0 rgba(0,0,0,.4)" }}>🌳 Self-Farm</div>
-        <div style={{ fontSize: 11, color: "#caa884", fontStyle: "italic", marginTop: 2 }}>одне дерево. один рух.</div>
-      </div>
-
-      {/* profile mini */}
-      <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "10px 11px", borderRadius: 13, background: "linear-gradient(180deg,#6a4a2c,#43290f)", boxShadow: "inset 0 1px 0 rgba(255,220,160,.3), 0 0 0 2px #2a1a0e", marginBottom: 16 }}>
-        <div style={{ width: 42, height: 42, flexShrink: 0, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, background: "radial-gradient(circle,#7bbf5a,#3f6a2a)", boxShadow: "inset 0 0 0 2px #2a1a0e" }}>🌱</div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 14, color: "#f3d9a8", fontWeight: 700, lineHeight: 1.1 }}>{lvl.name}</div>
-          <div style={{ fontSize: 11, color: "#c9a878" }}>{lvl.inLevel}/{lvl.target} XP</div>
+      <div style={{ padding: "2px 4px 16px", borderBottom: "1px solid var(--g-line-soft)", marginBottom: 16 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: 0.3, color: "var(--g-ink)" }}>
+          🌳 Self-Farm
+        </div>
+        <div style={{ fontSize: 10.5, color: "var(--g-ink-3)", letterSpacing: 1.2, marginTop: 4, textTransform: "uppercase" }}>
+          одне дерево · один рух
         </div>
       </div>
 
-      {/* vertical nav */}
-      <nav style={{ display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
-        {NAV.map((n) => {
-          const on = active === n.id;
-          return (
-            <div
-              key={n.id}
-              onClick={() => {
-                play("tap");
-                router.push(n.href);
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "11px 13px",
-                borderRadius: 12,
-                cursor: "pointer",
-                userSelect: "none",
-                color: on ? "#fff3d6" : "#d8c8a0",
-                background: on ? "linear-gradient(180deg,#7a5128,#5a3618)" : "transparent",
-                boxShadow: on ? "inset 0 1px 0 rgba(255,220,160,.35), 0 0 0 2px #2a1a0e" : "none",
-                fontWeight: 700,
-                fontSize: 15,
-                transition: "background .12s",
-              }}
-            >
-              <span
-                style={{
-                  width: 30,
-                  height: 30,
-                  flexShrink: 0,
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 16,
-                  background: on ? "radial-gradient(circle,#7bbf5a,#3f6a2a)" : "rgba(0,0,0,.2)",
-                  boxShadow: on ? "0 0 8px rgba(120,200,90,.5)" : "none",
-                }}
-              >
-                {n.icon}
-              </span>
-              {t(L, "tab." + n.id)}
-            </div>
-          );
-        })}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 11,
+          padding: "11px 12px",
+          borderRadius: 14,
+          marginBottom: 16,
+          background: "var(--g-card)",
+          border: "1px solid var(--g-line-soft)",
+        }}
+      >
+        <div
+          style={{
+            width: 38,
+            height: 38,
+            flexShrink: 0,
+            borderRadius: 12,
+            display: "grid",
+            placeItems: "center",
+            fontSize: 19,
+            background: "var(--g-green-dim)",
+            border: "1px solid var(--g-line-soft)",
+          }}
+        >
+          🌱
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.15, color: "var(--g-ink)" }}>{lvl.name}</div>
+          <div className="l3-xp" style={{ marginTop: 6 }}>
+            <i style={{ width: `${Math.round(lvl.pct * 100)}%` }} />
+          </div>
+          <div style={{ fontSize: 10, color: "var(--g-ink-3)", marginTop: 4 }}>
+            {lvl.isMax ? `${lvl.total} XP` : `${lvl.inLevel} / ${lvl.target} XP`}
+          </div>
+        </div>
+      </div>
+
+      <nav style={{ display: "flex", flexDirection: "column", gap: 5, flex: 1 }}>
+        {NAV.map((n) => (
+          <div
+            key={n.id}
+            className={"g-nav-item" + (active === n.id ? " on" : "")}
+            onClick={() => {
+              play("tap");
+              router.push(n.href);
+            }}
+          >
+            <span className="g-nav-ico">{n.icon}</span>
+            {t(L, "tab." + n.id)}
+          </div>
+        ))}
       </nav>
 
-      {/* day + streak */}
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-        <div style={{ flex: 1, textAlign: "center", padding: "8px 6px", borderRadius: 10, background: "linear-gradient(180deg,#6a4a2c,#43290f)", boxShadow: "0 0 0 2px #2a1a0e" }}>
-          <div style={{ fontSize: 9, letterSpacing: 1.5, color: "#e7c389" }}>ДЕНЬ</div>
-          <div style={{ fontSize: 17, color: "#f3d9a8", fontWeight: 700 }}>{state.day}</div>
-        </div>
-        <div style={{ flex: 1, textAlign: "center", padding: "8px 6px", borderRadius: 10, background: "linear-gradient(180deg,#6a4a2c,#43290f)", boxShadow: "0 0 0 2px #2a1a0e" }}>
-          <div style={{ fontSize: 9, letterSpacing: 1.5, color: "#e7c389" }}>СЕРІЯ</div>
-          <div style={{ fontSize: 17, color: "#ffd98a", fontWeight: 700 }}>🔥 {state.streak}</div>
-        </div>
+        <Mini label="день" value={String(state.day)} />
+        <Mini label="серія" value={`🔥 ${state.streak}`} />
       </div>
     </aside>
+  );
+}
+
+function Mini({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        textAlign: "center",
+        padding: "9px 6px",
+        borderRadius: 12,
+        background: "var(--g-card)",
+        border: "1px solid var(--g-line-soft)",
+      }}
+    >
+      <div style={{ fontSize: 9, letterSpacing: 1.4, color: "var(--g-ink-3)", textTransform: "uppercase" }}>{label}</div>
+      <div style={{ fontSize: 15, color: "var(--g-ink)", fontWeight: 700, marginTop: 2 }}>{value}</div>
+    </div>
   );
 }

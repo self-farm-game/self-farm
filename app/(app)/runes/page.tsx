@@ -1,135 +1,83 @@
 "use client";
+/**
+ * Руни — слід від практики, а не оцінка стану. Відкриваються самі,
+ * коли дія повторюється; нічого не можна «прокачати» навмисно.
+ */
 import { useGame } from "@/lib/store/game";
 import { RUNE_BRANCHES } from "@/lib/mock-data/runes";
-import { t } from "@/lib/mock-data/i18n";
+import Sheet from "@/components/ui/Sheet";
 
 export default function Runes() {
   const { state } = useGame();
-  const L = state.lang;
 
-  const sessionsCount = state.journal.reduce((a, d) => a + d.entries.length, 0);
-  const notesCount = state.journal.reduce(
-    (a, d) => a + d.entries.filter((e) => e.note).length,
-    0,
-  );
+  const sessions = (state.journal || []).reduce((a, d) => a + d.entries.length, 0);
+  const notes = (state.journal || []).reduce((a, d) => a + d.entries.filter((e) => e.note).length, 0);
+  const helped = Object.values(state.questStats || {}).reduce((a, s) => a + s.helped, 0);
 
-  // real progress per rune id (everything else stays locked for now)
-  const prog: Record<string, { cur: number; req: number }> = {
-    sprout: { cur: state.onboarded ? 1 : 0, req: 1 },
-    move: { cur: Math.min(3, state.questsDone), req: 3 },
-    return: { cur: Math.min(3, sessionsCount), req: 3 },
-    words: { cur: Math.min(3, notesCount), req: 3 },
-  };
-  const stateOf = (id: string): "done" | "prog" | "lock" => {
-    const p = prog[id];
-    if (!p || p.cur <= 0) return "lock";
-    return p.cur >= p.req ? "done" : "prog";
+  // реальний прогрес; решта поки замкнена
+  const prog: Record<string, { cur: number; req: number; how: string }> = {
+    sprout: { cur: state.onboarded ? 1 : 0, req: 1, how: "посадити дерево" },
+    move: { cur: Math.min(3, state.questsDone), req: 3, how: "пройти 3 стежки" },
+    return: { cur: Math.min(3, sessions), req: 3, how: "повернутись 3 рази" },
+    words: { cur: Math.min(3, notes), req: 3, how: "лишити 3 записи словами" },
+    silence: { cur: Math.min(5, helped), req: 5, how: "5 разів «допомогло»" },
   };
 
-  // "дерево помітило" — only after there is something to notice
-  const insights: string[] = [];
-  if (state.questsDone > 0) insights.push(`Квестів зроблено: ${state.questsDone}.`);
-  if (sessionsCount > 0) insights.push(`Ти повертався ${sessionsCount} ${sessionsCount === 1 ? "раз" : "рази"}.`);
-  if (notesCount > 0) insights.push(`Ти лишив ${notesCount} запис(ів) словами.`);
+  const openCount = Object.values(prog).filter((p) => p.cur >= p.req).length;
 
   return (
-    <div className="sf-screen" style={{ minHeight: "100%" }}>
-      <div
-        style={{
-          position: "relative",
-          padding: "52px 18px 20px",
-          textAlign: "center",
-          background: "linear-gradient(180deg,#34255a,#241a42)",
-          boxShadow: "inset 0 -8px 20px rgba(0,0,0,.4)",
-        }}
-      >
-        <div style={{ fontSize: 30, color: "#f4ecd6", fontWeight: 700, textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "rune.title")}</div>
-        <div style={{ fontSize: 13, lineHeight: 1.5, color: "#a99fc8", fontStyle: "italic", marginTop: 6 }}>
-          Дерево пам&apos;ятає не перемоги, а повернення.
-          <br />
-          Коли ти повторюєш маленькі дії — в корінні проступають руни.
-        </div>
+    <Sheet
+      crumb="РУНИ"
+      title="Колекція рун"
+      sub="Твої практики лишають сліди. Кожне повернення має значення."
+      wide
+      note="Руни відображають практику, а не оцінку твого стану. Жодну не можна отримати навмисно — тільки прожити."
+    >
+      <div style={{ fontSize: 12.5, color: "var(--g-ink-2)", marginBottom: 4 }}>
+        Відкрито <b style={{ color: "var(--g-gold)" }}>{openCount}</b> із{" "}
+        {RUNE_BRANCHES.reduce((a, b) => a + b.runes.length, 0)}
       </div>
 
-      <div style={{ padding: "18px 16px", background: "linear-gradient(180deg,#241a42,#1a1230 70%,#140d24)" }}>
-        {RUNE_BRANCHES.map((b, bi) => (
-          <div key={bi} style={{ marginBottom: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 11, paddingLeft: 2 }}>
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: b.color, boxShadow: "0 0 8px " + b.color }} />
-              <div style={{ fontSize: 16, color: "#efe7d2", fontWeight: 700, letterSpacing: 1 }}>{b.name}</div>
-              <div style={{ flex: 1, height: 2, background: "repeating-linear-gradient(90deg,rgba(150,120,200,.35) 0 5px, transparent 5px 10px)" }} />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
-              {b.runes.map((r, ri) => {
-                const st = stateOf(r.id);
-                const done = st === "done";
-                const prg = st === "prog";
-                const p = prog[r.id];
-                return (
-                  <div key={ri} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                    <div
-                      style={{
-                        width: 52,
-                        height: 52,
-                        borderRadius: 12,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 26,
-                        color: done ? "#fff" : prg ? "#cdbef0" : "#5a5276",
-                        background: done
-                          ? `radial-gradient(circle, ${b.color}, #2a2045)`
-                          : prg
-                          ? "radial-gradient(circle,#3a2f5c,#241a42)"
-                          : "radial-gradient(circle,#221c38,#1a1430)",
-                        boxShadow: done
-                          ? `0 0 14px ${b.color}, inset 0 0 0 2px rgba(255,255,255,.4)`
-                          : prg
-                          ? "inset 0 0 0 2px #5a4a8a, 0 0 8px rgba(120,90,180,.4)"
-                          : "inset 0 0 0 2px #2a2440",
-                        animation: done ? "sf-glow 2.6s ease-in-out infinite" : "none",
-                      }}
-                    >
-                      {st === "lock" ? "🔒" : r.sym}
-                    </div>
-                    <div style={{ fontSize: 10, lineHeight: 1.1, textAlign: "center", color: done ? "#e8dcc4" : prg ? "#b9aecb" : "#6a6090", minHeight: 22 }}>
-                      {r.name}
-                    </div>
-                    {prg && p && <div style={{ fontSize: 9, color: b.color, fontWeight: 700 }}>{p.cur}/{p.req}</div>}
+      {RUNE_BRANCHES.map((b, bi) => (
+        <div key={bi}>
+          <div className="l3-section-title">
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: b.color,
+                boxShadow: `0 0 10px ${b.color}`,
+                display: "inline-block",
+              }}
+            />
+            {b.name}
+          </div>
+          <div className="l3-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(148px, 1fr))" }}>
+            {b.runes.map((r) => {
+              const p = prog[r.id];
+              const open = !!p && p.cur >= p.req;
+              const started = !!p && p.cur > 0;
+              return (
+                <div key={r.id} className={"l3-rune" + (open ? " l3-on" : "")}>
+                  <div className="l3-rune-glyph" style={open ? { color: b.color, borderColor: b.color + "66" } : undefined}>
+                    {started || open ? r.sym : "·"}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-
-        <div
-          style={{
-            marginTop: 18,
-            borderRadius: 16,
-            padding: 16,
-            background: "linear-gradient(180deg,#d8bf94,#c8a878)",
-            boxShadow: "inset 0 2px 0 rgba(255,245,220,.5), 0 0 0 3px #6a4a2c, 0 0 0 5px #2a1a0e",
-          }}
-        >
-          <div style={{ fontSize: 13, letterSpacing: 2, color: "#6a4a2c", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
-            🌳 дерево помітило
-          </div>
-          {insights.length === 0 ? (
-            <div style={{ fontSize: 14, color: "#6a4a2c", fontStyle: "italic", lineHeight: 1.4 }}>
-              Поки що дерево лише придивляється. Зроби кілька квестів — і тут проступлять закономірності.
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-              {insights.map((t, i) => (
-                <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 14, color: "#4a3320", lineHeight: 1.35 }}>
-                  <span style={{ color: "#7bbf5a" }}>•</span> {t}
+                  <h4>{r.name.replace("Руна ", "")}</h4>
+                  <p>{p ? p.how : "відкриється пізніше"}</p>
+                  <div className="l3-bar">
+                    <i style={{ width: p ? `${Math.round((p.cur / p.req) * 100)}%` : "0%" }} />
+                  </div>
+                  <div className="l3-rune-foot">
+                    <span>{open ? "відкрито" : started ? "у процесі" : "ще не відкрита"}</span>
+                    <span>{p ? `${p.cur} / ${p.req}` : "—"}</span>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
         </div>
-      </div>
-    </div>
+      ))}
+    </Sheet>
   );
 }

@@ -1,66 +1,50 @@
 "use client";
+/**
+ * Хатина — профіль і налаштування. Спливає над садом, як і решта вкладок.
+ */
 import { useState } from "react";
 import { useGame } from "@/lib/store/game";
 import { levelInfo } from "@/lib/utils/xp";
 import { t, LANGS, type Lang } from "@/lib/mock-data/i18n";
-import { ScreenTitle } from "@/components/ui/primitives";
-import { play } from "@/lib/sound/sound";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import Sheet from "@/components/ui/Sheet";
+import { play } from "@/lib/sound/sound";
 
-const card = "linear-gradient(180deg,#2c2150,#241a42)";
-const cardShadow = "0 0 0 2px #4a3a6e";
-
-function Row({ icon, label, val, onClick }: { icon: string; label: string; val?: React.ReactNode; onClick?: () => void }) {
+function Row({
+  icon,
+  label,
+  val,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  val?: React.ReactNode;
+  onClick?: () => void;
+}) {
   return (
-    <div
-      onClick={onClick}
-      style={{ display: "flex", alignItems: "center", gap: 13, padding: "14px 16px", borderRadius: 13, cursor: onClick ? "pointer" : "default", background: card, boxShadow: cardShadow }}
-    >
-      <span style={{ fontSize: 22 }}>{icon}</span>
-      <span style={{ flex: 1, fontSize: 16, color: "#e8dcc4", fontWeight: 600 }}>{label}</span>
-      <span style={{ fontSize: 13, color: "#9a8fc0", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{val}</span>
-      {onClick && <span style={{ fontSize: 18, color: "#6a6090" }}>›</span>}
+    <div className={"l3-row" + (onClick ? "" : " l3-static")} onClick={onClick}>
+      <span className="l3-ico">{icon}</span>
+      <span className="l3-lab">{label}</span>
+      <span className="l3-val">{val}</span>
+      {onClick && <span style={{ color: "var(--g-ink-3)", fontSize: 16 }}>›</span>}
     </div>
   );
 }
 
-function AuthSection() {
-  const { auth, signOut, state } = useGame();
-  const L = state.lang;
-  const [busy, setBusy] = useState(false);
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "12px 14px",
+  borderRadius: 12,
+  outline: "none",
+  fontFamily: "inherit",
+  fontSize: 15,
+  color: "var(--g-ink)",
+  background: "rgba(0,0,0,.26)",
+  border: "1px solid var(--g-line)",
+};
 
-  if (!auth.ready) {
-    return (
-      <div style={{ marginTop: 16, borderRadius: 14, padding: 16, textAlign: "center", color: "#8a7fb0", fontSize: 13, background: card, boxShadow: cardShadow }}>
-        {t(L, "cabin.syncing")}
-      </div>
-    );
-  }
-
-  if (!auth.isAnonymous) {
-    return (
-      <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-        <Row icon="✦" label={t(L, "cabin.account")} val={auth.email || t(L, "cabin.signed_in")} />
-        <div
-          onClick={async () => {
-            if (busy) return;
-            setBusy(true);
-            await signOut();
-            setBusy(false);
-          }}
-          style={{ textAlign: "center", padding: "13px", borderRadius: 13, cursor: "pointer", fontWeight: 700, color: "#cfc4e6", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: cardShadow }}
-        >
-          {busy ? "…" : t(L, "cabin.sign_out")}
-        </div>
-      </div>
-    );
-  }
-
-  return <AuthForm />;
-}
-
-function AuthForm() {
-  const { signIn, signUp, state } = useGame();
+function AuthBlock() {
+  const { auth, signOut, signIn, signUp, state } = useGame();
   const L = state.lang;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,18 +52,30 @@ function AuthForm() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const input: React.CSSProperties = {
-    width: "100%",
-    padding: "12px 13px",
-    borderRadius: 11,
-    border: "none",
-    outline: "none",
-    fontFamily: "inherit",
-    fontSize: 15,
-    color: "#3a2616",
-    background: "linear-gradient(180deg,#e6cf9c,#cda874)",
-    boxShadow: "inset 0 2px 4px rgba(120,86,48,.4), 0 0 0 2px #6a4a2c",
-  };
+  if (!auth.ready) {
+    return <div className="l3-row l3-static">{t(L, "cabin.syncing")}</div>;
+  }
+
+  if (!auth.isAnonymous) {
+    return (
+      <>
+        <Row icon="✦" label={t(L, "cabin.account")} val={auth.email || t(L, "cabin.signed_in")} />
+        <div style={{ marginTop: 10, display: "flex", justifyContent: "center" }}>
+          <button
+            className="l3-btn l3-sm l3-btn-soft"
+            onClick={async () => {
+              if (busy) return;
+              setBusy(true);
+              await signOut();
+              setBusy(false);
+            }}
+          >
+            {busy ? "…" : t(L, "cabin.sign_out")}
+          </button>
+        </div>
+      </>
+    );
+  }
 
   const run = async (mode: "in" | "up") => {
     setErr(null);
@@ -99,30 +95,31 @@ function AuthForm() {
   };
 
   return (
-    <div style={{ marginTop: 16, borderRadius: 16, padding: 16, background: "linear-gradient(180deg,#34255a,#241a42)", boxShadow: "0 0 0 2px #4a3a6e, inset 0 1px 0 rgba(150,120,200,.2)" }}>
-      <div style={{ fontSize: 16, color: "#f4ecd6", fontWeight: 700 }}>{t(L, "cabin.save_title")}</div>
-      <div style={{ fontSize: 12.5, color: "#a99fc8", marginTop: 4, marginBottom: 12, lineHeight: 1.4 }}>
+    <div
+      style={{
+        padding: 16,
+        borderRadius: 16,
+        background: "var(--g-card)",
+        border: "1px solid var(--g-line-soft)",
+      }}
+    >
+      <div style={{ fontSize: 15, fontWeight: 700 }}>{t(L, "cabin.save_title")}</div>
+      <div style={{ fontSize: 12.5, color: "var(--g-ink-3)", marginTop: 5, marginBottom: 13, lineHeight: 1.45 }}>
         {t(L, "cabin.save_desc")}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-        <input style={input} type="email" inputMode="email" autoComplete="email" placeholder={t(L, "cabin.email")} value={email} onChange={(e) => setEmail(e.target.value)} />
-        <input style={input} type="password" autoComplete="current-password" placeholder={t(L, "cabin.password")} value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input style={inputStyle} type="email" inputMode="email" autoComplete="email" placeholder={t(L, "cabin.email")} value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input style={inputStyle} type="password" autoComplete="current-password" placeholder={t(L, "cabin.password")} value={password} onChange={(e) => setPassword(e.target.value)} />
       </div>
-      {err && <div style={{ fontSize: 12.5, color: "#e8a0a0", marginTop: 9 }}>{err}</div>}
-      {ok && <div style={{ fontSize: 12.5, color: "#b9d99a", marginTop: 9 }}>{ok}</div>}
-      <div style={{ display: "flex", gap: 9, marginTop: 12 }}>
-        <div
-          onClick={() => !busy && run("up")}
-          style={{ flex: 1, textAlign: "center", padding: "12px", borderRadius: 12, cursor: "pointer", fontWeight: 700, color: "#2a1d10", background: "linear-gradient(180deg,#e6cf9c,#cda874)", boxShadow: "inset 0 2px 0 rgba(255,250,225,.5), 0 0 0 2px #6a4a2c" }}
-        >
+      {err && <div style={{ fontSize: 12.5, color: "var(--g-rose)", marginTop: 10 }}>{err}</div>}
+      {ok && <div style={{ fontSize: 12.5, color: "var(--g-green)", marginTop: 10 }}>{ok}</div>}
+      <div style={{ display: "flex", gap: 9, marginTop: 13 }}>
+        <button className="l3-btn l3-sm" style={{ flex: 1 }} onClick={() => !busy && run("up")}>
           {busy ? "…" : t(L, "cabin.create")}
-        </div>
-        <div
-          onClick={() => !busy && run("in")}
-          style={{ flex: 1, textAlign: "center", padding: "12px", borderRadius: 12, cursor: "pointer", fontWeight: 700, color: "#cfc4e6", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: cardShadow }}
-        >
+        </button>
+        <button className="l3-btn l3-sm l3-btn-soft" style={{ flex: 1 }} onClick={() => !busy && run("in")}>
           {busy ? "…" : t(L, "cabin.enter")}
-        </div>
+        </button>
       </div>
     </div>
   );
@@ -130,105 +127,134 @@ function AuthForm() {
 
 export default function Cabin() {
   const { state, auth, toggleMute, reset, setLang } = useGame();
-  const lang = state.lang;
-  const lvl = levelInfo(state.totalXp);
   const L = state.lang;
+  const lvl = levelInfo(state.totalXp);
   const [langOpen, setLangOpen] = useState(false);
 
-  const sessionsCount = state.journal.reduce((a, d) => a + d.entries.length, 0);
-  const notesCount = state.journal.reduce((a, d) => a + d.entries.filter((e) => e.note).length, 0);
-  const runesUnlocked =
-    (state.onboarded ? 1 : 0) +
-    (state.questsDone >= 3 ? 1 : 0) +
-    (sessionsCount >= 3 ? 1 : 0) +
-    (notesCount >= 3 ? 1 : 0);
+  const runs = Object.values(state.questStats || {}).reduce((a, s) => a + s.runs, 0);
+  const helped = Object.values(state.questStats || {}).reduce((a, s) => a + s.helped, 0);
 
-  const stat = (n: string | number, label: string, color: string) => (
-    <div style={{ flex: 1, textAlign: "center", borderRadius: 13, padding: "12px 6px", background: card, boxShadow: cardShadow }}>
-      <div style={{ fontSize: 24, color, fontWeight: 700 }}>{n}</div>
-      <div style={{ fontSize: 11, color: "#9a8fc0", letterSpacing: 1 }}>{label}</div>
-    </div>
-  );
+  if (langOpen) {
+    return (
+      <Sheet
+        crumb="ХАТИНА / МОВА"
+        title={t(L, "lang.title")}
+        sub={t(L, "lang.sub")}
+        foot={
+          <button className="l3-btn l3-sm l3-btn-soft" onClick={() => setLangOpen(false)}>
+            ← Назад
+          </button>
+        }
+      >
+        {LANGS.map((lg) => {
+          const on = state.lang === lg.id;
+          return (
+            <div
+              key={lg.id}
+              className={"l3-row" + (on ? " l3-on" : "")}
+              style={on ? { background: "var(--g-green-dim)", borderColor: "rgba(134,198,124,.35)" } : undefined}
+              onClick={() => {
+                setLang(lg.id as Lang);
+                play("select");
+                setLangOpen(false);
+              }}
+            >
+              <span className="l3-ico">{lg.flag}</span>
+              <span className="l3-lab">
+                {lg.label}
+                <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>{lg.note}</span>
+              </span>
+              {on && <span style={{ color: "var(--g-green)", fontSize: 16 }}>✓</span>}
+            </div>
+          );
+        })}
+      </Sheet>
+    );
+  }
 
   return (
-    <div className="sf-screen" style={{ padding: "52px 16px 18px", minHeight: "100%" }}>
-      <ScreenTitle title={t(L, "cabin.title")} sub={t(L, "cabin.sub")} />
-
-      <div style={{ borderRadius: 18, padding: 18, background: "linear-gradient(180deg,#5d3f24,#3f2812)", boxShadow: "inset 0 2px 0 rgba(255,220,160,.3), inset 0 -5px 0 rgba(0,0,0,.4), 0 0 0 2px #2a1a0e, 0 6px 0 rgba(0,0,0,.3)", display: "flex", gap: 15, alignItems: "center" }}>
-        <div style={{ width: 66, height: 66, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, background: "radial-gradient(circle,#7bbf5a,#3f6a2a)", boxShadow: "inset 0 0 0 3px #2a1a0e, 0 0 0 2px #6a4a2c" }}>🌱</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 22, color: "#f3d9a8", fontWeight: 700 }}>{t(L, "cabin.traveller")}</div>
-          <div style={{ fontSize: 13, color: "#c9a878" }}>{t(L, "cabin.tree_level", { n: lvl.levelNum, xp: state.totalXp })}</div>
+    <Sheet
+      crumb="ХАТИНА"
+      title={t(L, "cabin.title")}
+      sub={t(L, "cabin.sub")}
+      note={t(L, "cabin.tagline")}
+    >
+      {/* профіль */}
+      <div className="l3-row l3-static" style={{ padding: "16px 18px" }}>
+        <span className="l3-ico" style={{ fontSize: 28 }}>🌱</span>
+        <span className="l3-lab" style={{ fontSize: 17 }}>
+          {t(L, "cabin.traveller")}
+          <span style={{ display: "block", fontSize: 12, color: "var(--g-ink-3)", fontWeight: 400, marginTop: 2 }}>
+            {lvl.name} · {state.totalXp} XP
+          </span>
           {!auth.isAnonymous && auth.email && (
-            <div style={{ fontSize: 12, color: "#b9d99a", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>✦ {auth.email}</div>
+            <span style={{ display: "block", fontSize: 11.5, color: "var(--g-green)", fontWeight: 400, marginTop: 2 }}>
+              ✦ {auth.email}
+            </span>
           )}
-        </div>
+        </span>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-        {stat(state.day, t(L, "cabin.days"), "#ffd98a")}
-        {stat(runesUnlocked, t(L, "cabin.runes"), "#a98bff")}
-        {stat(state.questsDone, t(L, "cabin.quests"), "#7bbf5a")}
+      <div className="l3-grid" style={{ marginTop: 10, gridTemplateColumns: "repeat(4, 1fr)" }}>
+        <Stat n={state.day} label="день" />
+        <Stat n={state.streak} label="серія" />
+        <Stat n={runs} label="стежок" />
+        <Stat n={helped} label="допомогло" />
       </div>
 
-      {isSupabaseConfigured && <AuthSection />}
-
-      <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-        <Row
-          icon="🌐"
-          label={t(L, "cabin.language")}
-          val={t(L, "cabin.language_val")}
-          onClick={() => { play("select"); setLangOpen(true); }}
-        />
-        <Row icon="🔈" label={t(L, "cabin.sound")} val={state.muted ? t(L, "cabin.sound_off") : t(L, "cabin.sound_on")} onClick={() => { toggleMute(); if (state.muted) play("select"); }} />
-        <Row icon="🔔" label={t(L, "cabin.reminders")} val={t(L, "cabin.reminders_val")} />
-        <Row icon="📤" label={t(L, "cabin.export")} />
-        <Row icon="🌱" label={t(L, "cabin.about")} />
-        <Row icon="♻️" label={t(L, "cabin.reset")} onClick={() => { if (confirm(t(L, "cabin.reset_confirm"))) reset(); }} />
-        {/* стара піксельна сцена — лишається як запасний варіант */}
-        <Row icon="🖼️" label="Класична 2D-сцена" val="архів" onClick={() => { play("select"); window.location.href = "/garden2d"; }} />
-      </div>
-
-      <div style={{ textAlign: "center", fontSize: 12, color: "#6a5f88", marginTop: 20, fontStyle: "italic" }}>
-        {t(L, "cabin.tagline")}
-      </div>
-
-      {langOpen && (
-        <div
-          onClick={() => setLangOpen(false)}
-          style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(10,8,20,.6)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 22 }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: "100%", maxWidth: 340, borderRadius: 18, padding: 18, background: "linear-gradient(180deg,#2c2150,#1c1530)", boxShadow: "0 0 0 2px #4a3a6e, 0 12px 34px rgba(0,0,0,.55)" }}
-          >
-            <div style={{ fontSize: 17, color: "#f4ecd6", fontWeight: 700 }}>{t(L, "lang.title")}</div>
-            <div style={{ fontSize: 12.5, color: "#a99fc8", marginTop: 4, marginBottom: 14 }}>{t(L, "lang.sub")}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {LANGS.map((lg) => {
-                const on = state.lang === lg.id;
-                return (
-                  <div
-                    key={lg.id}
-                    onClick={() => { setLang(lg.id as Lang); play("select"); setLangOpen(false); }}
-                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 15px", borderRadius: 13, cursor: "pointer", background: on ? "radial-gradient(circle at 20% 0%,#5a4a8a,#332658)" : "rgba(60,48,86,.5)", boxShadow: on ? "0 0 0 2px #7a6ab0, 0 0 14px rgba(150,110,220,.4)" : "inset 0 0 0 2px rgba(150,120,200,.28)" }}
-                  >
-                    <span style={{ fontSize: 13, fontWeight: 700, minWidth: 34, textAlign: "center", color: on ? "#fff" : "#cdbef0" }}>{lg.flag}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15.5, color: "#efe7d2", fontWeight: 700 }}>{lg.label}</div>
-                      <div style={{ fontSize: 11.5, color: "#9a8fc0" }}>{lg.note}</div>
-                    </div>
-                    {on && <span style={{ color: "#b9d99a", fontSize: 18 }}>✓</span>}
-                  </div>
-                );
-              })}
-            </div>
-            <div onClick={() => setLangOpen(false)} style={{ marginTop: 14, textAlign: "center", fontSize: 13, color: "#8a7fb0", cursor: "pointer" }}>
-              {t(L, "lang.close")}
-            </div>
-          </div>
-        </div>
+      {isSupabaseConfigured && (
+        <>
+          <div className="l3-section-title">акаунт</div>
+          <AuthBlock />
+        </>
       )}
+
+      <div className="l3-section-title">налаштування</div>
+      <Row
+        icon="🌐"
+        label={t(L, "cabin.language")}
+        val={t(L, "cabin.language_val")}
+        onClick={() => { play("select"); setLangOpen(true); }}
+      />
+      <Row
+        icon="🔈"
+        label={t(L, "cabin.sound")}
+        val={state.muted ? t(L, "cabin.sound_off") : t(L, "cabin.sound_on")}
+        onClick={() => { toggleMute(); if (state.muted) play("select"); }}
+      />
+      <Row icon="🔔" label={t(L, "cabin.reminders")} val={t(L, "cabin.reminders_val")} />
+      <Row icon="📤" label={t(L, "cabin.export")} />
+      <Row icon="🌱" label={t(L, "cabin.about")} />
+      <Row
+        icon="🖼️"
+        label="Класична 2D-сцена"
+        val="архів"
+        onClick={() => { play("select"); window.location.href = "/garden2d"; }}
+      />
+      <Row
+        icon="♻️"
+        label={t(L, "cabin.reset")}
+        onClick={() => { if (confirm(t(L, "cabin.reset_confirm"))) reset(); }}
+      />
+    </Sheet>
+  );
+}
+
+function Stat({ n, label }: { n: number; label: string }) {
+  return (
+    <div
+      style={{
+        textAlign: "center",
+        padding: "12px 6px",
+        borderRadius: 14,
+        background: "var(--g-card)",
+        border: "1px solid var(--g-line-soft)",
+      }}
+    >
+      <div style={{ fontSize: 19, fontWeight: 700, color: "var(--g-gold)" }}>{n}</div>
+      <div style={{ fontSize: 10, letterSpacing: 1.1, textTransform: "uppercase", color: "var(--g-ink-3)", marginTop: 3 }}>
+        {label}
+      </div>
     </div>
   );
 }

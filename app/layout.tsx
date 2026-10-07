@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Comfortaa } from "next/font/google";
 import "./globals.css";
+import "./glass.css";
 import { GameProvider } from "@/lib/store/game";
 import GameShell from "@/components/layout/GameShell";
 

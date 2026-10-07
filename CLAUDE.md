@@ -29,13 +29,25 @@ Internal positioning only (never main UI copy): "не self-harm, а self-farm".
   коріння, руни, маленький рух.
 - Desktop is a centered game window on a decorative dark field — never a
   stretched vertical mobile with empty sides.
+- **One visual language: dark glass over a live garden.** The 3D island is
+  mounted ONCE in `app/(app)/layout.tsx` and is the permanent background of
+  every tab. Tabs are not pages with their own background — they are
+  translucent sheets that float over the garden (`components/ui/Sheet.tsx`),
+  and the scrim's `backdrop-filter` is what blurs the garden behind them.
+  Navigation uses the same glass. Tokens live in `app/glass.css` (`--g-*`);
+  never reintroduce the old wood/parchment panels outside /garden2d.
 
 ## Stack & layout
 Next.js 14 App Router, TypeScript, mostly inline pixel styles (faithful to the
 shared design) + a little Tailwind config kept for future use.
-- `app/` — routes: `/onboarding`, `/(app)/{garden,questbook,journal,runes,cabin}`.
-  The check-in → quest → reward flow lives as local state inside `garden/page.tsx`
-  (it belongs to the Garden tab).
+- `app/` — routes: `/onboarding`, `/(app)/{garden,questbook,journal,runes,cabin}`,
+  plus `/garden2d` (archived pixel scene, deliberately OUTSIDE the `(app)` group
+  so it doesn't get the 3D world behind it).
+  `app/(app)/layout.tsx` wraps every tab in `GardenWorld`; `/garden/page.tsx`
+  returns `null` because the garden IS the world. The check-in → quest →
+  reward flow lives inside `components/garden3d/GardenWorld.tsx`.
+  NB: `GardenWorld` decides "is a tab open?" from `usePathname()`, not from
+  `!!children` — a page that renders `null` still arrives as a truthy element.
 - `components/ui/primitives.tsx` — WoodButton, ParchButton, Chip, HeartBar, Stars,
   BackRow, BombomBanner, ScreenTitle.
 - `components/layout/` — GameShell (device frame + wall + top bar + nav), BottomNav.
