@@ -20,6 +20,24 @@ import {
 // cloud per anonymous user. Without Supabase env vars the app runs fine on
 // localStorage alone. Every field maps to the `state` jsonb in player_saves.
 
+/** Скільки разів квест проходили і чим це закінчилось. */
+export interface QuestStat {
+  runs: number;
+  helped: number;
+  same: number;
+  nope: number;
+  lastAt: number;
+}
+
+export interface QuestLogEntry {
+  q: string; // id квесту
+  t: string; // шаблон T01–T20
+  m: string; // стан, з якого його взяли
+  at: number;
+  o: "helped" | "same" | "nope";
+  s: number; // секунд на проходження
+}
+
 export interface GameState {
   onboarded: boolean;
   day: number;
@@ -42,6 +60,11 @@ export interface GameState {
   xpWindowStart: number; // epoch ms when the current 3h XP window opened
   xpInWindow: number; // how many XP-earning quests done in the current window
   hollowRune: string | null; // rune id tucked into the tree hollow (easter egg)
+  currentMood: string | null; // mood key picked at the latest check-in
+  // --- аналітика квестів: чим більше проходжень, тим точніші пропозиції ---
+  questStats: Record<string, QuestStat>; // ключ — id квесту
+  comboStats: Record<string, QuestStat>; // ключ — `${moodKey}|${template}`
+  questLog: QuestLogEntry[]; // останні проходження (обрізається до 300)
   lang: "en" | "uk" | "uk_raw"; // UI language ("uk_raw" = uncensored Бомбом)
   doneToday: { id: string; title: string; icon: string; time: string }[]; // finished on dayKey
 }
@@ -69,6 +92,10 @@ const SEED: GameState = {
   xpWindowStart: 0,
   xpInWindow: 0,
   hollowRune: null,
+  currentMood: null,
+  questStats: {},
+  comboStats: {},
+  questLog: [],
   lang: "uk",
   doneToday: [],
 };
@@ -98,7 +125,7 @@ interface Ctx {
   nextCheckinInMs: number; // legacy (always 0 now)
   xpLeft: number; // XP-earning quests left in the current 3h window
   xpWindowLeftMs: number; // ms left in the current 3h XP window (0 if none)
-  openCheckin: (stateKeys: string[], questIds: string[]) => void;
+  openCheckin: (stateKeys: string[], questIds: string[], mood?: string) => void;
   placeHollowRune: (runeId: string | null) => void;
   setLang: (lang: "en" | "uk" | "uk_raw") => void;
   plantTree: () => void;
@@ -122,6 +149,14 @@ interface Ctx {
     questXp: number;
     after: string;
     reflection?: string;
+    /** стан, з якого квест запропонували (для аналітики) */
+    mood?: string;
+    /** шаблон квесту T01–T20 */
+    template?: string;
+    /** відповідь на «чи допомогло?» */
+    outcome?: "helped" | "same" | "nope";
+    /** скільки секунд тривало проходження */
+    seconds?: number;
   }) => SessionResult;
 }
 
@@ -294,7 +329,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Register a mood check-in. Allowed only when the previous set is cleared.
   // Opens a fresh 3h XP window if none is currently running.
-  const openCheckin = (stateKeys: string[], questIds: string[]) => {
+  const openCheckin = (stateKeys: string[], questIds: string[], mood?: string) => {
     if ((stateRef.current.activeQuestIds || []).length > 0) return; // finish the set first
     setState((s) => {
       const tk = todayKey();
@@ -307,6 +342,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         doneToday: rolledDone,
         activeStates: stateKeys,
         activeQuestIds: questIds,
+        currentMood: mood ?? s.currentMood ?? null,
         lastCheckinAt: now,
         activeUntil: now + XP_WINDOW_MS,
         // start a new XP window only if the previous one has elapsed
@@ -362,6 +398,41 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       };
       const doneToday = [doneEntry, ...(sameDay ? s.doneToday : [])];
       const activeQuestIds = (s.activeQuestIds || []).filter((id) => id !== input.questId);
+
+      // ---- аналітика: чи допоміг цей квест саме в цьому стані ----
+      const bump = (base: QuestStat | undefined): QuestStat => {
+        const b = base || { runs: 0, helped: 0, same: 0, nope: 0, lastAt: 0 };
+        const o = input.outcome;
+        return {
+          runs: b.runs + 1,
+          helped: b.helped + (o === "helped" ? 1 : 0),
+          same: b.same + (o === "same" ? 1 : 0),
+          nope: b.nope + (o === "nope" ? 1 : 0),
+          lastAt: now,
+        };
+      };
+      const questStats = { ...(s.questStats || {}) };
+      const comboStats = { ...(s.comboStats || {}) };
+      let questLog = s.questLog || [];
+      if (input.questId) {
+        questStats[input.questId] = bump(questStats[input.questId]);
+        const mk = input.mood || s.currentMood || "unknown";
+        if (input.template) {
+          const ck = mk + "|" + input.template;
+          comboStats[ck] = bump(comboStats[ck]);
+        }
+        questLog = [
+          {
+            q: input.questId,
+            t: input.template || "",
+            m: mk,
+            at: now,
+            o: input.outcome || "same",
+            s: Math.max(0, Math.round(input.seconds || 0)),
+          },
+          ...questLog,
+        ].slice(0, 300);
+      }
       // advance the XP window counter (reset it if the window had elapsed)
       const winActive = now - (s.xpWindowStart || 0) < XP_WINDOW_MS;
       const xpWindowStart = winActive ? s.xpWindowStart : now;
@@ -379,6 +450,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         activeQuestIds,
         xpWindowStart,
         xpInWindow,
+        questStats,
+        comboStats,
+        questLog,
       };
     });
     return reward;

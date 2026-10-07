@@ -16,7 +16,14 @@ Internal positioning only (never main UI copy): "не self-harm, а self-farm".
   Inventory ("Знахідки") is a Garden sub-screen, NOT a tab.
 - Do not punish missed days. Reward returning. The tree never withers from
   inactivity — it grows from returning and trying, not from being happy. Growth is staged
-  (acorn → grand oak, 6 stages) via components/garden/TreeStages.tsx (SVG).
+  (sprout → grand oak, 6 stages); each stage is a DIFFERENT silhouette, not the same
+  tree scaled — built procedurally in components/garden3d/IslandScene.tsx.
+- Garden is 3D (three.js, low-poly floating island). The old pixel scene still
+  exists at /garden2d and is reachable from Cabin; do not delete it, but new work
+  goes into the 3D scene.
+- Every quest runs STEP BY STEP (one step per screen), ends with the doc's
+  «Перевірка» questions, then «Чи допомогло?». That answer is the analytics
+  signal — never skip it, never auto-fill it.
 - Keep medical/diagnostic language out of the UI. Use the game vernacular:
   блиск, стрічки, дзижчання, шум, напруга, пусте поле, баклажанне поле,
   коріння, руни, маленький рух.
@@ -36,7 +43,13 @@ shared design) + a little Tailwind config kept for future use.
   shaped to map 1:1 onto Supabase later.
 - `lib/sound/sound.ts` — synthesized Web Audio SFX (no audio files); muted flag
   driven by Cabin settings.
-- `lib/mock-data/` — quests, runes, items, content (states/energy/onboarding/etc).
+- `lib/mock-data/quests-v2.ts` — THE quest source: 44 quests from the design doc
+  (intro → steps → check → reward → intensity/duration/context → warning), grouped
+  by 19 mood keys. `lib/mock-data/quests.ts` is the old set, still used by nothing
+  on the main path — treat quests-v2 as canonical.
+- `lib/utils/quest-picker.ts` — ranks quests for a mood using the player's own
+  feedback (state.questStats by quest, state.comboStats by `mood|template`).
+- `lib/mock-data/` — runes, items, content (states/energy/onboarding/etc).
 - `lib/supabase/` — client stub + schema.sql (run later).
 - `public/assets/` — pixel sprites (tree, bombom) + wood texture. The garden sky
   scene is drawn in CSS (the original stock background was watermarked, removed).

@@ -185,8 +185,8 @@ export default function Cabin() {
         <Row icon="📤" label={t(L, "cabin.export")} />
         <Row icon="🌱" label={t(L, "cabin.about")} />
         <Row icon="♻️" label={t(L, "cabin.reset")} onClick={() => { if (confirm(t(L, "cabin.reset_confirm"))) reset(); }} />
-        {/* 3D-пісочниця: прототип саду на three.js, поза основною грою */}
-        <Row icon="🧪" label="3D-прототип саду" val="beta" onClick={() => { play("select"); window.location.href = "/lab3d"; }} />
+        {/* стара піксельна сцена — лишається як запасний варіант */}
+        <Row icon="🖼️" label="Класична 2D-сцена" val="архів" onClick={() => { play("select"); window.location.href = "/garden2d"; }} />
       </div>
 
       <div style={{ textAlign: "center", fontSize: 12, color: "#6a5f88", marginTop: 20, fontStyle: "italic" }}>

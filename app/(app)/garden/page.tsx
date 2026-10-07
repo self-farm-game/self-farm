@@ -1,613 +1,504 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useGame, XP_WINDOW_CAP } from "@/lib/store/game";
-import TreeStages from "@/components/garden/TreeStages";
+/**
+ * Сад — головний екран. 3D-острів + увесь цикл:
+ *   чек-ін (стан) → три стежки → покрокове проходження → «чи допомогло?» → відкриття.
+ *
+ * Відповідь на «чи допомогло?» лягає в аналітику (state.questStats / comboStats)
+ * і наступного разу змінює підбір — див. lib/utils/quest-picker.ts.
+ *
+ * Хатинка на острові клікабельна: Бомбом виходить збоку екрана з реплікою.
+ * Стара піксельна сцена лишилась на /garden2d.
+ */
+import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import "./garden3d.css";
+import { useGame } from "@/lib/store/game";
 import { levelInfo } from "@/lib/utils/xp";
-import { play } from "@/lib/sound/sound";
-import { QUESTS, suggestQuests, type MockQuest } from "@/lib/mock-data/quests";
-import { orderStates, toggleState } from "@/lib/utils/states";
-import { GROUP_TINT, stateLabel } from "@/lib/mock-data/states";
-import { ITEMS } from "@/lib/mock-data/items";
-import { BODY } from "@/lib/mock-data/content";
-import { BOMBOM_LINES, t, ENERGY_OPTS, TENSION_OPTS, AFTER_OPTS } from "@/lib/mock-data/i18n";
+import { pickQuests, moodInsights } from "@/lib/utils/quest-picker";
 import {
-  WoodButton,
-  ParchButton,
-  Chip,
-  HeartBar,
-  Stars,
-  BackRow,
-  BombomBanner,
-} from "@/components/ui/primitives";
+  MOODS,
+  MOOD_BY_KEY,
+  QUEST_BY_ID,
+  OUTCOMES,
+  type MoodKey,
+  type OutcomeKey,
+  type Quest,
+} from "@/lib/mock-data/quests-v2";
+import { DROP_POOL } from "@/lib/mock-data/items";
+import { unlockedRunes, runeById } from "@/lib/utils/runes";
+import { BOMBOM_LINES } from "@/lib/mock-data/i18n";
+import { play } from "@/lib/sound/sound";
 
-type Flow =
-  | "home"
-  | "checkin_state"
-  | "checkin_energy"
-  | "quest_suggest"
-  | "quest_detail"
-  | "quest_active"
-  | "quest_complete"
-  | "quest_note"
-  | "reward"
-  | "inventory";
+const IslandScene = dynamic(() => import("@/components/garden3d/IslandScene"), {
+  ssr: false,
+  loading: () => <div className="l3-canvas" />,
+});
 
-const parchCard =
-  "linear-gradient(180deg,#d8bf94,#c8a878)";
-const parchShadow =
-  "inset 0 2px 0 rgba(255,245,220,.55), inset 0 -5px 0 rgba(120,86,48,.5), 0 0 0 3px #6a4a2c, 0 0 0 5px #2a1a0e, 0 5px 0 rgba(0,0,0,.3)";
-
-// 5 cloud sprites drifting across the sky on slightly random tracks
-const CLOUDS = [
-  // one crossing ≈ 55s; the delays are spread across the cycle so only 1–2 clouds
-  // are in the sky at a time and the others are still off-screen waiting their turn
-  { v: 1, top: 7,  w: 130, dur: 55, delay: 0,   op: 0.95 },
-  { v: 3, top: 15, w: 150, dur: 62, delay: -16, op: 0.9 },
-  { v: 2, top: 11, w: 100, dur: 58, delay: -34, op: 0.85 },
-  { v: 5, top: 22, w: 85,  dur: 66, delay: -50, op: 0.8 },
-];
+type Screen = "scene" | "checkin" | "paths" | "run" | "check" | "outcome" | "reward" | "finds" | "runes" | "stats";
 
 export default function Garden() {
-  const { state, recordSession, nextBombom, dailyLeft, dailyDone, openCheckin, canCheckin, xpLeft } = useGame();
-  const router = useRouter();
-  const params = useSearchParams();
-  const [flow, setFlow] = useState<Flow>("home");
-  const [directId, setDirectId] = useState<string | null>(null);
-  const [states, setStates] = useState<string[]>([]);
-  const [energy, setEnergy] = useState<string | null>(null);
-  const [tension, setTension] = useState<string | null>(null);
-  const [body, setBody] = useState<string[]>([]);
-  const [showNote, setShowNote] = useState(false);
-  const [note, setNote] = useState("");
-  const [qIdx, setQIdx] = useState(0);
-  const [after, setAfter] = useState("");
-  const [reflection, setReflection] = useState("");
-  const [timer, setTimer] = useState(120);
-  const [reward, setReward] = useState<{ xp: number; item: any } | null>(null);
-
-  // ordered chips (personalised) + quests matched to the chosen states
+  const { state, canCheckin, xpLeft, openCheckin, recordSession, placeHollowRune } = useGame();
   const lvl = levelInfo(state.totalXp);
-  const L = state.lang;
-  const orderedStates = orderStates(state.stateCounts || {});
-  const suggested: MockQuest[] = states.length ? suggestQuests(states, lvl.levelNum, 3) : [];
-  const directQ = directId ? QUESTS.find((x) => x.id === directId) : null;
-  const q = directQ || suggested[qIdx] || suggested[0] || QUESTS[0];
 
-  // deep-link from the Questbook: /garden?quest=<id> opens that quest directly
-  useEffect(() => {
-    const qid = params.get("quest");
-    if (!qid) return;
-    const found = QUESTS.find((x) => x.id === qid);
-    if (found) {
-      // reuse the states from the active check-in so the session is tagged
-      setStates((state.activeStates && state.activeStates.length ? state.activeStates : []) as string[]);
-      setDirectId(qid);
-      go("quest_detail");
+  const [screen, setScreen] = useState<Screen>("scene");
+  const [mood, setMood] = useState<MoodKey | null>(null);
+  const [quest, setQuest] = useState<Quest | null>(null);
+  const [stepIdx, setStepIdx] = useState(0);
+  const [say, setSay] = useState<string | null>(null);
+  const [gain, setGain] = useState<{ xp: number; item: { icon: string; name: string } | null } | null>(null);
+  const startedAt = useRef(0);
+
+  const active = useMemo(
+    () => (state.activeQuestIds || []).map((id) => QUEST_BY_ID[id]).filter(Boolean) as Quest[],
+    [state.activeQuestIds],
+  );
+  const activeMood = (state.currentMood as MoodKey | null) || null;
+  const runes = useMemo(() => unlockedRunes(state), [state]);
+  const placed = runeById(state.hollowRune);
+  const insights = useMemo(() => moodInsights(state), [state]);
+  const lines = BOMBOM_LINES[state.lang] || BOMBOM_LINES.uk;
+
+  const close = () => setScreen("scene");
+
+  /* ── чек-ін ── */
+  const chooseMood = (key: MoodKey) => {
+    play("select");
+    const picked = pickQuests(state, key, 3);
+    openCheckin([key], picked.map((q) => q.id), key);
+    setMood(key);
+    setScreen("paths");
+  };
+
+  /* ── запуск квесту ── */
+  const startQuest = (q: Quest) => {
+    play("select");
+    setQuest(q);
+    setStepIdx(0);
+    startedAt.current = Date.now();
+    setScreen("run");
+  };
+
+  const nextStep = () => {
+    if (!quest) return;
+    if (stepIdx < quest.steps.length - 1) {
+      setStepIdx((i) => i + 1);
+      play("select");
+    } else {
+      setScreen("check");
     }
-    router.replace("/garden");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const tick = useRef<any>(null);
-  useEffect(() => {
-    if (flow === "quest_active") {
-      tick.current = setInterval(() => setTimer((t) => Math.max(0, t - 1)), 1000);
-      return () => clearInterval(tick.current);
-    }
-  }, [flow]);
-
-  const go = (f: Flow) => {
-    setFlow(f);
-    const el = document.querySelector(".sf-scroll");
-    if (el) el.scrollTop = 0;
-  };
-  const resetFlow = () => {
-    setStates([]);
-    setEnergy(null);
-    setTension(null);
-    setBody([]);
-    setShowNote(false);
-    setNote("");
-    setAfter("");
-    setReflection("");
-    setTimer(120);
-    setDirectId(null);
-    go("home");
   };
 
-  const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
-  const fmtWait = (ms: number) => {
-    const m = Math.max(0, Math.ceil(ms / 60000));
-    const h = Math.floor(m / 60);
-    return h > 0 ? `${h} год ${m % 60} хв` : `${m} хв`;
-  };
-
-  const finishToReward = () => {
-    const r = recordSession({
-      states: states.map((k) => stateLabel(L, k)),
-      stateKeys: states,
-      energy,
-      tension,
-      note,
-      questId: q.id,
-      questIcon: q.icon,
-      questTitle: q.title,
-      questXp: q.xp,
-      after,
-      reflection,
+  /* ── «чи допомогло?» → запис + аналітика ── */
+  const finish = (outcome: OutcomeKey) => {
+    if (!quest) return;
+    const secs = (Date.now() - startedAt.current) / 1000;
+    const res = recordSession({
+      states: [MOOD_BY_KEY[quest.mood]?.label || ""],
+      stateKeys: [quest.mood],
+      energy: null,
+      tension: null,
+      questId: quest.id,
+      questIcon: quest.icon,
+      questTitle: quest.title,
+      questXp: quest.xp,
+      after: OUTCOMES.find((o) => o.key === outcome)?.label || "",
+      mood: activeMood || quest.mood,
+      template: quest.template,
+      outcome,
+      seconds: secs,
     });
-    setReward(r);
-    play("reward");
-    if (r.item) setTimeout(() => play("item"), 350);
-    go("reward");
+    play(outcome === "helped" ? "reward" : "select");
+    setGain({ xp: res.xp, item: res.item ? { icon: res.item.icon, name: res.item.name } : null });
+    setScreen("reward");
   };
 
-  /* ---------------- HOME ---------------- */
-  if (flow === "home") {
-    const lines = BOMBOM_LINES[state.lang] || BOMBOM_LINES.en;
-    const line = lines[state.bombomIdx % lines.length];
-    // each stage fills a bit more of the scene than the last one
-    // tree grows bigger each stage: scale multiplier applied to the base width
-    const growScale = [0.5, 0.62, 0.74, 0.86, 0.94, 1.0][Math.min(6, lvl.levelNum) - 1];
-    return (
-      <div className="sf-screen sf-garden">
-        {/* ---- the scene: takes whatever height the UI leaves ---- */}
-        <div className="sf-stage">
-          {/* sky gradient */}
-          <div className="sf-garden-sky" />
-          {/* drifting clouds */}
-          <div className="sf-clouds" aria-hidden>
-            {CLOUDS.map((c, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+  const sceneStage = Math.min(6, Math.max(1, lvl.levelNum));
+
+  return (
+    <div className={"l3-root" + (say ? " l3-talking" : "")}>
+      <IslandScene
+        stage={sceneStage}
+        runeColor={placed ? "#b9a6ff" : null}
+        onTreeClick={() => setSay("Дерево? Воно росте, поки ти повертаєшся. Не швидше, не повільніше.")}
+        onHollowClick={() => setScreen("runes")}
+        onHutClick={() => {
+          play("select");
+          setSay(lines[Math.floor(Math.random() * lines.length)]);
+        }}
+      />
+
+      <div className="l3-ui">
+        <div className="l3-top">
+          <div className="l3-panel l3-player">
+            <div className="l3-avatar">🌳</div>
+            <div className="l3-player-meta">
+              <div className="l3-name">{lvl.name}</div>
+              <div className="l3-sub">{lvl.sub}</div>
+              <div className="l3-xp">
+                <i style={{ width: `${Math.round(lvl.pct * 100)}%` }} />
+              </div>
+              <div className="l3-xp-num">
+                {lvl.isMax ? `${lvl.total} XP` : `${lvl.inLevel} / ${lvl.target} XP`}
+              </div>
+            </div>
+          </div>
+
+          <div className="l3-pills">
+            <div className="l3-pill">📅 ДЕНЬ <b>{state.day}</b></div>
+            <div className="l3-pill">🔥 <b>{state.streak}</b></div>
+          </div>
+        </div>
+
+        <div className="l3-rail">
+          <div className="l3-tile" onClick={() => { play("select"); setScreen("finds"); }}>
+            <div className="l3-ico">🎒</div>
+            <div className="l3-cap">Знахідки</div>
+            {state.ownedItems.length > 0 && <div className="l3-badge">{state.ownedItems.length}</div>}
+          </div>
+          <div className="l3-tile" onClick={() => { play("select"); setScreen("stats"); }}>
+            <div className="l3-ico">📊</div>
+            <div className="l3-cap">Що працює</div>
+          </div>
+        </div>
+
+        <div className="l3-bottom">
+          {canCheckin ? (
+            <button className="l3-btn" onClick={() => { play("select"); setScreen("checkin"); }}>
+              Як ти зараз?
+            </button>
+          ) : (
+            <button className="l3-btn" onClick={() => { play("select"); setScreen("paths"); }}>
+              Стежки · {active.length}
+            </button>
+          )}
+          <div className="l3-hint">
+            {canCheckin
+              ? "⟲ тягни сад, щоб обернути · хатинка клікається"
+              : `лишилось пройти ${active.length} · XP у вікні: ${xpLeft}`}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Бомбом вийшов з хатинки ── */}
+      {say && (
+        <div className="l3-bombom-panel">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assets/sprites/garden/BomBom.png" alt="Бомбом" />
+          <div className="l3-say">
+            <div className="l3-say-x" onClick={() => setSay(null)}>✕</div>
+            <div className="l3-who">Бомбом</div>
+            {say}
+            <div className="l3-say-more">
+              <button
+                className="l3-btn l3-sm l3-btn-soft"
+                onClick={() => setSay(lines[Math.floor(Math.random() * lines.length)])}
+              >
+                Ще щось скажи
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── чек-ін: один стан ── */}
+      {screen === "checkin" && (
+        <Modal title="Як ти зараз?" sub="Один дотик. Слова не потрібні." onClose={close}>
+          <div className="l3-grid">
+            {MOODS.map((m) => (
+              <div key={m.key} className="l3-choice" onClick={() => chooseMood(m.key)}>
+                <div className="l3-ico">{m.icon}</div>
+                <div className="l3-lbl">{m.label}</div>
+              </div>
+            ))}
+          </div>
+        </Modal>
+      )}
+
+      {/* ── три стежки ── */}
+      {screen === "paths" && (
+        <Modal
+          title="Стежки"
+          sub={
+            activeMood
+              ? `Підібрано під стан «${MOOD_BY_KEY[activeMood]?.label}». Пройди всі — відкриється новий чек-ін.`
+              : "Пройди всі — відкриється новий чек-ін."
+          }
+          onClose={close}
+          foot={<button className="l3-btn l3-sm l3-btn-soft" onClick={close}>Пізніше</button>}
+        >
+          {active.length === 0 ? (
+            <div className="l3-intro">Стежок зараз немає. Тисни «Як ти зараз?» — і зʼявляться три.</div>
+          ) : (
+            active.map((q) => (
+              <div key={q.id} className="l3-quest" onClick={() => startQuest(q)}>
+                <div className="l3-quest-ico">{q.icon}</div>
+                <div style={{ minWidth: 0 }}>
+                  <h3>{q.title}</h3>
+                  <p>{q.intro}</p>
+                  <div className="l3-tags">
+                    <span className="l3-tag">{q.duration}</span>
+                    <span className="l3-tag l3-tag-green">+{q.xp} XP</span>
+                    <span className="l3-tag l3-tag-blue">{q.context}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </Modal>
+      )}
+
+      {/* ── покрокове проходження ── */}
+      {screen === "run" && quest && (
+        <Modal
+          title={quest.title}
+          sub={`крок ${stepIdx + 1} з ${quest.steps.length}`}
+          onClose={close}
+          foot={
+            <>
+              <button
+                className="l3-btn l3-sm l3-btn-soft"
+                onClick={() => (stepIdx === 0 ? setScreen("paths") : setStepIdx((i) => i - 1))}
+              >
+                {stepIdx === 0 ? "Назад" : "← Крок назад"}
+              </button>
+              <button className="l3-btn l3-sm" onClick={nextStep}>
+                {stepIdx < quest.steps.length - 1 ? "Зробив →" : "Готово"}
+              </button>
+            </>
+          }
+        >
+          <div className="l3-run-top">
+            <div className="l3-run-ico">{quest.icon}</div>
+            <div style={{ minWidth: 0 }}>
+              <h3>{quest.title}</h3>
+              <p>{quest.intensity} · {quest.duration} · {quest.context}</p>
+            </div>
+          </div>
+
+          {stepIdx === 0 && <div className="l3-intro">{quest.intro}</div>}
+
+          <div className="l3-dots">
+            {quest.steps.map((_, i) => (
+              <span
                 key={i}
-                src={`/assets/sprites/garden/cloud-${c.v}.png`}
-                alt=""
-                className="sf-drift"
-                style={{ top: `${c.top}%`, width: `${c.w}px`, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, opacity: c.op }}
+                className={"l3-dot" + (i === stepIdx ? " l3-on" : i < stepIdx ? " l3-past" : "")}
               />
             ))}
           </div>
-          <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-            <Stars n={8} seed={11} area={42} />
+
+          <div className="l3-step" key={stepIdx}>
+            <div className="l3-step-n">{stepIdx + 1}</div>
+            <div className="l3-step-t">{quest.steps[stepIdx]}</div>
           </div>
 
-          {/* meadow (one texture, transparent sky) → tree → gnome */}
-          <div className="sf-plot">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/sprites/garden/bg-mobile.png" alt="" className="sf-plot-img sf-only-mobile" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/sprites/garden/bg-desktop.png" alt="" className="sf-plot-img sf-only-desktop" />
-
-            {/* the tree, planted on the stone circle (grows with each stage) */}
-            <div className="sf-garden-tree">
-              <div className="sf-tree-fit" style={{ transform: `scale(${growScale})`, transformOrigin: "50% 100%" }}>
-                <div className="sf-garden-shadow" />
-                <TreeStages stage={lvl.levelNum} pct={lvl.pct} />
-              </div>
+          {quest.warning && (
+            <div className="l3-warn">
+              <span>⚠</span>
+              <span>{quest.warning}</span>
             </div>
+          )}
+        </Modal>
+      )}
 
-            {/* Бомбом on the grass */}
-            <div
-              className="sf-gnome"
-              onClick={() => { nextBombom(); play("tap"); }}
-              title="тицьни, щоб почути ще"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/assets/sprites/garden/BomBom.png" alt="БомБом" />
-              <div className="sf-gnome-bubble">
-                <div className="sf-bombom-name">{t(L, "bombom.tap")}</div>
-                <p>{line}</p>
+      {/* ── перевірка «як тобі зараз?» ── */}
+      {screen === "check" && quest && (
+        <Modal
+          title="Швидка перевірка"
+          sub="Нічого писати не треба — просто подивись на це."
+          onClose={close}
+          foot={<button className="l3-btn l3-sm" onClick={() => setScreen("outcome")}>Далі →</button>}
+        >
+          <div className="l3-qlist">
+            {quest.check.map((c, i) => (
+              <div key={i} className="l3-q">
+                <span>•</span>
+                <span>{c}</span>
               </div>
-            </div>
+            ))}
           </div>
+        </Modal>
+      )}
 
-          {/* ---- top overlay: level bar + inventory ---- */}
-          <div className="sf-garden-top">
-            <div className="sf-xp-panel">
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 7 }}>
-                <div style={{ minWidth: 0 }}>
-                  <span style={{ fontSize: 16, color: "#f3d9a8", fontWeight: 700 }}>{lvl.name}</span>
-                  <span style={{ fontSize: 11.5, color: "#c9a878", fontStyle: "italic", marginLeft: 7 }}>{lvl.sub}</span>
+      {/* ── чи допомогло ── */}
+      {screen === "outcome" && quest && (
+        <Modal
+          title="Чи допомогло?"
+          sub="Чесна відповідь робить наступні стежки точнішими."
+          onClose={close}
+        >
+          <div className="l3-outcomes">
+            {OUTCOMES.map((o) => (
+              <div key={o.key} className="l3-outcome" onClick={() => finish(o.key)}>
+                <div className="l3-ico">{o.icon}</div>
+                <div>
+                  <b>{o.label}</b>
+                  <small>{o.note}</small>
                 </div>
-                <div style={{ fontSize: 12, color: "#e7c389", fontWeight: 600, whiteSpace: "nowrap" }}>
-                  {lvl.inLevel} / {lvl.target} XP
-                </div>
               </div>
-              <HeartBar pct={Math.round(lvl.pct * 100) + "%"} />
-            </div>
-
-            <div className="sf-top-row" style={{ justifyContent: "flex-end" }}>
-              <div className="sf-inv-btn" onClick={() => go("inventory")}>
-                <span style={{ fontSize: 22, lineHeight: 1 }}>🎒</span>
-                <span style={{ fontSize: 8.5, letterSpacing: 0.5, color: "#e7c389", fontWeight: 700 }}>{t(L, "garden.finds")}</span>
-                <div className="sf-inv-badge">{state.ownedItems.length}</div>
-              </div>
-            </div>
+            ))}
           </div>
-        </div>
+        </Modal>
+      )}
 
-        {/* ---- bottom: the single action ---- */}
-        <div className="sf-garden-bottom">
-          {canCheckin ? (
-            <ParchButton
+      {/* ── відкриття ── */}
+      {screen === "reward" && quest && (
+        <Modal
+          title="Відкрито"
+          sub={quest.title}
+          onClose={() => { setQuest(null); setGain(null); close(); }}
+          foot={
+            <button
+              className="l3-btn l3-sm"
               onClick={() => {
-                play("confirm");
-                setQIdx(0);
-                go("checkin_state");
+                setQuest(null);
+                setGain(null);
+                setScreen((state.activeQuestIds || []).length > 0 ? "paths" : "scene");
               }}
             >
-              {t(state.lang, "cta.how_are_you")}
-            </ParchButton>
+              {(state.activeQuestIds || []).length > 0 ? "До стежок" : "На галявину"}
+            </button>
+          }
+        >
+          <div className="l3-reward">
+            <div className="l3-trophy">🏆</div>
+            <h3>«{quest.reward}»</h3>
+            <p>{quest.rewardNote}</p>
+            <div className="l3-gain">
+              <span className="l3-tag l3-tag-green">
+                {gain && gain.xp > 0 ? `+${gain.xp} XP` : "без XP — ліміт вікна"}
+              </span>
+              {gain?.item && <span className="l3-tag">{gain.item.icon} {gain.item.name}</span>}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── знахідки ── */}
+      {screen === "finds" && (
+        <Modal title="Знахідки" sub="Те, що впало під ноги, поки ти йшов." onClose={close}>
+          {state.ownedItems.length === 0 ? (
+            <div className="l3-intro">Поки порожньо. Знахідки падають самі, коли проходиш стежки.</div>
           ) : (
-            <div style={{ textAlign: "center", borderRadius: 14, padding: "13px 14px", background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: "0 0 0 2px #4a3a6e" }}>
-              <div style={{ fontSize: 14, color: "#cfc4e6", fontWeight: 700 }}>{t(state.lang, "cta.paths_waiting")}</div>
-              <div style={{ fontSize: 12, color: "#a99fc8", marginTop: 3, lineHeight: 1.4 }}>
-                {t(state.lang, "cta.finish_set", { n: dailyLeft })}
-              </div>
+            <div className="l3-grid">
+              {state.ownedItems.map((name) => {
+                const it = DROP_POOL.find((d) => d.name === name);
+                return (
+                  <div key={name} className="l3-choice">
+                    <div className="l3-ico">{it?.icon || "✦"}</div>
+                    <div className="l3-lbl">{name}</div>
+                  </div>
+                );
+              })}
             </div>
           )}
-          {canCheckin && (
-            <div style={{ textAlign: "center", fontSize: 11, color: "#e9dcc0", marginTop: 1, textShadow: "0 1px 2px rgba(0,0,0,.5)" }}>
-              {xpLeft > 0
-                ? `${state.questsDone === 0 ? t(state.lang, "hint.first") : t(state.lang, "hint.again")} · ${t(state.lang, "hint.xp_left", { n: xpLeft, cap: XP_WINDOW_CAP })}`
-                : t(state.lang, "hint.xp_done")}
+        </Modal>
+      )}
+
+      {/* ── дупло: покласти руну ── */}
+      {screen === "runes" && (
+        <Modal
+          title="Дупло"
+          sub={sceneStage >= 5 ? "Місце рівно для однієї руни." : "Дупло зʼявиться на 5-й стадії."}
+          onClose={close}
+        >
+          {runes.length === 0 ? (
+            <div className="l3-intro">Жодної руни ще не відкрито. Вони приходять самі.</div>
+          ) : (
+            <div className="l3-grid">
+              {runes.map((r) => (
+                <div
+                  key={r.id}
+                  className={"l3-choice" + (state.hollowRune === r.id ? " l3-on" : "")}
+                  onClick={() => {
+                    if (sceneStage < 5) { setSay("Дупла ще нема. Рости."); close(); return; }
+                    placeHollowRune(state.hollowRune === r.id ? null : r.id);
+                    play("select");
+                    close();
+                  }}
+                >
+                  <div className="l3-ico">{r.sym}</div>
+                  <div className="l3-lbl">{r.name.replace("Руна ", "")}</div>
+                </div>
+              ))}
             </div>
           )}
-        </div>
-      </div>
-    );
-  }
+        </Modal>
+      )}
 
-  /* ---------------- INVENTORY ---------------- */
-  if (flow === "inventory") {
-    const found = ITEMS.filter((it) => !it.locked && state.ownedItems.includes(it.name));
-    const lockedTiles = ITEMS.filter((it) => it.locked).slice(0, 2);
-    return (
-      <div className="sf-screen" style={{ padding: "54px 16px 18px", minHeight: "100%" }}>
-        <BackRow onClick={() => go("home")} />
-        <div style={{ fontSize: 30, color: "#f4ecd6", fontWeight: 700, textShadow: "0 3px 0 rgba(0,0,0,.35)", marginTop: 6 }}>{t(L, "garden.finds")}</div>
-        <div style={{ fontSize: 13, color: "#a99fc8", fontStyle: "italic", marginBottom: 16 }}>речі, що чіпляються до стежки</div>
-
-        {found.length === 0 && (
-          <div style={{ borderRadius: 16, padding: "22px 18px", textAlign: "center", background: "linear-gradient(180deg,#2c2150,#241a42)", boxShadow: "0 0 0 2px #4a3a6e", marginBottom: 14 }}>
-            <div style={{ fontSize: 38, marginBottom: 8 }}>🎒</div>
-            <div style={{ fontSize: 15, color: "#cfc4e6", fontWeight: 700 }}>Поки порожньо</div>
-            <div style={{ fontSize: 13, color: "#8a7fb0", marginTop: 6, lineHeight: 1.4 }}>
-              Знахідки інколи випадають за квести.
-              <br />
-              Зроби маленький рух — і щось зачепиться.
+      {/* ── що саме працює (аналітика) ── */}
+      {screen === "stats" && (
+        <Modal
+          title="Що працює"
+          sub="Збирається з твоїх відповідей після кожної стежки."
+          onClose={close}
+        >
+          {insights.length === 0 ? (
+            <div className="l3-intro">
+              Поки нічого. Пройди кілька стежок і скажи, чи допомогло — тут зʼявиться,
+              що саме спрацьовує в якому стані, і підбір стане точнішим.
             </div>
-          </div>
-        )}
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {found.map((it, i) => (
-            <div
-              key={i}
-              style={{ borderRadius: 14, padding: "14px 12px", textAlign: "center", background: parchCard, boxShadow: "inset 0 2px 0 rgba(255,245,220,.5), 0 0 0 3px #6a4a2c, 0 0 0 5px #2a1a0e" }}
-            >
-              <div style={{ width: 54, height: 54, margin: "0 auto 9px", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, background: "radial-gradient(circle,#efe0bd,#c9a878)", boxShadow: "inset 0 0 0 2px #6a4a2c" }}>{it.icon}</div>
-              <div style={{ fontSize: 14, color: "#3a2616", fontWeight: 700, lineHeight: 1.1 }}>{it.name}</div>
-              <div style={{ fontSize: 10, color: it.rc, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginTop: 3 }}>{it.rar}</div>
-              <div style={{ fontSize: 11, color: "#6a4a2c", fontStyle: "italic", marginTop: 5, lineHeight: 1.3 }}>{it.desc}</div>
-            </div>
-          ))}
-          {lockedTiles.map((_, i) => (
-            <div key={"l" + i} style={{ borderRadius: 14, padding: "14px 12px", textAlign: "center", opacity: 0.5, background: "repeating-linear-gradient(45deg,#2c2645 0 8px,#241d3a 8px 16px)", boxShadow: "0 0 0 2px #4a3a6e" }}>
-              <div style={{ width: 54, height: 54, margin: "0 auto 9px", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, background: "rgba(0,0,0,.25)" }}>❔</div>
-              <div style={{ fontSize: 14, color: "#8a7fb0", fontWeight: 700 }}>???</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------------- CHECK-IN: STATE ---------------- */
-  if (flow === "checkin_state") {
-    return (
-      <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%" }}>
-        <BackRow onClick={resetFlow} />
-        <div style={{ marginTop: 6 }}>
-          <BombomBanner>«Не будемо садити ліс. Одне дерево. Один рух. Кажи, що там у тебе зараз.»</BombomBanner>
-        </div>
-        <div style={{ fontSize: 28, color: "#f4ecd6", fontWeight: 700, textAlign: "center", margin: "24px 0 4px", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "checkin.state.title")}</div>
-        <div style={{ fontSize: 13, color: "#a99fc8", textAlign: "center", marginBottom: 18 }}>{t(L, "checkin.state.sub")}</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 9, justifyContent: "center" }}>
-          {orderedStates.map((sd) => {
-            const on = states.includes(sd.key);
-            const tint = GROUP_TINT[sd.group];
-            return (
-              <div
-                key={sd.key}
-                onClick={() => {
-                  play("select");
-                  setStates((cur) => toggleState(cur, sd.key));
-                }}
-                style={{
-                  cursor: "pointer",
-                  userSelect: "none",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  padding: "9px 14px",
-                  borderRadius: 20,
-                  color: on ? "#1a1226" : "#e7dcc4",
-                  background: on ? tint : "rgba(60,48,86,.55)",
-                  boxShadow: on ? `0 0 0 2px ${tint}, 0 0 10px ${tint}66` : "inset 0 0 0 2px rgba(150,120,200,.35)",
-                  transition: "background .12s",
-                }}
-              >
-                {stateLabel(L, sd.key)}
-              </div>
-            );
-          })}
-        </div>
-        <div style={{ fontSize: 11, color: "#7d7298", textAlign: "center", marginTop: 12 }}>
-          {t(L, "checkin.state.reorder")}
-        </div>
-        <div onClick={() => setShowNote((v) => !v)} style={{ textAlign: "center", marginTop: 22, fontSize: 14, color: "#c9a878", cursor: "pointer", letterSpacing: 0.5 }}>
-          {t(L, "quest.add_words")}
-        </div>
-        {showNote && (
-          <div style={{ marginTop: 12, borderRadius: 13, padding: 10, background: "rgba(212,191,148,.12)", boxShadow: "inset 0 0 0 2px #6a4a2c" }}>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={t(L, "quest.note_ph")}
-              style={{ width: "100%", height: 62, resize: "none", border: "none", outline: "none", background: "transparent", color: "#efe7d2", fontSize: 14 }}
-            />
-          </div>
-        )}
-        <div style={{ marginTop: 24, opacity: states.length ? 1 : 0.5, pointerEvents: states.length ? "auto" : "none" }}>
-          <WoodButton big onClick={() => {
-            play("confirm");
-            setQIdx(0);
-            openCheckin(states, suggestQuests(states, lvl.levelNum, 3).map((x) => x.id));
-            go("checkin_energy");
-          }}>
-            {states.length ? t(L, "checkin.next") : t(L, "checkin.pick_one")}
-          </WoodButton>
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------------- CHECK-IN: ENERGY / TENSION ---------------- */
-  if (flow === "checkin_energy") {
-    return (
-      <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%" }}>
-        <BackRow onClick={() => go("checkin_state")} />
-        <div style={{ fontSize: 26, color: "#f4ecd6", fontWeight: 700, textAlign: "center", margin: "14px 0 6px", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "checkin.energy.title")}</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 9, justifyContent: "center", marginBottom: 8 }}>
-          {ENERGY_OPTS[L].map((e) => (
-            <Chip key={e} active={energy === e} onClick={() => { play("select"); setEnergy(e); }}>{e}</Chip>
-          ))}
-        </div>
-        <div style={{ fontSize: 26, color: "#f4ecd6", fontWeight: 700, textAlign: "center", margin: "28px 0 6px", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "checkin.tension.title")}</div>
-        <div style={{ display: "flex", gap: 9, justifyContent: "center", marginBottom: 18 }}>
-          {TENSION_OPTS[L].map((tn) => (
-            <Chip key={tn} active={tension === tn} onClick={() => { play("select"); setTension(tn); }}>{tn}</Chip>
-          ))}
-        </div>
-        <div style={{ fontSize: 13, color: "#9a8fc0", textAlign: "center", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>{t(L, "quest.where")}</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-          {BODY.map((b) => (
-            <Chip key={b} sm active={body.includes(b)} onClick={() => { play("tap"); setBody((cur) => (cur.includes(b) ? cur.filter((x) => x !== b) : [...cur, b])); }}>{b}</Chip>
-          ))}
-        </div>
-        <div style={{ marginTop: 30 }}>
-          <WoodButton big onClick={() => { play("confirm"); go("quest_suggest"); }}>{t(L, "checkin.next")}</WoodButton>
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------------- QUEST SUGGEST ---------------- */
-  if (flow === "quest_suggest") {
-    return (
-      <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%" }}>
-        <BackRow onClick={() => go("checkin_energy")} />
-        <div style={{ marginTop: 6 }}>
-          <BombomBanner>«Ось стежки під те, що ти зараз відчуваєш. Не мусиш перемагати день — обери одну маленьку.»</BombomBanner>
-        </div>
-        <div style={{ fontSize: 12.5, color: "#c9bfe0", textAlign: "center", margin: "18px 0 4px" }}>
-          {t(L, "quest.pick_for", { states: states.map((k) => stateLabel(L, k)).join(", ") || t(L, "quest.your_state") })}
-        </div>
-        <div style={{ fontSize: 13, color: "#9a8fc0", textAlign: "center", textTransform: "uppercase", letterSpacing: 2, margin: "6px 0 14px" }}>{t(L, "quest.choose")}</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {suggested.map((qq, i) => (
-            <div
-              key={qq.id}
-              onClick={() => { play("select"); setQIdx(i); go("quest_detail"); }}
-              style={{ cursor: "pointer", borderRadius: 16, padding: "15px 16px", background: parchCard, boxShadow: parchShadow, display: "flex", gap: 13, alignItems: "center" }}
-            >
-              <div style={{ width: 52, height: 52, flexShrink: 0, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, background: "radial-gradient(circle,#efe0bd,#c9a878)", boxShadow: "inset 0 0 0 2px #6a4a2c" }}>{qq.icon}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 17, color: "#3a2616", fontWeight: 700, lineHeight: 1.1 }}>{qq.title}</div>
-                <div style={{ fontSize: 12, color: "#7a5836", margin: "4px 0 8px" }}>{t(L, "quest.for", { for: qq.for })}</div>
-                <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, color: "#5a3f24", padding: "3px 8px", borderRadius: 6, background: "rgba(106,74,44,.18)" }}>⏱ {qq.dur}</span>
-                  <span style={{ fontSize: 11, color: "#5a3f24", padding: "3px 8px", borderRadius: 6, background: "rgba(106,74,44,.18)" }}>✦ +{qq.xp}</span>
-                  {qq.tier > 1 && (
-                    <span style={{ fontSize: 11, fontWeight: 700, color: qq.tier === 3 ? "#8a2f2f" : "#8a5a1f", padding: "3px 8px", borderRadius: 6, background: qq.tier === 3 ? "rgba(180,60,60,.18)" : "rgba(200,140,50,.2)" }}>
-                      {qq.tier === 3 ? t(L, "quest.badge.bold") : t(L, "quest.badge.challenge")}
-                    </span>
-                  )}
+          ) : (
+            insights.map((i) => (
+              <div key={i.mood} className="l3-insight">
+                <div className="l3-ico">{i.icon}</div>
+                <div style={{ minWidth: 92 }}>
+                  <b>{i.label}</b>
+                  <small>{plural(i.runs, "прохід", "проходи", "проходів")}</small>
+                </div>
+                <div className="l3-bar">
+                  <i style={{ width: `${Math.round((i.rate || 0) * 100)}%` }} />
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, minWidth: 34, textAlign: "right" }}>
+                  {i.rate === null ? "—" : Math.round(i.rate * 100) + "%"}
                 </div>
               </div>
-              <div style={{ fontSize: 22, color: "#7a5836" }}>›</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------------- QUEST DETAIL ---------------- */
-  if (flow === "quest_detail") {
-    return (
-      <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%" }}>
-        <BackRow onClick={() => go("quest_suggest")} />
-        <div style={{ marginTop: 6, borderRadius: 18, padding: "20px 18px 22px", background: parchCard, boxShadow: parchShadow }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ fontSize: 40, flexShrink: 0 }}>{q.icon}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 21, color: "#3a2616", fontWeight: 700, lineHeight: 1.15 }}>{q.title}</div>
-              <div style={{ fontSize: 12, color: "#7a5836", marginTop: 3 }}>для стану: {q.for}</div>
-            </div>
-          </div>
-          <div style={{ height: 2, background: "repeating-linear-gradient(90deg,#8a6a44 0 6px, transparent 6px 12px)", margin: "16px 0", opacity: 0.6 }} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-            {q.steps.map((s, i) => (
-              <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start" }}>
-                <div style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 7, background: "linear-gradient(180deg,#7a5128,#5a3618)", boxShadow: "inset 0 1px 0 rgba(255,220,160,.4), 0 0 0 2px #3a2410", color: "#ffe6b8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>{i + 1}</div>
-                <div style={{ fontSize: 15, color: "#3a2616", lineHeight: 1.35, paddingTop: 2 }}>{s}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ height: 2, background: "repeating-linear-gradient(90deg,#8a6a44 0 6px, transparent 6px 12px)", margin: "16px 0", opacity: 0.6 }} />
-          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-            <div style={{ fontSize: 13, color: "#5a3f24", padding: "5px 12px", borderRadius: 8, background: "rgba(106,74,44,.18)" }}>⏱ {q.dur}</div>
-            <div style={{ fontSize: 13, color: "#5a3f24", padding: "5px 12px", borderRadius: 8, background: "rgba(106,74,44,.18)" }}>✦ +{q.xp} XP</div>
-            <div style={{ fontSize: 13, color: "#5a3f24", padding: "5px 12px", borderRadius: 8, background: "rgba(106,74,44,.18)" }}>🎁 предмет</div>
-          </div>
-        </div>
-        <div style={{ marginTop: 18 }}>
-          <WoodButton big onClick={() => { play("confirm"); setTimer(120); go("quest_active"); }}>Взяти квест</WoodButton>
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------------- QUEST ACTIVE ---------------- */
-  if (flow === "quest_active") {
-    return (
-      <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ fontSize: 13, letterSpacing: 3, color: "#9a8fc0", textTransform: "uppercase" }}>квест активний</div>
-        <div style={{ fontSize: 56, margin: "12px 0 6px", animation: "sf-float 4s ease-in-out infinite" }}>{q.icon}</div>
-        <div style={{ fontSize: 22, color: "#f4ecd6", fontWeight: 700, textShadow: "0 3px 0 rgba(0,0,0,.35)", textAlign: "center" }}>{q.title}</div>
-        <div style={{ fontSize: 30, color: "#ffd98a", fontWeight: 700, margin: "12px 0 6px", letterSpacing: 2 }}>{fmt(timer)}</div>
-        <div style={{ width: 200, height: 10, borderRadius: 6, background: "rgba(0,0,0,.3)", boxShadow: "inset 0 0 0 2px #2a1a0e", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: 100 - (timer / 120) * 100 + "%", background: "linear-gradient(180deg,#7bbf5a,#4f9a3a)", transition: "width 1s linear" }} />
-        </div>
-
-        {/* the instruction stays visible while doing the quest */}
-        <div style={{ width: "100%", maxWidth: 340, marginTop: 20, borderRadius: 16, padding: "16px 16px 18px", background: parchCard, boxShadow: parchShadow }}>
-          <div style={{ fontSize: 12, color: "#7a5836", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 10, textAlign: "center" }}>що робити</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {q.steps.map((s, i) => (
-              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <div style={{ width: 22, height: 22, flexShrink: 0, borderRadius: 6, background: "linear-gradient(180deg,#7a5128,#5a3618)", boxShadow: "inset 0 1px 0 rgba(255,220,160,.4), 0 0 0 2px #3a2410", color: "#ffe6b8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>{i + 1}</div>
-                <div style={{ fontSize: 14, color: "#3a2616", lineHeight: 1.35, paddingTop: 1 }}>{s}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ fontSize: 13, lineHeight: 1.5, color: "#b9aecb", fontStyle: "italic", margin: "18px 0", maxWidth: 260, textAlign: "center" }}>
-          Не треба робити ідеально. Просто повернись, коли зробиш.
-        </div>
-        <div style={{ width: "100%" }}>
-          <WoodButton big onClick={() => { play("complete"); go("quest_complete"); }}>{t(L, "quest.submit")}</WoodButton>
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------------- QUEST COMPLETE (after-state) ---------------- */
-  if (flow === "quest_complete") {
-    return (
-      <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <div style={{ fontSize: 54, textAlign: "center", marginBottom: 10, animation: "sf-pop .5s ease both" }}>🌿</div>
-        <div style={{ fontSize: 28, color: "#f4ecd6", fontWeight: 700, textAlign: "center", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "complete.title")}</div>
-        <div style={{ fontSize: 13, color: "#a99fc8", textAlign: "center", margin: "8px 0 24px", fontStyle: "italic" }}>{t(L, "complete.sub")}</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {AFTER_OPTS[L].map((a) => (
-            <div
-              key={a.label}
-              onClick={() => { play("select"); setAfter(a.label); go("quest_note"); }}
-              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 13, padding: "15px 18px", borderRadius: 14, background: "linear-gradient(180deg,#3a2c52,#2c2042)", boxShadow: "inset 0 1px 0 rgba(150,120,200,.2), inset 0 -3px 0 rgba(0,0,0,.35), 0 0 0 2px #4a3a6e", color: "#e8dcc4", fontSize: 17, fontWeight: 600 }}
-            >
-              <span style={{ fontSize: 24 }}>{a.icon}</span> {a.label}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------------- OPTIONAL NOTE ---------------- */
-  if (flow === "quest_note") {
-    return (
-      <div className="sf-screen" style={{ padding: "54px 18px 24px", minHeight: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <div style={{ fontSize: 26, color: "#f4ecd6", fontWeight: 700, textAlign: "center", textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>{t(L, "note.title")}</div>
-        <div style={{ fontSize: 13, color: "#a99fc8", textAlign: "center", margin: "8px 0 20px", fontStyle: "italic" }}>{t(L, "note.sub")}</div>
-        <div style={{ borderRadius: 16, padding: 14, background: parchCard, boxShadow: "inset 0 2px 0 rgba(255,245,220,.5), 0 0 0 3px #6a4a2c, 0 0 0 5px #2a1a0e" }}>
-          <textarea
-            value={reflection}
-            onChange={(e) => setReflection(e.target.value)}
-            placeholder={t(L, "note.ph")}
-            style={{ width: "100%", height: 120, resize: "none", border: "none", outline: "none", background: "transparent", color: "#3a2616", fontSize: 15, lineHeight: 1.5 }}
-          />
-        </div>
-        <div style={{ marginTop: 18 }}>
-          <ParchButton onClick={() => { play("confirm"); finishToReward(); }}>{t(L, "note.add")}</ParchButton>
-        </div>
-        <div onClick={() => { setReflection(""); finishToReward(); }} style={{ textAlign: "center", marginTop: 14, fontSize: 14, color: "#7d7298", cursor: "pointer", letterSpacing: 1 }}>{t(L, "note.skip")}</div>
-      </div>
-    );
-  }
-
-  /* ---------------- REWARD ---------------- */
-  if (flow === "reward" && reward) {
-    return (
-      <div className="sf-screen" style={{ padding: "50px 18px 24px", minHeight: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <div style={{ textAlign: "center", animation: "sf-pop .5s ease both" }}>
-          <div style={{ fontSize: 40, color: "#ffd98a", fontWeight: 700, textShadow: "0 4px 0 rgba(0,0,0,.4)" }}>{t(L, "reward.xp", { n: reward.xp })}</div>
-          <div style={{ fontSize: 15, color: "#b9d99a", fontStyle: "italic", marginTop: 6 }}>{t(L, "reward.woke")}</div>
-        </div>
-
-        {reward.item && (
-          <div style={{ marginTop: 22, borderRadius: 16, padding: 16, background: parchCard, boxShadow: parchShadow, display: "flex", gap: 14, alignItems: "center" }}>
-            <div style={{ width: 62, height: 62, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, background: "radial-gradient(circle,#efe0bd,#c9a878)", boxShadow: "inset 0 0 0 2px #6a4a2c, 0 0 14px rgba(255,220,140,.5)", animation: "sf-glow 2.2s ease-in-out infinite" }}>{reward.item.icon}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, letterSpacing: 2, color: "#8a6a44", textTransform: "uppercase" }}>{t(L, "reward.found_item")}</div>
-              <div style={{ fontSize: 18, color: "#3a2616", fontWeight: 700 }}>{reward.item.name}</div>
-              <div style={{ fontSize: 13, color: "#6a4a2c", fontStyle: "italic" }}>«{reward.item.desc}»</div>
-            </div>
-          </div>
-        )}
-
-        {/* rune progress — reflects real quests done */}
-        {(() => {
-          const cur = Math.min(3, state.questsDone);
-          const opened = cur >= 3;
-          return (
-            <div style={{ marginTop: 14, borderRadius: 16, padding: 16, background: "linear-gradient(180deg,#2c2150,#241a42)", boxShadow: "inset 0 1px 0 rgba(150,120,200,.25), 0 0 0 3px #4a3a6e, 0 0 0 5px #1a1230" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 46, height: 46, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, background: "radial-gradient(circle,#5a4a8a,#332658)", boxShadow: "0 0 14px rgba(150,110,220,.6), inset 0 0 0 2px #7a6ab0", animation: "sf-glow 2.4s ease-in-out infinite" }}>ᛗ</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, letterSpacing: 2, color: "#9a8fc0", textTransform: "uppercase" }}>{opened ? t(L, "reward.rune_open") : t(L, "reward.rune_grow")}</div>
-                  <div style={{ fontSize: 17, color: "#efe7d2", fontWeight: 700 }}>{t(L, "reward.rune_move", { cur })}</div>
-                </div>
-              </div>
-              <div style={{ marginTop: 10, height: 9, borderRadius: 5, background: "rgba(0,0,0,.35)", boxShadow: "inset 0 0 0 2px #1a1230", overflow: "hidden" }}>
-                <div style={{ height: "100%", width: (cur / 3) * 100 + "%", background: "linear-gradient(180deg,#a98bff,#7a5ad8)", transition: "width .5s ease" }} />
-              </div>
-            </div>
-          );
-        })()}
-
-        <div style={{ marginTop: 22 }}>
-          <WoodButton big onClick={() => { play("tap"); resetFlow(); }}>{t(L, "reward.to_garden")}</WoodButton>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
+            ))
+          )}
+        </Modal>
+      )}
+    </div>
+  );
 }
 
-/* ---------------- TREE SCENE (clean, watermark-free pixel scene) ---------------- */
+/** Українська множина: 1 прохід · 2–4 проходи · 5+ проходів (з урахуванням 11–14). */
+function plural(n: number, one: string, few: string, many: string) {
+  const d = n % 10;
+  const h = n % 100;
+  const word = h >= 11 && h <= 14 ? many : d === 1 ? one : d >= 2 && d <= 4 ? few : many;
+  return `${n} ${word}`;
+}
+
+/* ───────────────────────── модалка ───────────────────────── */
+function Modal({
+  title,
+  sub,
+  onClose,
+  foot,
+  children,
+}: {
+  title: string;
+  sub?: string;
+  onClose: () => void;
+  foot?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [onClose]);
+
+  return (
+    <div className="l3-scrim" onClick={onClose}>
+      <div className="l3-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="l3-modal-head">
+          <h2>{title}</h2>
+          {sub && <p>{sub}</p>}
+          <div className="l3-x" onClick={onClose}>✕</div>
+        </div>
+        <div className="l3-modal-body">{children}</div>
+        {foot && <div className="l3-modal-foot">{foot}</div>}
+      </div>
+    </div>
+  );
+}
