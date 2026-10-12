@@ -3,12 +3,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ONBOARDING } from "@/lib/mock-data/content";
 import { useGame } from "@/lib/store/game";
+import { t } from "@/lib/mock-data/i18n";
 import { WoodButton, Stars } from "@/components/ui/primitives";
 import { play } from "@/lib/sound/sound";
 
 export default function Onboarding() {
   const router = useRouter();
-  const { plantTree } = useGame();
+  const { state, plantTree } = useGame();
+  const en = state.lang === "en";
   const [step, setStep] = useState(0);
   const ob = ONBOARDING[step];
 
@@ -79,7 +81,7 @@ export default function Onboarding() {
             marginBottom: 14,
           }}
         >
-          {ob.kicker}
+          {en ? ob.kickerEn : ob.kicker}
         </div>
         <div
           style={{
@@ -90,7 +92,7 @@ export default function Onboarding() {
             maxWidth: 300,
           }}
         >
-          {ob.title}
+          {en ? ob.titleEn : ob.title}
         </div>
         {ob.sub && (
           <div
@@ -103,7 +105,7 @@ export default function Onboarding() {
               fontStyle: "italic",
             }}
           >
-            {ob.sub}
+            {en ? ob.subEn : ob.sub}
           </div>
         )}
       </div>
@@ -124,7 +126,7 @@ export default function Onboarding() {
           ))}
         </div>
         <WoodButton big onClick={next}>
-          {ob.btn}
+          {en ? ob.btnEn : ob.btn}
         </WoodButton>
         {step < ONBOARDING.length - 1 && (
           <div
@@ -138,7 +140,7 @@ export default function Onboarding() {
               letterSpacing: 1,
             }}
           >
-            пропустити
+            {t(state.lang, "note.skip")}
           </div>
         )}
       </div>

@@ -131,7 +131,7 @@ type View = null | "lang" | "reminders" | "export" | "about";
 export default function Cabin() {
   const { state, auth, toggleMute, reset, setLang, setReminders, importState } = useGame();
   const L = state.lang;
-  const lvl = levelInfo(state.totalXp);
+  const lvl = levelInfo(state.totalXp, L);
   const [view, setView] = useState<View>(null);
 
   const runs = Object.values(state.questStats || {}).reduce((a, s) => a + s.runs, 0);
@@ -139,14 +139,14 @@ export default function Cabin() {
   const rem = state.reminders || { on: false, times: ["20:00"] };
   const back = (
     <button className="l3-btn l3-sm l3-btn-soft" onClick={() => setView(null)}>
-      ← Назад
+      {t(L, "cabin.back")}
     </button>
   );
 
   /* ── мова ── */
   if (view === "lang") {
     return (
-      <Sheet crumb="ХАТИНА / МОВА" title={t(L, "lang.title")} sub={t(L, "lang.sub")} foot={back}>
+      <Sheet crumb={t(L, "lang.crumb")} title={t(L, "lang.title")} sub={t(L, "lang.sub")} foot={back}>
         {LANGS.map((lg) => {
           const on = state.lang === lg.id;
           return (
@@ -163,7 +163,7 @@ export default function Cabin() {
               <span className="l3-ico">{lg.flag}</span>
               <span className="l3-lab">
                 {lg.label}
-                <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>{lg.note}</span>
+                <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>{t(L, lg.noteKey)}</span>
               </span>
               {on && <span style={{ color: "var(--g-green)", fontSize: 16 }}>✓</span>}
             </div>
@@ -175,21 +175,21 @@ export default function Cabin() {
 
   /* ── нагадування ── */
   if (view === "reminders") {
-    return <RemindersSheet rem={rem} setReminders={setReminders} back={back} />;
+    return <RemindersSheet L={L} rem={rem} setReminders={setReminders} back={back} />;
   }
 
   /* ── експорт ── */
   if (view === "export") {
-    return <ExportSheet state={state} importState={importState} back={back} />;
+    return <ExportSheet L={L} state={state} importState={importState} back={back} />;
   }
 
   /* ── про гру ── */
   if (view === "about") {
-    return <AboutSheet back={back} />;
+    return <AboutSheet L={L} back={back} />;
   }
 
   return (
-    <Sheet crumb="ХАТИНА" title={t(L, "cabin.title")} sub={t(L, "cabin.sub")} note={t(L, "cabin.tagline")}>
+    <Sheet crumb={t(L, "cabin.crumb")} title={t(L, "cabin.title")} sub={t(L, "cabin.sub")} note={t(L, "cabin.tagline")}>
       {/* профіль */}
       <div className="l3-row l3-static" style={{ padding: "16px 18px" }}>
         <span className="l3-ico" style={{ fontSize: 28 }}>🌱</span>
@@ -207,20 +207,20 @@ export default function Cabin() {
       </div>
 
       <div className="l3-grid" style={{ marginTop: 10, gridTemplateColumns: "repeat(4, 1fr)" }}>
-        <Stat n={state.day} label="день" />
-        <Stat n={state.streak} label="серія" />
-        <Stat n={runs} label="стежок" />
-        <Stat n={helped} label="допомогло" />
+        <Stat n={state.day} label={t(L, "cabin.stat_day")} />
+        <Stat n={state.streak} label={t(L, "cabin.stat_streak")} />
+        <Stat n={runs} label={t(L, "cabin.stat_paths")} />
+        <Stat n={helped} label={t(L, "cabin.stat_helped")} />
       </div>
 
       {isSupabaseConfigured && (
         <>
-          <div className="l3-section-title">акаунт</div>
+          <div className="l3-section-title">{t(L, "cabin.sec_account")}</div>
           <AuthBlock />
         </>
       )}
 
-      <div className="l3-section-title">налаштування</div>
+      <div className="l3-section-title">{t(L, "cabin.sec_settings")}</div>
       <Row
         icon="🌐"
         label={t(L, "cabin.language")}
@@ -236,25 +236,25 @@ export default function Cabin() {
       <Row
         icon="🔔"
         label={t(L, "cabin.reminders")}
-        val={rem.on ? rem.times.join(" · ") : "вимкнені"}
+        val={rem.on ? rem.times.join(" · ") : t(L, "cabin.reminders_off")}
         onClick={() => { play("select"); setView("reminders"); }}
       />
       <Row
         icon="📤"
         label={t(L, "cabin.export")}
-        val="файл"
+        val={t(L, "cabin.export_val")}
         onClick={() => { play("select"); setView("export"); }}
       />
       <Row
         icon="🌱"
         label={t(L, "cabin.about")}
-        val="пре-бета"
+        val={t(L, "cabin.about_val")}
         onClick={() => { play("select"); setView("about"); }}
       />
       <Row
         icon="🖼️"
-        label="Класична 2D-сцена"
-        val="архів"
+        label={t(L, "cabin.classic")}
+        val={t(L, "cabin.classic_val")}
         onClick={() => { play("select"); window.location.href = "/garden2d"; }}
       />
       <Row
@@ -268,17 +268,19 @@ export default function Cabin() {
 
 /* ───────────────────────── нагадування ───────────────────────── */
 
-const PRESETS: { key: string; label: string; note: string; times: string[] }[] = [
-  { key: "evening", label: "Увечері", note: "один раз, о 20:00", times: ["20:00"] },
-  { key: "morning", label: "Зранку", note: "один раз, о 09:00", times: ["09:00"] },
-  { key: "both", label: "Двічі", note: "зранку і ввечері", times: ["09:00", "20:00"] },
+const PRESETS: { key: string; lk: string; nk: string; times: string[] }[] = [
+  { key: "evening", lk: "rem.evening", nk: "rem.evening_note", times: ["20:00"] },
+  { key: "morning", lk: "rem.morning", nk: "rem.morning_note", times: ["09:00"] },
+  { key: "both", lk: "rem.both", nk: "rem.both_note", times: ["09:00", "20:00"] },
 ];
 
 function RemindersSheet({
+  L,
   rem,
   setReminders,
   back,
 }: {
+  L: Lang;
   rem: { on: boolean; times: string[] };
   setReminders: (r: { on: boolean; times: string[] }) => void;
   back: React.ReactNode;
@@ -299,7 +301,7 @@ function RemindersSheet({
       setPerm(r);
       if (r === "granted") {
         play("reward");
-        new Notification("Self-Farm", { body: "Домовились. Нагадаю тихо.", tag: "self-farm-test" });
+        new Notification("Self-Farm", { body: t(L, "rem.granted_body"), tag: "self-farm-test" });
       }
     } catch {
       setPerm("denied");
@@ -313,40 +315,33 @@ function RemindersSheet({
 
   return (
     <Sheet
-      crumb="ХАТИНА / НАГАДУВАННЯ"
-      title="Нагадування"
-      sub="Одне тихе повідомлення, без наполягань. Пропустив — нічого не станеться."
+      crumb={t(L, "rem.crumb")}
+      title={t(L, "rem.title")}
+      sub={t(L, "rem.sub")}
       foot={back}
-      note={
-        granted
-          ? "Сповіщення локальні: вони приходять, поки вкладка з грою відкрита (хай і у фоні). Закритий браузер нічого не надішле — справжній push зʼявиться разом із сервером."
-          : undefined
-      }
+      note={granted ? t(L, "rem.note") : undefined}
     >
       {!supported && (
         <div className="l3-warn" style={{ marginTop: 0, marginBottom: 14 }}>
           <span>⚠</span>
-          <span>Цей браузер не вміє показувати сповіщення. Налаштування збережеться, але нагадування не прийде.</span>
+          <span>{t(L, "rem.unsupported")}</span>
         </div>
       )}
 
       {supported && perm === "denied" && (
         <div className="l3-warn" style={{ marginTop: 0, marginBottom: 14 }}>
           <span>⚠</span>
-          <span>
-            Сповіщення заблоковані для цього сайту. Дозволити можна в налаштуваннях браузера —
-            іконка біля адреси сторінки.
-          </span>
+          <span>{t(L, "rem.denied")}</span>
         </div>
       )}
 
       {supported && perm === "default" && (
         <div style={{ marginBottom: 16 }}>
           <button className="l3-btn l3-sm" onClick={ask}>
-            Дозволити сповіщення
+            {t(L, "rem.allow")}
           </button>
           <div style={{ fontSize: 11.5, color: "var(--g-ink-3)", marginTop: 9, lineHeight: 1.5 }}>
-            Без дозволу браузер не покаже нічого. Його можна забрати будь-коли.
+            {t(L, "rem.allow_note")}
           </div>
         </div>
       )}
@@ -360,9 +355,9 @@ function RemindersSheet({
       >
         <span className="l3-ico">{rem.on ? "🔔" : "🔕"}</span>
         <span className="l3-lab">
-          Нагадувати
+          {t(L, "rem.toggle")}
           <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>
-            {rem.on ? "увімкнено" : "вимкнено"}
+            {rem.on ? t(L, "rem.on") : t(L, "rem.off")}
           </span>
         </span>
         <span
@@ -394,7 +389,7 @@ function RemindersSheet({
 
       {rem.on && (
         <>
-          <div className="l3-section-title">коли</div>
+          <div className="l3-section-title">{t(L, "rem.when")}</div>
           {PRESETS.map((p) => {
             const on = current === p.times.join(",");
             return (
@@ -406,15 +401,15 @@ function RemindersSheet({
               >
                 <span className="l3-ico">{p.key === "morning" ? "🌅" : p.key === "both" ? "🔁" : "🌙"}</span>
                 <span className="l3-lab">
-                  {p.label}
-                  <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>{p.note}</span>
+                  {t(L, p.lk)}
+                  <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>{t(L, p.nk)}</span>
                 </span>
                 {on && <span style={{ color: "var(--g-green)", fontSize: 16 }}>✓</span>}
               </div>
             );
           })}
 
-          <div className="l3-section-title">свій час</div>
+          <div className="l3-section-title">{t(L, "rem.custom")}</div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <input
               type="time"
@@ -434,7 +429,7 @@ function RemindersSheet({
               }}
             />
             <button className="l3-btn l3-sm l3-btn-soft" onClick={() => pick([custom])}>
-              Поставити
+              {t(L, "rem.set")}
             </button>
           </div>
         </>
@@ -446,10 +441,12 @@ function RemindersSheet({
 /* ───────────────────────── експорт / відновлення ───────────────────────── */
 
 function ExportSheet({
+  L,
   state,
   importState,
   back,
 }: {
+  L: Lang;
   state: GameState;
   importState: (raw: unknown) => { ok: boolean; error?: string };
   back: React.ReactNode;
@@ -467,67 +464,67 @@ function ExportSheet({
       const res = importState(JSON.parse(text));
       if (res.ok) {
         play("reward");
-        setMsg({ ok: true, text: "Відновлено. Сад уже на місці." });
+        setMsg({ ok: true, text: t(L, "exp.ok_restore") });
       } else {
-        setMsg({ ok: false, text: res.error || "Не вдалось прочитати файл." });
+        setMsg({ ok: false, text: res.error || t(L, "exp.err_read") });
       }
     } catch {
-      setMsg({ ok: false, text: "Файл пошкоджений або це не JSON." });
+      setMsg({ ok: false, text: t(L, "exp.err_json") });
     }
     if (fileRef.current) fileRef.current.value = "";
   };
 
   return (
     <Sheet
-      crumb="ХАТИНА / ДАНІ"
-      title="Експорт даних"
-      sub="Усе робиться у твоєму браузері. Нічого нікуди не надсилається."
+      crumb={t(L, "exp.crumb")}
+      title={t(L, "exp.title")}
+      sub={t(L, "exp.sub")}
       foot={back}
-      note="Файл збереження містить журнал і статистику. Якщо ділишся ним — пам'ятай, що там твої записи."
+      note={t(L, "exp.note")}
     >
       <div className="l3-row l3-static">
         <span className="l3-ico">📦</span>
         <span className="l3-lab">
-          Що всередині
+          {t(L, "exp.inside")}
           <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>
-            {entries} записів у журналі · {runs} проходжень · {state.totalXp} XP
+            {t(L, "exp.inside_val", { entries, runs, xp: state.totalXp })}
           </span>
         </span>
       </div>
 
-      <div className="l3-section-title">зберегти</div>
+      <div className="l3-section-title">{t(L, "exp.sec_save")}</div>
       <Row
         icon="💾"
-        label="Повне збереження"
+        label={t(L, "exp.full")}
         val=".json"
         onClick={() => {
           play("select");
           exportSave(state);
-          setMsg({ ok: true, text: "Файл пішов у «Завантаження»." });
+          setMsg({ ok: true, text: t(L, "exp.ok_save") });
         }}
       />
       <Row
         icon="📖"
-        label="Журнал текстом"
+        label={t(L, "exp.journal")}
         val=".md"
         onClick={() => {
           play("select");
           exportJournal(state);
-          setMsg({ ok: true, text: "Журнал збережено." });
+          setMsg({ ok: true, text: t(L, "exp.ok_journal") });
         }}
       />
       <Row
         icon="📊"
-        label="Лог проходжень"
+        label={t(L, "exp.log")}
         val=".csv"
         onClick={() => {
           play("select");
           exportLogCsv(state);
-          setMsg({ ok: true, text: "Таблиця збережена." });
+          setMsg({ ok: true, text: t(L, "exp.ok_log") });
         }}
       />
 
-      <div className="l3-section-title">відновити</div>
+      <div className="l3-section-title">{t(L, "exp.sec_restore")}</div>
       <input
         ref={fileRef}
         type="file"
@@ -537,10 +534,10 @@ function ExportSheet({
       />
       <Row
         icon="📥"
-        label="Відновити з файлу"
-        val="замінить поточний прогрес"
+        label={t(L, "exp.restore")}
+        val={t(L, "exp.restore_val")}
         onClick={() => {
-          if (!confirm("Поточний сад буде замінено даними з файлу. Продовжити?")) return;
+          if (!confirm(t(L, "exp.restore_confirm"))) return;
           fileRef.current?.click();
         }}
       />
@@ -564,51 +561,31 @@ function ExportSheet({
 
 /* ───────────────────────── про гру ───────────────────────── */
 
-function AboutSheet({ back }: { back: React.ReactNode }) {
+function AboutSheet({ L, back }: { L: Lang; back: React.ReactNode }) {
   return (
     <Sheet
-      crumb="ХАТИНА / ПРО ГРУ"
-      title="Про Self-Farm"
-      sub="Одне дерево. Один рух. Маленька гра про повернення до себе."
+      crumb={t(L, "ab.crumb")}
+      title={t(L, "ab.title")}
+      sub={t(L, "ab.sub")}
       foot={back}
-      note="Пре-бета · тексти стежок ще проходять вичитку"
+      note={t(L, "ab.note")}
     >
-      <P>
-        Ти помічаєш, як тобі зараз. Береш одну крихітну справу в реальному світі.
-        Повертаєшся й кажеш, чи стало інакше. З цих повернень росте одне дерево —
-        не з того, що тобі добре, а з того, що ти прийшов.
-      </P>
+      <P>{t(L, "ab.p1")}</P>
 
-      <div className="l3-section-title">як це влаштовано</div>
-      <Row2 icon="🫧" title="Чек-ін — один дотик">
-        Жодних шкал і щоденників. Обрав стан — отримав три стежки під нього.
-      </Row2>
-      <Row2 icon="👣" title="Стежка — крок за кроком">
-        Один крок на екран. Наприкінці коротка перевірка й питання, чи допомогло.
-      </Row2>
-      <Row2 icon="🌳" title="Дерево росте від повернень">
-        Шість стадій. Пропущені дні нічого не забирають — дерево не вʼяне.
-      </Row2>
-      <Row2 icon="📊" title="Гра вчиться на твоїх відповідях">
-        Те, що допомагало, трапляється частіше. Те, що не підійшло, — рідше.
-        Нічого не блокується назавжди.
-      </Row2>
+      <div className="l3-section-title">{t(L, "ab.sec_how")}</div>
+      <Row2 icon="🫧" title={t(L, "ab.h1")}>{t(L, "ab.d1")}</Row2>
+      <Row2 icon="👣" title={t(L, "ab.h2")}>{t(L, "ab.d2")}</Row2>
+      <Row2 icon="🌳" title={t(L, "ab.h3")}>{t(L, "ab.d3")}</Row2>
+      <Row2 icon="📊" title={t(L, "ab.h4")}>{t(L, "ab.d4")}</Row2>
 
-      <div className="l3-section-title">чим це не є</div>
-      <P>
-        Self-Farm — не терапія, не лікування і не заміна фахівцю. Тут немає
-        діагнозів, оцінок і «правильного» стану. Це гра, яка допомагає помітити
-        себе й зробити маленький рух.
-      </P>
-      <P>
-        Якщо зараз справді важко й це триває — варто поговорити з живою людиною:
-        з тим, кому довіряєш, або з фахівцем. Дерево почекає.
-      </P>
+      <div className="l3-section-title">{t(L, "ab.sec_not")}</div>
+      <P>{t(L, "ab.p2")}</P>
+      <P>{t(L, "ab.p3")}</P>
 
-      <div className="l3-section-title">дрібниці</div>
-      <Row icon="🧙" label="Бомбом" val="живе в хатинці на острові" />
-      <Row icon="🔒" label="Дані" val="локально + твій акаунт" />
-      <Row icon="📦" label="Версія" val="пре-бета · 0.1" />
+      <div className="l3-section-title">{t(L, "ab.sec_bits")}</div>
+      <Row icon="🧙" label={t(L, "ab.bombom")} val={t(L, "ab.bombom_val")} />
+      <Row icon="🔒" label={t(L, "ab.data")} val={t(L, "ab.data_val")} />
+      <Row icon="📦" label={t(L, "ab.version")} val={t(L, "ab.version_val")} />
     </Sheet>
   );
 }

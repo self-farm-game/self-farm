@@ -7,24 +7,29 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/store/game";
-import { MOOD_BY_KEY, OUTCOMES, QUEST_BY_ID, type Quest } from "@/lib/mock-data/quests-v2";
+import { OUTCOMES, QUEST_BY_ID, type Quest } from "@/lib/mock-data/quests-v2";
+import { localizeQuest, moodLabel, outcomeLabel, questById } from "@/lib/mock-data/quests-i18n";
+import { t } from "@/lib/mock-data/i18n";
 import Sheet from "@/components/ui/Sheet";
 import { play } from "@/lib/sound/sound";
 
 const OUT_ICON: Record<string, string> = Object.fromEntries(OUTCOMES.map((o) => [o.key, o.icon]));
-const OUT_LABEL: Record<string, string> = Object.fromEntries(OUTCOMES.map((o) => [o.key, o.label]));
 
 export default function Questbook() {
   const router = useRouter();
   const { state, canCheckin } = useGame();
+  const L = state.lang;
   const [detail, setDetail] = useState<Quest | null>(null);
 
   const active = useMemo(
-    () => (state.activeQuestIds || []).map((id) => QUEST_BY_ID[id]).filter(Boolean) as Quest[],
-    [state.activeQuestIds],
+    () =>
+      (state.activeQuestIds || [])
+        .map((id) => QUEST_BY_ID[id])
+        .filter(Boolean)
+        .map((q) => localizeQuest(L, q as Quest)),
+    [state.activeQuestIds, L],
   );
   const done = state.iterationDone || [];
-  const mood = state.currentMood ? MOOD_BY_KEY[state.currentMood] : null;
   const total = active.length + done.length;
 
   const goGarden = () => {
@@ -35,30 +40,30 @@ export default function Questbook() {
   if (detail) {
     return (
       <Sheet
-        crumb="СТЕЖКА"
+        crumb={t(L, "qb.crumb_path")}
         title={detail.title}
         sub={`${detail.intensity} · ${detail.duration} · ${detail.context}`}
         note={detail.warning ? `⚠ ${detail.warning}` : undefined}
         foot={
           <>
             <button className="l3-btn l3-sm l3-btn-soft" onClick={() => setDetail(null)}>
-              ← До набору
+              {t(L, "qb.back_to_set")}
             </button>
             <button className="l3-btn l3-sm" onClick={goGarden}>
-              Пройти в Саду
+              {t(L, "qb.do_in_garden")}
             </button>
           </>
         }
       >
         <div className="l3-intro">{detail.intro}</div>
-        <div className="l3-section-title">що робимо</div>
+        <div className="l3-section-title">{t(L, "qb.what_we_do")}</div>
         {detail.steps.map((s, i) => (
           <div key={i} className="l3-step" style={{ marginBottom: 9 }}>
             <div className="l3-step-n">{i + 1}</div>
             <div className="l3-step-t" style={{ fontSize: 14 }}>{s}</div>
           </div>
         ))}
-        <div className="l3-section-title">перевірка</div>
+        <div className="l3-section-title">{t(L, "qb.check_label")}</div>
         <div className="l3-qlist">
           {detail.check.map((c, i) => (
             <div key={i} className="l3-q">
@@ -73,27 +78,27 @@ export default function Questbook() {
 
   return (
     <Sheet
-      crumb="КВЕСТИ"
-      title="Поточний набір"
+      crumb={t(L, "qb.crumb")}
+      title={t(L, "qb.set_title")}
       sub={
-        mood
-          ? `Підібрано під стан «${mood.label}». Повний каталог не показуємо — стежка має сенс під стан.`
-          : "Набір відкривається чек-іном у Саду."
+        state.currentMood
+          ? t(L, "qb.set_sub_mood", { mood: moodLabel(L, state.currentMood) })
+          : t(L, "qb.set_sub_none")
       }
       foot={
         <button className="l3-btn l3-sm" onClick={goGarden}>
-          {canCheckin ? "У Сад → «Як ти зараз?»" : "У Сад → проходити"}
+          {canCheckin ? t(L, "qb.go_checkin") : t(L, "qb.go_do")}
         </button>
       }
     >
       {total === 0 ? (
         <div className="l3-empty">
           <div className="l3-ico">📜</div>
-          <h4>Набору зараз немає</h4>
+          <h4>{t(L, "qb.empty_title")}</h4>
           <p>
-            Скажи в Саду, як тобі, — і зʼявляться три стежки.
+            {t(L, "qb.empty_desc")}
             <br />
-            Усі проходження лишаються в Журналі.
+            {t(L, "qb.empty_note")}
           </p>
         </div>
       ) : (
@@ -108,10 +113,7 @@ export default function Questbook() {
               color: "var(--g-ink-2)",
             }}
           >
-            <span>
-              Пройдено <b style={{ color: "var(--g-ink)" }}>{done.length}</b> з{" "}
-              <b style={{ color: "var(--g-ink)" }}>{total}</b>
-            </span>
+            <span>{t(L, "qb.progress", { done: done.length, total })}</span>
             <span className="l3-bar" style={{ maxWidth: 180 }}>
               <i style={{ width: `${Math.round((done.length / total) * 100)}%` }} />
             </span>
@@ -119,7 +121,7 @@ export default function Questbook() {
 
           {active.length > 0 && (
             <>
-              <div className="l3-section-title">відкрито</div>
+              <div className="l3-section-title">{t(L, "qb.opened")}</div>
               {active.map((q) => (
                 <div key={q.id} className="l3-quest" onClick={() => { play("tap"); setDetail(q); }}>
                   <div className="l3-quest-ico">{q.icon}</div>
@@ -129,7 +131,7 @@ export default function Questbook() {
                     <div className="l3-tags">
                       <span className="l3-tag">{q.duration}</span>
                       <span className="l3-tag l3-tag-green">+{q.xp} XP</span>
-                      <span className="l3-tag l3-tag-blue">{q.steps.length} кроки</span>
+                      <span className="l3-tag l3-tag-blue">{t(L, "qb.steps_n", { n: q.steps.length })}</span>
                     </div>
                   </div>
                 </div>
@@ -139,14 +141,14 @@ export default function Questbook() {
 
           {done.length > 0 && (
             <>
-              <div className="l3-section-title">пройдено в цьому наборі</div>
+              <div className="l3-section-title">{t(L, "qb.done_in_set")}</div>
               {done.map((d, i) => (
                 <div key={d.id + i} className="l3-row l3-static">
                   <span className="l3-ico">{d.icon}</span>
                   <span className="l3-lab">
-                    {d.title}
+                    {questById(L, d.id)?.title || d.title}
                     <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>
-                      {d.time} · {OUT_LABEL[d.outcome] || d.outcome}
+                      {d.time} · {outcomeLabel(L, d.outcome)}
                     </span>
                   </span>
                   <span style={{ fontSize: 17 }}>{OUT_ICON[d.outcome] || "·"}</span>

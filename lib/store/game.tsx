@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { JournalDay } from "@/lib/mock-data/content";
 import { DROP_POOL } from "@/lib/mock-data/items";
+import { t } from "@/lib/mock-data/i18n";
 import { QUEST_BY_ID } from "@/lib/mock-data/quests-v2";
 import { setMuted as setSoundMuted } from "@/lib/sound/sound";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -341,6 +342,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state, hydrated]);
 
+  // Keep <html lang> in step with the chosen language: screen readers and the
+  // browser's own translate prompt both read it, and it is wrong by default
+  // (the document ships as "uk").
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = state.lang === "en" ? "en" : "uk";
+    }
+  }, [state.lang]);
+
   const plantTree = () => setState((s) => ({ ...s, onboarded: true }));
   const nextBombom = () => setState((s) => ({ ...s, bombomIdx: s.bombomIdx + 1 }));
   const placeHollowRune = (runeId: string | null) => setState((s) => ({ ...s, hollowRune: runeId }));
@@ -360,9 +370,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     try {
       const obj = raw as Record<string, unknown>;
       const body = (obj && typeof obj === "object" && "state" in obj ? obj.state : obj) as Partial<GameState>;
-      if (!body || typeof body !== "object") return { ok: false, error: "Файл порожній або не той." };
+      if (!body || typeof body !== "object") return { ok: false, error: t(stateRef.current.lang, "imp.empty") };
       if (typeof body.totalXp !== "number" || !Array.isArray(body.journal)) {
-        return { ok: false, error: "Це не схоже на збереження Self-Farm." };
+        return { ok: false, error: t(stateRef.current.lang, "imp.not_save") };
       }
       const next = migrate({ ...SEED, ...body } as GameState);
       setState(next);
@@ -372,7 +382,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (isSupabaseConfigured && userId.current) saveRemote(userId.current, next);
       return { ok: true };
     } catch (e) {
-      return { ok: false, error: "Не вдалось прочитати файл." };
+      return { ok: false, error: t(stateRef.current.lang, "imp.unreadable") };
     }
   };
   const toggleMute = () => setState((s) => ({ ...s, muted: !s.muted }));
@@ -429,14 +439,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       item: drop ? { icon: drop.icon, name: drop.name, desc: drop.desc } : null,
     };
     setState((s) => {
+      // The entry is written in the language the player is using right now.
+      // Old entries keep the words they were written in — a journal is a
+      // record, not a UI surface. Only the day key stays constant (below), so
+      // switching language can't split "today" into two groups.
+      const en = s.lang === "en";
+      const dropName = drop ? (en ? drop.nameEn : drop.name) : "";
       const entry = {
-        time: new Date().toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }),
-        state: input.states.length ? input.states.join(" + ") : "Не знаю",
+        time: new Date().toLocaleTimeString(en ? "en-GB" : "uk-UA", { hour: "2-digit", minute: "2-digit" }),
+        state: input.states.length ? input.states.join(" + ") : t(s.lang, "ui.unknown_state"),
         energy: input.energy || "—",
         tension: input.tension,
         quest: input.questTitle,
         after: input.after,
-        reward: `${grantedXp > 0 ? "+" + grantedXp + " XP" : "без XP (ліміт вікна)"}${drop ? " · " + drop.name : ""}`,
+        reward: `${grantedXp > 0 ? "+" + grantedXp + " XP" : t(s.lang, "jr.reward_noxp")}${drop ? " · " + dropName : ""}`,
         note: input.reflection || null,
       };
       const journal = [...s.journal];
@@ -526,25 +542,25 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // ---- auth actions (optional email/password, layered over anonymous) ----
 
   const signUp = async (email: string, password: string) => {
-    if (!isSupabaseConfigured) return { error: "Бекенд не підключено" };
+    if (!isSupabaseConfigured) return { error: t(stateRef.current.lang, "auth.no_backend") };
     const res = await registerEmail(email.trim(), password);
     if (res.error) return { error: res.error };
     if (!res.hasSession) {
       // email confirmation is ON — account made but no session yet
-      return { error: "Акаунт створено. Підтверди пошту листом, тоді увійди." };
+      return { error: t(stateRef.current.lang, "auth.confirm_mail") };
     }
     return { error: null }; // SIGNED_IN listener loads state + opens the gate
   };
 
   const signIn = async (email: string, password: string) => {
-    if (!isSupabaseConfigured) return { error: "Бекенд не підключено" };
+    if (!isSupabaseConfigured) return { error: t(stateRef.current.lang, "auth.no_backend") };
     const res = await signInEmail(email.trim(), password);
     if (res.error) return { error: res.error };
     return { error: null }; // listener handles state
   };
 
   const signInGoogle = async () => {
-    if (!isSupabaseConfigured) return { error: "Бекенд не підключено" };
+    if (!isSupabaseConfigured) return { error: t(stateRef.current.lang, "auth.no_backend") };
     return await signInWithGoogle(); // redirects to Google; listener handles the return
   };
 

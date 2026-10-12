@@ -12,7 +12,7 @@ export default function SideNav() {
   const router = useRouter();
   const { state } = useGame();
   const L = state.lang;
-  const lvl = levelInfo(state.totalXp);
+  const lvl = levelInfo(state.totalXp, L);
   const active = NAV.find((n) => pathname.startsWith(n.href))?.id ?? "garden";
 
   return (
@@ -22,7 +22,7 @@ export default function SideNav() {
           🌳 Self-Farm
         </div>
         <div style={{ fontSize: 10.5, color: "var(--g-ink-3)", letterSpacing: 1.2, marginTop: 4, textTransform: "uppercase" }}>
-          одне дерево · один рух
+          {t(L, "side.tagline")}
         </div>
       </div>
 
@@ -81,8 +81,8 @@ export default function SideNav() {
       </nav>
 
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-        <Mini label="день" value={String(state.day)} />
-        <Mini label="серія" value={`🔥 ${state.streak}`} />
+        <Mini label={t(L, "side.day")} value={String(state.day)} />
+        <Mini label={t(L, "side.streak")} value={`🔥 ${state.streak}`} />
       </div>
     </aside>
   );

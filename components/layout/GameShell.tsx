@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useGame } from "@/lib/store/game";
+import { t } from "@/lib/mock-data/i18n";
 import BottomNav from "./BottomNav";
 import SideNav from "./SideNav";
 import AuthGate from "@/components/auth/AuthGate";
@@ -94,7 +95,7 @@ export default function GameShell({ children }: { children: React.ReactNode }) {
                 {/* mobile-only top status bar */}
                 <div className="sf-topbar">
                   <WoodPill>{now || "··:··"}</WoodPill>
-                  <WoodPill>ДЕНЬ {state.day}</WoodPill>
+                  <WoodPill>{t(state.lang, "garden.day")} {state.day}</WoodPill>
                   <WoodPill>🔥 {state.streak}</WoodPill>
                 </div>
 

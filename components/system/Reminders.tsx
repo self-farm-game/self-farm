@@ -12,6 +12,7 @@
  */
 import { useEffect, useRef } from "react";
 import { useGame } from "@/lib/store/game";
+import { t } from "@/lib/mock-data/i18n";
 
 /** "20:00" → хвилини від півночі. Некоректний рядок → null. */
 export function parseTime(hhmm: string): number | null {
@@ -23,13 +24,7 @@ export function parseTime(hhmm: string): number | null {
   return h * 60 + mi;
 }
 
-const LINES = [
-  "Дерево не поспішає. Але воно там.",
-  "Хвилина в саду — теж повернення.",
-  "Можна просто зайти й нічого не робити.",
-  "Як ти зараз? Без слів, одним дотиком.",
-  "Сад на місці. Чекає, не нагадує двічі.",
-];
+const LINE_KEYS = ["rem.line1", "rem.line2", "rem.line3", "rem.line4", "rem.line5"];
 
 export default function Reminders() {
   const { state, hydrated, markReminded } = useGame();
@@ -63,7 +58,7 @@ export default function Reminders() {
         if (slotDate.getTime() > lastRemindAt) {
           try {
             new Notification("Self-Farm", {
-              body: LINES[Math.floor(Math.random() * LINES.length)],
+              body: t(state.lang, LINE_KEYS[Math.floor(Math.random() * LINE_KEYS.length)]),
               icon: "/assets/sprites/garden/BomBom.png",
               tag: "self-farm-reminder",
             });
@@ -84,7 +79,7 @@ export default function Reminders() {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [hydrated, on, times, lastRemindAt, state.reminders, markReminded]);
+  }, [hydrated, on, times, lastRemindAt, state.reminders, state.lang, markReminded]);
 
   return null;
 }

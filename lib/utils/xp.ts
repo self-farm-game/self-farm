@@ -14,16 +14,20 @@ export interface LevelInfo {
 
 // Ten stages. XP per quest is ~8–24, so early stages come quickly and later
 // ones stretch out. Tune targets freely — the sprite for a stage is stage N.
-const LEVELS: { name: string; sub: string; target: number }[] = [
-  { name: "Паросток", sub: "щойно з землі", target: 40 },
-  { name: "Саджанець", sub: "тонкий стовбур", target: 90 },
-  { name: "Молоде деревце", sub: "перше листя", target: 170 },
-  { name: "Плідне дерево", sub: "перші яблука", target: 300 },
-  { name: "Щедре дерево", sub: "стиглі яблука", target: 500 },
-  { name: "Віковий дуб", sub: "памʼятає все", target: Infinity },
+type LevelDef = { name: string; sub: string; nameEn: string; subEn: string; target: number };
+
+const LEVELS: LevelDef[] = [
+  { name: "Паросток", sub: "щойно з землі", nameEn: "Sprout", subEn: "just out of the ground", target: 40 },
+  { name: "Саджанець", sub: "тонкий стовбур", nameEn: "Seedling", subEn: "a thin stem", target: 90 },
+  { name: "Молоде деревце", sub: "перше листя", nameEn: "Young tree", subEn: "its first leaves", target: 170 },
+  { name: "Плідне дерево", sub: "перші яблука", nameEn: "Bearing tree", subEn: "its first apples", target: 300 },
+  { name: "Щедре дерево", sub: "стиглі яблука", nameEn: "Generous tree", subEn: "ripe apples", target: 500 },
+  { name: "Віковий дуб", sub: "памʼятає все", nameEn: "Ancient oak", subEn: "remembers everything", target: Infinity },
 ];
 
-export function levelInfo(totalXp: number): LevelInfo {
+/** `en` switches the stage name; the numbers are the same in every language. */
+export function levelInfo(totalXp: number, lang?: string): LevelInfo {
+  const en = lang === "en";
   let lvl = 0;
   let rem = Math.max(0, totalXp);
   while (lvl < LEVELS.length - 1 && rem >= LEVELS[lvl].target) {
@@ -34,8 +38,8 @@ export function levelInfo(totalXp: number): LevelInfo {
   const finite = isFinite(target);
   return {
     levelNum: lvl + 1,
-    name: LEVELS[lvl].name,
-    sub: LEVELS[lvl].sub,
+    name: en ? LEVELS[lvl].nameEn : LEVELS[lvl].name,
+    sub: en ? LEVELS[lvl].subEn : LEVELS[lvl].sub,
     inLevel: rem,
     target: finite ? target : rem,
     pct: finite ? Math.min(1, rem / target) : 1,

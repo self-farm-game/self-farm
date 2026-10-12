@@ -19,6 +19,16 @@ export function unlockedRunes(state: GameState): RuneNode[] {
   return all.filter((r) => ok[r.id]);
 }
 
+/** Rune name in the player's language. */
+export function runeName(r: { name: string; nameEn: string }, lang?: string): string {
+  return lang === "en" ? r.nameEn : r.name;
+}
+
+/** Short name for a tight chip: the "Rune of …" / "Руна …" prefix is dropped. */
+export function runeShort(r: { name: string; nameEn: string }, lang?: string): string {
+  return runeName(r, lang).replace(/^Руна /, "").replace(/^Rune of (the )?/, "");
+}
+
 export function runeById(id: string | null): RuneNode | null {
   if (!id) return null;
   for (const b of RUNE_BRANCHES) {

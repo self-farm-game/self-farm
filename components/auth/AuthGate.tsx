@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
 import { useGame } from "@/lib/store/game";
+import { t } from "@/lib/mock-data/i18n";
 import { Stars, WoodButton } from "@/components/ui/primitives";
 import { play } from "@/lib/sound/sound";
 
 export default function AuthGate() {
-  const { signUp, signIn, signInGoogle, auth } = useGame();
+  const { state, signUp, signIn, signInGoogle, auth } = useGame();
+  const L = state.lang;
   const [mode, setMode] = useState<"up" | "in">("up");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,14 +45,14 @@ export default function AuthGate() {
     setErr(null);
     setMsg(null);
     if (!email.trim() || password.length < 6) {
-      setErr("Введи пошту і пароль (мінімум 6 символів).");
+      setErr(t(L, "auth.err_creds"));
       return;
     }
     setBusy(true);
     const res = mode === "up" ? await signUp(email, password) : await signIn(email, password);
     setBusy(false);
     if (res.error) {
-      if (mode === "up" && res.error.startsWith("Акаунт створено")) {
+      if (mode === "up" && res.error === t(L, "auth.confirm_mail")) {
         setMsg(res.error);
         setMode("in");
       } else {
@@ -73,7 +75,7 @@ export default function AuthGate() {
           <div style={{ fontSize: 60, marginBottom: 10, animation: "sf-float 5s ease-in-out infinite" }}>🌳</div>
           <div style={{ fontSize: 30, color: "#f4ecd6", fontWeight: 700, textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>Self-Farm</div>
           <div style={{ fontSize: 13.5, color: "#b9aecb", fontStyle: "italic", marginTop: 8, lineHeight: 1.5, maxWidth: 280, marginLeft: "auto", marginRight: "auto" }}>
-            Поле чекає. Щоб твоє дерево росло й памʼяталось — заведи акаунт.
+            {t(L, "auth.intro")}
           </div>
         </div>
 
@@ -97,12 +99,12 @@ export default function AuthGate() {
           }}
         >
           <GoogleMark />
-          {gbusy ? "…" : "Продовжити з Google"}
+          {gbusy ? "…" : t(L, "auth.google")}
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0" }}>
           <div style={{ flex: 1, height: 2, background: "rgba(150,120,200,.3)" }} />
-          <div style={{ fontSize: 12, color: "#8a7fb0" }}>або поштою</div>
+          <div style={{ fontSize: 12, color: "#8a7fb0" }}>{t(L, "auth.or_email")}</div>
           <div style={{ flex: 1, height: 2, background: "rgba(150,120,200,.3)" }} />
         </div>
 
@@ -130,18 +132,18 @@ export default function AuthGate() {
                 boxShadow: mode === m ? "0 0 0 2px #6a4a2c" : "0 0 0 2px #4a3a6e",
               }}
             >
-              {m === "up" ? "Реєстрація" : "Вхід"}
+              {m === "up" ? t(L, "auth.signup") : t(L, "auth.signin")}
             </div>
           ))}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <input style={input} type="email" inputMode="email" autoComplete="email" placeholder="пошта" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input style={input} type="email" inputMode="email" autoComplete="email" placeholder={t(L, "auth.ph_email")} value={email} onChange={(e) => setEmail(e.target.value)} />
           <input
             style={input}
             type="password"
             autoComplete={mode === "up" ? "new-password" : "current-password"}
-            placeholder="пароль (мінімум 6)"
+            placeholder={t(L, "auth.ph_pass")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submit()}
@@ -155,12 +157,12 @@ export default function AuthGate() {
 
         <div style={{ marginTop: 18 }}>
           <WoodButton big onClick={() => !busy && submit()}>
-            {busy ? "…" : mode === "up" ? "🌱  Створити акаунт" : "Увійти"}
+            {busy ? "…" : mode === "up" ? t(L, "auth.create") : t(L, "auth.enter")}
           </WoodButton>
         </div>
 
         <div style={{ textAlign: "center", marginTop: 18, fontSize: 12, color: "#7d7298", lineHeight: 1.5 }}>
-          {mode === "up" ? "Уже маєш акаунт? Тисни «Вхід»." : "Ще нема акаунта? Тисни «Реєстрація»."}
+          {mode === "up" ? t(L, "auth.have") : t(L, "auth.none")}
         </div>
       </div>
     </div>

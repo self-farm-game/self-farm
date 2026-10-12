@@ -4,34 +4,36 @@
  * нічого не оцінюється: це доказ, що ти приходив.
  */
 import { useGame } from "@/lib/store/game";
+import { t } from "@/lib/mock-data/i18n";
 import Sheet from "@/components/ui/Sheet";
 
 export default function Journal() {
   const { state } = useGame();
+  const L = state.lang;
   const days = state.journal || [];
   const total = days.reduce((a, d) => a + d.entries.length, 0);
 
   return (
     <Sheet
-      crumb="ЖУРНАЛ"
-      title="Фермерський журнал"
-      sub={total === 0 ? "Поки порожньо." : `${total} записів. Дерево памʼятає не перемоги, а повернення.`}
-      note="Записи не можна виправити чи стерти — так вони лишаються чесними."
+      crumb={t(L, "jr.crumb")}
+      title={t(L, "jr.title2")}
+      sub={total === 0 ? t(L, "jr.sub_empty") : t(L, "jr.sub_n", { n: total })}
+      note={t(L, "jr.note")}
     >
       {days.length === 0 ? (
         <div className="l3-empty">
           <div className="l3-ico">📖</div>
-          <h4>Сторінки ще чисті</h4>
+          <h4>{t(L, "jr.empty_title")}</h4>
           <p>
-            Тут зʼявлятиметься те, що ти проживаєш.
+            {t(L, "jr.empty_1")}
             <br />
-            Почни з «Як ти зараз?» у Саду.
+            {t(L, "jr.empty_2")}
           </p>
         </div>
       ) : (
         days.map((d, di) => (
           <div key={di} style={{ marginBottom: 6 }}>
-            <div className="l3-section-title">{d.day}</div>
+            <div className="l3-section-title">{d.day === "Сьогодні" ? t(L, "jr.today") : d.day}</div>
             {d.entries.map((e, ei) => (
               <div key={ei} className="l3-entry">
                 <div className="l3-entry-top">
@@ -55,7 +57,7 @@ export default function Journal() {
                 {e.note && <div className="l3-entry-note">«{e.note}»</div>}
                 {!e.quest && (
                   <div style={{ fontSize: 12.5, color: "var(--g-ink-3)", fontStyle: "italic", marginTop: 6 }}>
-                    стежку не брав — і це теж окей
+                    {t(L, "jr.no_quest")}
                   </div>
                 )}
               </div>

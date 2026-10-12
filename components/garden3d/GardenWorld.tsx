@@ -22,7 +22,6 @@ import { useGame } from "@/lib/store/game";
 import { levelInfo } from "@/lib/utils/xp";
 import { pickQuests, moodInsights } from "@/lib/utils/quest-picker";
 import {
-  MOODS,
   MOOD_BY_KEY,
   QUEST_BY_ID,
   OUTCOMES,
@@ -30,9 +29,10 @@ import {
   type OutcomeKey,
   type Quest,
 } from "@/lib/mock-data/quests-v2";
+import { localizeQuest, moodLabel, moodsFor, outcomesFor } from "@/lib/mock-data/quests-i18n";
 import { DROP_POOL } from "@/lib/mock-data/items";
-import { unlockedRunes, runeById } from "@/lib/utils/runes";
-import { BOMBOM_LINES } from "@/lib/mock-data/i18n";
+import { unlockedRunes, runeById, runeShort } from "@/lib/utils/runes";
+import { BOMBOM_LINES, t, type Lang } from "@/lib/mock-data/i18n";
 import { play } from "@/lib/sound/sound";
 
 const IslandScene = dynamic(() => import("@/components/garden3d/IslandScene"), {
@@ -44,7 +44,10 @@ type Screen = "scene" | "checkin" | "paths" | "run" | "check" | "outcome" | "rew
 
 export default function GardenWorld({ children }: { children?: React.ReactNode }) {
   const { state, canCheckin, xpLeft, openCheckin, recordSession, placeHollowRune } = useGame();
-  const lvl = levelInfo(state.totalXp);
+  const L = state.lang;
+  const lvl = levelInfo(state.totalXp, L);
+  const moods = useMemo(() => moodsFor(L), [L]);
+  const outcomes = useMemo(() => outcomesFor(L), [L]);
 
   const [screen, setScreen] = useState<Screen>("scene");
   const [mood, setMood] = useState<MoodKey | null>(null);
@@ -55,8 +58,12 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
   const startedAt = useRef(0);
 
   const active = useMemo(
-    () => (state.activeQuestIds || []).map((id) => QUEST_BY_ID[id]).filter(Boolean) as Quest[],
-    [state.activeQuestIds],
+    () =>
+      (state.activeQuestIds || [])
+        .map((id) => QUEST_BY_ID[id])
+        .filter(Boolean)
+        .map((q) => localizeQuest(L, q as Quest)),
+    [state.activeQuestIds, L],
   );
   const activeMood = (state.currentMood as MoodKey | null) || null;
   const runes = useMemo(() => unlockedRunes(state), [state]);
@@ -104,7 +111,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
     if (!quest) return;
     const secs = (Date.now() - startedAt.current) / 1000;
     const res = recordSession({
-      states: [MOOD_BY_KEY[quest.mood]?.label || ""],
+      states: [moodLabel(L, quest.mood)],
       stateKeys: [quest.mood],
       energy: null,
       tension: null,
@@ -112,14 +119,24 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       questIcon: quest.icon,
       questTitle: quest.title,
       questXp: quest.xp,
-      after: OUTCOMES.find((o) => o.key === outcome)?.label || "",
+      after: outcomes.find((o) => o.key === outcome)?.label || "",
       mood: activeMood || quest.mood,
       template: quest.template,
       outcome,
       seconds: secs,
     });
     play(outcome === "helped" ? "reward" : "select");
-    setGain({ xp: res.xp, item: res.item ? { icon: res.item.icon, name: res.item.name } : null });
+    setGain({
+      xp: res.xp,
+      item: res.item
+        ? {
+            icon: res.item.icon,
+            name:
+              (L === "en" ? DROP_POOL.find((d) => d.name === res.item!.name)?.nameEn : null) ||
+              res.item.name,
+          }
+        : null,
+    });
     setScreen("reward");
   };
 
@@ -130,7 +147,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       <IslandScene
         stage={sceneStage}
         runeColor={placed ? "#b9a6ff" : null}
-        onTreeClick={() => setSay("Дерево? Воно росте, поки ти повертаєшся. Не швидше, не повільніше.")}
+        onTreeClick={() => setSay(t(L, "garden.tree_say"))}
         onHollowClick={() => setScreen("runes")}
         onHutClick={() => {
           play("select");
@@ -155,7 +172,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
           </div>
 
           <div className="l3-pills">
-            <div className="l3-pill">📅 ДЕНЬ <b>{state.day}</b></div>
+            <div className="l3-pill">📅 {t(L, "garden.day")} <b>{state.day}</b></div>
             <div className="l3-pill">🔥 <b>{state.streak}</b></div>
           </div>
         </div>
@@ -163,29 +180,29 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
         <div className="l3-rail">
           <div className="l3-tile" onClick={() => { play("select"); setScreen("finds"); }}>
             <div className="l3-ico">🎒</div>
-            <div className="l3-cap">Знахідки</div>
+            <div className="l3-cap">{t(L, "garden.finds")}</div>
             {state.ownedItems.length > 0 && <div className="l3-badge">{state.ownedItems.length}</div>}
           </div>
           <div className="l3-tile" onClick={() => { play("select"); setScreen("stats"); }}>
             <div className="l3-ico">📊</div>
-            <div className="l3-cap">Що працює</div>
+            <div className="l3-cap">{t(L, "garden.what_works")}</div>
           </div>
         </div>
 
         <div className="l3-bottom">
           {canCheckin ? (
             <button className="l3-btn" onClick={() => { play("select"); setScreen("checkin"); }}>
-              Як ти зараз?
+              {t(L, "cta.how_are_you")}
             </button>
           ) : (
             <button className="l3-btn" onClick={() => { play("select"); setScreen("paths"); }}>
-              Стежки · {active.length}
+              {t(L, "garden.paths_n", { n: active.length })}
             </button>
           )}
           <div className="l3-hint">
             {canCheckin
-              ? "⟲ тягни — оберт · колесо чи щипок — зум · тисни хатинку"
-              : `лишилось пройти ${active.length} · XP у вікні: ${xpLeft}`}
+              ? t(L, "garden.hint_rotate")
+              : t(L, "garden.hint_left", { n: active.length, xp: xpLeft })}
           </div>
         </div>
       </div>
@@ -194,17 +211,17 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       {say && (
         <div className="l3-bombom-panel">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/sprites/garden/BomBom.png" alt="Бомбом" />
+          <img src="/assets/sprites/garden/BomBom.png" alt={t(L, "bombom.name")} />
           <div className="l3-say">
             <div className="l3-say-x" onClick={() => setSay(null)}>✕</div>
-            <div className="l3-who">Бомбом</div>
+            <div className="l3-who">{t(L, "bombom.name")}</div>
             {say}
             <div className="l3-say-more">
               <button
                 className="l3-btn l3-sm l3-btn-soft"
                 onClick={() => setSay(lines[Math.floor(Math.random() * lines.length)])}
               >
-                Ще щось скажи
+                {t(L, "bombom.more")}
               </button>
             </div>
           </div>
@@ -213,9 +230,9 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
 
       {/* ── чек-ін: один стан ── */}
       {!sheetOpen && screen === "checkin" && (
-        <Modal title="Як ти зараз?" crumb="ЧЕК-ІН" sub="Один дотик. Слова не потрібні." onClose={close}>
+        <Modal title={t(L, "checkin.state.title")} crumb={t(L, "checkin.crumb")} sub={t(L, "checkin.sub")} onClose={close}>
           <div className="l3-grid">
-            {MOODS.map((m) => (
+            {moods.map((m) => (
               <div key={m.key} className="l3-choice" onClick={() => chooseMood(m.key)}>
                 <div className="l3-ico">{m.icon}</div>
                 <div className="l3-lbl">{m.label}</div>
@@ -228,18 +245,18 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       {/* ── три стежки ── */}
       {!sheetOpen && screen === "paths" && (
         <Modal
-          title="Стежки" crumb="СТЕЖКИ"
+          title={t(L, "paths.title")} crumb={t(L, "paths.crumb")}
           sub={
             activeMood
-              ? `Підібрано під стан «${MOOD_BY_KEY[activeMood]?.label}». Пройди всі — відкриється новий чек-ін.`
-              : "Пройди всі — відкриється новий чек-ін."
+              ? t(L, "paths.sub_mood", { mood: moodLabel(L, activeMood) })
+              : t(L, "paths.sub")
           }
           onClose={close}
-          foot={<button className="l3-btn l3-sm l3-btn-soft" onClick={close}>Пізніше</button>}
+          foot={<button className="l3-btn l3-sm l3-btn-soft" onClick={close}>{t(L, "paths.later")}</button>}
         >
           {active.length === 0 ? (
             <div className="l3-intro">
-              Стежок зараз немає. Тисни «Як ти зараз?» — і зʼявляться три.
+              {t(L, "paths.empty")}
             </div>
           ) : (
             active.map((q) => (
@@ -264,8 +281,8 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       {!sheetOpen && screen === "run" && quest && (
         <Modal
           title={quest.title}
-          crumb="СТЕЖКА"
-          sub={`крок ${stepIdx + 1} з ${quest.steps.length}`}
+          crumb={t(L, "run.crumb")}
+          sub={t(L, "run.step_of", { n: stepIdx + 1, total: quest.steps.length })}
           onClose={close}
           foot={
             <>
@@ -273,10 +290,10 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
                 className="l3-btn l3-sm l3-btn-soft"
                 onClick={() => (stepIdx === 0 ? setScreen("paths") : setStepIdx((i) => i - 1))}
               >
-                {stepIdx === 0 ? "Назад" : "← Крок назад"}
+                {stepIdx === 0 ? t(L, "run.back") : t(L, "run.step_back")}
               </button>
               <button className="l3-btn l3-sm" onClick={nextStep}>
-                {stepIdx < quest.steps.length - 1 ? "Зробив →" : "Готово"}
+                {stepIdx < quest.steps.length - 1 ? t(L, "run.did") : t(L, "run.finish")}
               </button>
             </>
           }
@@ -317,10 +334,10 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       {/* ── перевірка «як тобі зараз?» ── */}
       {!sheetOpen && screen === "check" && quest && (
         <Modal
-          title="Швидка перевірка" crumb="ПЕРЕВІРКА"
-          sub="Нічого писати не треба — просто подивись на це."
+          title={t(L, "check.title")} crumb={t(L, "check.crumb")}
+          sub={t(L, "check.sub")}
           onClose={close}
-          foot={<button className="l3-btn l3-sm" onClick={() => setScreen("outcome")}>Далі →</button>}
+          foot={<button className="l3-btn l3-sm" onClick={() => setScreen("outcome")}>{t(L, "check.next")}</button>}
         >
           <div className="l3-qlist">
             {quest.check.map((c, i) => (
@@ -336,12 +353,12 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       {/* ── чи допомогло ── */}
       {!sheetOpen && screen === "outcome" && quest && (
         <Modal
-          title="Чи допомогло?" crumb="ПЕРЕВІРКА"
-          sub="Чесна відповідь робить наступні стежки точнішими."
+          title={t(L, "outcome.title")} crumb={t(L, "check.crumb")}
+          sub={t(L, "outcome.sub")}
           onClose={close}
         >
           <div className="l3-outcomes">
-            {OUTCOMES.map((o) => (
+            {outcomes.map((o) => (
               <div key={o.key} className="l3-outcome" onClick={() => finish(o.key)}>
                 <div className="l3-ico">{o.icon}</div>
                 <div>
@@ -357,7 +374,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       {/* ── відкриття ── */}
       {!sheetOpen && screen === "reward" && quest && (
         <Modal
-          title="Відкрито" crumb="ВІДКРИТТЯ"
+          title={t(L, "open.title")} crumb={t(L, "open.crumb")}
           sub={quest.title}
           onClose={() => { setQuest(null); setGain(null); close(); }}
           foot={
@@ -369,7 +386,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
                 setScreen((state.activeQuestIds || []).length > 0 ? "paths" : "scene");
               }}
             >
-              {(state.activeQuestIds || []).length > 0 ? "До стежок" : "На галявину"}
+              {(state.activeQuestIds || []).length > 0 ? t(L, "open.to_paths") : t(L, "open.to_garden")}
             </button>
           }
         >
@@ -379,7 +396,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
             <p>{quest.rewardNote}</p>
             <div className="l3-gain">
               <span className="l3-tag l3-tag-green">
-                {gain && gain.xp > 0 ? `+${gain.xp} XP` : "без XP — ліміт вікна"}
+                {gain && gain.xp > 0 ? t(L, "reward.xp", { n: gain.xp }) : t(L, "open.noxp")}
               </span>
               {gain?.item && <span className="l3-tag">{gain.item.icon} {gain.item.name}</span>}
             </div>
@@ -389,9 +406,9 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
 
       {/* ── знахідки ── */}
       {!sheetOpen && screen === "finds" && (
-        <Modal title="Знахідки" crumb="ЗНАХІДКИ" sub="Те, що впало під ноги, поки ти йшов." onClose={close}>
+        <Modal title={t(L, "garden.finds")} crumb={t(L, "finds.crumb")} sub={t(L, "finds.sub")} onClose={close}>
           {state.ownedItems.length === 0 ? (
-            <div className="l3-intro">Поки порожньо. Знахідки падають самі, коли проходиш стежки.</div>
+            <div className="l3-intro">{t(L, "finds.empty")}</div>
           ) : (
             <div className="l3-grid">
               {state.ownedItems.map((name) => {
@@ -399,7 +416,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
                 return (
                   <div key={name} className="l3-choice">
                     <div className="l3-ico">{it?.icon || "✦"}</div>
-                    <div className="l3-lbl">{name}</div>
+                    <div className="l3-lbl">{it && L === "en" ? it.nameEn : name}</div>
                   </div>
                 );
               })}
@@ -411,12 +428,12 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       {/* ── дупло: покласти руну ── */}
       {!sheetOpen && screen === "runes" && (
         <Modal
-          title="Дупло" crumb="ДУПЛО"
-          sub={sceneStage >= 5 ? "Місце рівно для однієї руни." : "Дупло зʼявиться на 5-й стадії."}
+          title={t(L, "hollow.short")} crumb={t(L, "hollow.crumb")}
+          sub={sceneStage >= 5 ? t(L, "hollow.sub_open") : t(L, "hollow.sub_locked")}
           onClose={close}
         >
           {runes.length === 0 ? (
-            <div className="l3-intro">Жодної руни ще не відкрито. Вони приходять самі.</div>
+            <div className="l3-intro">{t(L, "hollow.none")}</div>
           ) : (
             <div className="l3-grid">
               {runes.map((r) => (
@@ -424,14 +441,14 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
                   key={r.id}
                   className={"l3-choice" + (state.hollowRune === r.id ? " l3-on" : "")}
                   onClick={() => {
-                    if (sceneStage < 5) { setSay("Дупла ще нема. Рости."); close(); return; }
+                    if (sceneStage < 5) { setSay(t(L, "hollow.not_yet")); close(); return; }
                     placeHollowRune(state.hollowRune === r.id ? null : r.id);
                     play("select");
                     close();
                   }}
                 >
                   <div className="l3-ico">{r.sym}</div>
-                  <div className="l3-lbl">{r.name.replace("Руна ", "")}</div>
+                  <div className="l3-lbl">{runeShort(r, L)}</div>
                 </div>
               ))}
             </div>
@@ -442,22 +459,21 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       {/* ── що саме працює (аналітика) ── */}
       {!sheetOpen && screen === "stats" && (
         <Modal
-          title="Що працює" crumb="АНАЛІТИКА"
-          sub="Збирається з твоїх відповідей після кожної стежки."
+          title={t(L, "garden.what_works")} crumb={t(L, "works.crumb")}
+          sub={t(L, "works.sub")}
           onClose={close}
         >
           {insights.length === 0 ? (
             <div className="l3-intro">
-              Поки нічого. Пройди кілька стежок і скажи, чи допомогло — тут зʼявиться,
-              що саме спрацьовує в якому стані, і підбір стане точнішим.
+              {t(L, "works.empty")}
             </div>
           ) : (
             insights.map((i) => (
               <div key={i.mood} className="l3-insight">
                 <div className="l3-ico">{i.icon}</div>
                 <div style={{ minWidth: 92 }}>
-                  <b>{i.label}</b>
-                  <small>{plural(i.runs, "прохід", "проходи", "проходів")}</small>
+                  <b>{moodLabel(L, i.mood)}</b>
+                  <small>{runsLabel(L, i.runs)}</small>
                 </div>
                 <div className="l3-bar">
                   <i style={{ width: `${Math.round((i.rate || 0) * 100)}%` }} />
@@ -478,10 +494,12 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
 }
 
 /** Українська множина: 1 прохід · 2–4 проходи · 5+ проходів (з урахуванням 11–14). */
-function plural(n: number, one: string, few: string, many: string) {
+/** "3 проходи" / "3 walked" — Ukrainian needs three forms, English one. */
+function runsLabel(lang: Lang, n: number): string {
+  if (lang === "en") return `${n} walked`;
   const d = n % 10;
   const h = n % 100;
-  const word = h >= 11 && h <= 14 ? many : d === 1 ? one : d >= 2 && d <= 4 ? few : many;
+  const word = h >= 11 && h <= 14 ? "проходів" : d === 1 ? "прохід" : d >= 2 && d <= 4 ? "проходи" : "проходів";
   return `${n} ${word}`;
 }
 
@@ -512,7 +530,7 @@ function Modal({
       <div className="l3-modal" onClick={(e) => e.stopPropagation()}>
         <div className="l3-modal-head">
           <div className="l3-crumb">
-            <b>⌁ SELF-FARM</b> <span>/</span> {crumb || "САД"}
+            <b>⌁ SELF-FARM</b> <span>/</span> {crumb || "·"}
           </div>
           <h2>{title}</h2>
           {sub && <p>{sub}</p>}

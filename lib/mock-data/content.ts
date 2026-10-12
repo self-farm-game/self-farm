@@ -36,6 +36,10 @@ export interface OnboardingStep {
   title: string;
   sub: string | null;
   btn: string;
+  kickerEn: string;
+  titleEn: string;
+  subEn: string | null;
+  btnEn: string;
 }
 export const ONBOARDING: OnboardingStep[] = [
   {
@@ -45,6 +49,10 @@ export const ONBOARDING: OnboardingStep[] = [
     title: "Ти вийшов із печери блиску.",
     sub: "Стрічки, дзижчання, миготіння. Шум ще в голові.",
     btn: "Далі",
+    kickerEn: "step 1",
+    titleEn: "You walked out of the cave of glitter.",
+    subEn: "Feeds, buzzing, flickering. The noise is still in your head.",
+    btnEn: "Next",
   },
   {
     icon: "🌫️",
@@ -53,6 +61,10 @@ export const ONBOARDING: OnboardingStep[] = [
     title: "Зовні — не ліс. Просто пусте поле.",
     sub: "Тиша спершу лякає. У ній стає видно власний стан.",
     btn: "Далі",
+    kickerEn: "step 2",
+    titleEn: "Outside there's no forest. Just an empty field.",
+    subEn: "The quiet is frightening at first. In it you can see your own state.",
+    btnEn: "Next",
   },
   {
     icon: "🧙",
@@ -61,6 +73,10 @@ export const ONBOARDING: OnboardingStep[] = [
     title: "«Ліс садити не будемо. Одне дерево. Один рух.»",
     sub: null,
     btn: "🌱  Посадити дерево",
+    kickerEn: "bombom comes to meet you",
+    titleEn: "\u201cWe're not planting a forest. One tree. One move.\u201d",
+    subEn: null,
+    btnEn: "\ud83c\udf31  Plant the tree",
   },
 ];
 
@@ -81,12 +97,14 @@ export const CABIN_ROWS = [
   { icon: "🌱", label: "Про Self-Farm", val: "" },
 ];
 
+// `key` points into the dictionary (lib/mock-data/i18n.ts); `label` is the
+// Ukrainian fallback for anything that renders NAV without a language.
 export const NAV = [
-  { id: "garden", icon: "🌳", label: "Сад", href: "/garden" },
-  { id: "questbook", icon: "📜", label: "Квести", href: "/questbook" },
-  { id: "journal", icon: "📖", label: "Журнал", href: "/journal" },
-  { id: "runes", icon: "ᛟ", label: "Руни", href: "/runes" },
-  { id: "cabin", icon: "🏚️", label: "Хатина", href: "/cabin" },
+  { id: "garden", icon: "🌳", key: "tab.garden", label: "Сад", href: "/garden" },
+  { id: "questbook", icon: "📜", key: "tab.quests", label: "Квести", href: "/questbook" },
+  { id: "journal", icon: "📖", key: "tab.journal", label: "Журнал", href: "/journal" },
+  { id: "runes", icon: "ᛟ", key: "tab.runes", label: "Руни", href: "/runes" },
+  { id: "cabin", icon: "🏚️", key: "tab.cabin", label: "Хатина", href: "/cabin" },
 ];
 
 export const JOURNAL_FILTERS = ["Усе", "Стани", "Квести", "Нотатки", "Знахідки"];
