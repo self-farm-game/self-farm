@@ -62,6 +62,10 @@ export interface GameState {
   xpInWindow: number; // how many XP-earning quests done in the current window
   hollowRune: string | null; // rune id tucked into the tree hollow (easter egg)
   currentMood: string | null; // mood key picked at the latest check-in
+  /** мʼякі нагадування повернутись; час у форматі "HH:MM" за місцевим часом */
+  reminders: { on: boolean; times: string[] };
+  /** останнє показане нагадування — щоб не повторювати той самий слот */
+  lastRemindAt: number;
   // --- аналітика квестів: чим більше проходжень, тим точніші пропозиції ---
   questStats: Record<string, QuestStat>; // ключ — id квесту
   comboStats: Record<string, QuestStat>; // ключ — `${moodKey}|${template}`
@@ -96,6 +100,8 @@ const SEED: GameState = {
   xpInWindow: 0,
   hollowRune: null,
   currentMood: null,
+  reminders: { on: false, times: ["20:00"] },
+  lastRemindAt: 0,
   questStats: {},
   comboStats: {},
   questLog: [],
@@ -132,6 +138,10 @@ interface Ctx {
   openCheckin: (stateKeys: string[], questIds: string[], mood?: string) => void;
   placeHollowRune: (runeId: string | null) => void;
   setLang: (lang: "en" | "uk" | "uk_raw") => void;
+  setReminders: (r: { on: boolean; times: string[] }) => void;
+  markReminded: (at: number) => void;
+  /** Повністю замінює збереження даними з файлу. Повертає помилку, якщо файл не той. */
+  importState: (raw: unknown) => { ok: boolean; error?: string };
   plantTree: () => void;
   nextBombom: () => void;
   toggleMute: () => void;
@@ -335,6 +345,36 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const nextBombom = () => setState((s) => ({ ...s, bombomIdx: s.bombomIdx + 1 }));
   const placeHollowRune = (runeId: string | null) => setState((s) => ({ ...s, hollowRune: runeId }));
   const setLang = (lang: "en" | "uk" | "uk_raw") => setState((s) => ({ ...s, lang }));
+
+  const setReminders = (r: { on: boolean; times: string[] }) =>
+    setState((s) => ({ ...s, reminders: { on: r.on, times: [...r.times].sort() } }));
+
+  const markReminded = (at: number) => setState((s) => ({ ...s, lastRemindAt: at }));
+
+  /**
+   * Відновлення з файлу. Приймаємо і «голий» стан, і обгортку з експорту.
+   * Перевіряємо лише кілька обовʼязкових полів — решту добираємо з SEED,
+   * щоб старий файл не ламав гру після оновлення.
+   */
+  const importState: Ctx["importState"] = (raw) => {
+    try {
+      const obj = raw as Record<string, unknown>;
+      const body = (obj && typeof obj === "object" && "state" in obj ? obj.state : obj) as Partial<GameState>;
+      if (!body || typeof body !== "object") return { ok: false, error: "Файл порожній або не той." };
+      if (typeof body.totalXp !== "number" || !Array.isArray(body.journal)) {
+        return { ok: false, error: "Це не схоже на збереження Self-Farm." };
+      }
+      const next = migrate({ ...SEED, ...body } as GameState);
+      setState(next);
+      try {
+        localStorage.setItem(localKey(), JSON.stringify(next));
+      } catch {}
+      if (isSupabaseConfigured && userId.current) saveRemote(userId.current, next);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: "Не вдалось прочитати файл." };
+    }
+  };
   const toggleMute = () => setState((s) => ({ ...s, muted: !s.muted }));
   const reset = () => {
     try {
@@ -518,7 +558,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <GameContext.Provider
-      value={{ state, hydrated, auth, dailyDone, dailyLeft, checkinLeftMs, canCheckin, nextCheckinInMs, xpLeft, xpWindowLeftMs, openCheckin, placeHollowRune, setLang, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
+      value={{ state, hydrated, auth, dailyDone, dailyLeft, checkinLeftMs, canCheckin, nextCheckinInMs, xpLeft, xpWindowLeftMs, openCheckin, placeHollowRune, setLang, setReminders, markReminded, importState, plantTree, nextBombom, toggleMute, reset, signUp, signIn, signInGoogle, signOut, recordSession }}
     >
       {children}
     </GameContext.Provider>

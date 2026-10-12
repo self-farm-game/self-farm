@@ -5,7 +5,13 @@
  * лишаються там, де були. Вкладка приходить як children і спливає над садом.
  */
 import GardenWorld from "@/components/garden3d/GardenWorld";
+import Reminders from "@/components/system/Reminders";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return <GardenWorld>{children}</GardenWorld>;
+  return (
+    <>
+      <Reminders />
+      <GardenWorld>{children}</GardenWorld>
+    </>
+  );
 }
