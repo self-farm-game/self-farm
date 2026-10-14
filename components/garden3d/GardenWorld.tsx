@@ -70,6 +70,18 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
   const placed = runeById(state.hollowRune);
   const insights = useMemo(() => moodInsights(state), [state]);
   const lines = BOMBOM_LINES[state.lang] || BOMBOM_LINES.uk;
+  // Бомбом has plenty to say now, so never hand back the line he just said —
+  // an immediate repeat is the one thing that makes him feel canned.
+  const saidRef = useRef<string | null>(null);
+  const nextLine = () => {
+    if (lines.length < 2) return lines[0] || "";
+    let pick = lines[Math.floor(Math.random() * lines.length)];
+    for (let i = 0; i < 6 && pick === saidRef.current; i++) {
+      pick = lines[Math.floor(Math.random() * lines.length)];
+    }
+    saidRef.current = pick;
+    return pick;
+  };
 
   const close = () => setScreen("scene");
   // Поки над садом висить вкладка — свої вікна саду не показуємо.
@@ -151,7 +163,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
         onHollowClick={() => setScreen("runes")}
         onHutClick={() => {
           play("select");
-          setSay(lines[Math.floor(Math.random() * lines.length)]);
+          setSay(nextLine());
         }}
       />
 
@@ -219,7 +231,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
             <div className="l3-say-more">
               <button
                 className="l3-btn l3-sm l3-btn-soft"
-                onClick={() => setSay(lines[Math.floor(Math.random() * lines.length)])}
+                onClick={() => { play("tap"); setSay(nextLine()); }}
               >
                 {t(L, "bombom.more")}
               </button>

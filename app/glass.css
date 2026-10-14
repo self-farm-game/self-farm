@@ -872,3 +872,251 @@
     color: var(--g-ink);
   }
 }
+
+/* ─────────────────────────── 404 ───────────────────────────
+   Заблукала стежка. Острова тут немає — сцену малюємо CSS-ом,
+   щоб сторінка не тягла three.js заради однієї картинки.      */
+
+.nf-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 18px;
+}
+
+/* небо: холодна ніч, низький місяць і тепле світло десь за горизонтом */
+.nf-sky {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(14px 14px at 78% 17%, rgba(247, 240, 210, 0.9), rgba(247, 240, 210, 0.12) 60%, transparent 72%),
+    radial-gradient(160px 160px at 78% 17%, rgba(190, 220, 235, 0.14), transparent 70%),
+    radial-gradient(130% 60% at 50% 104%, rgba(233, 193, 120, 0.2), transparent 64%),
+    linear-gradient(180deg, #05121a 0%, #071a1f 42%, #0a2321 72%, #0c2a24 100%);
+}
+
+/* три ряди пагорбів: далекі світліші за ближні — так зʼявляється глибина */
+.nf-hills {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: 0;
+  height: 42%;
+  pointer-events: none;
+}
+
+.nf-hills::before,
+.nf-hills::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* дальній кряж */
+.nf-hills::before {
+  height: 100%;
+  background:
+    radial-gradient(44% 72% at 14% 100%, #16403a 0 70%, transparent 72%),
+    radial-gradient(50% 64% at 52% 100%, #143934 0 70%, transparent 72%),
+    radial-gradient(46% 78% at 88% 100%, #16403a 0 70%, transparent 72%);
+  filter: blur(1.5px);
+  opacity: 0.75;
+}
+
+/* ближній кряж — темніший і чіткіший */
+.nf-hills::after {
+  height: 64%;
+  background:
+    radial-gradient(52% 88% at 26% 104%, #0a221f 0 72%, transparent 74%),
+    radial-gradient(58% 76% at 72% 104%, #08201c 0 72%, transparent 74%),
+    linear-gradient(180deg, transparent 56%, #081d1a 92%);
+}
+
+.nf-fog {
+  position: absolute;
+  left: -25%;
+  right: -25%;
+  bottom: 12%;
+  height: 26%;
+  background: linear-gradient(180deg, transparent, rgba(186, 226, 204, 0.16) 48%, transparent);
+  filter: blur(18px);
+  animation: nf-drift 26s ease-in-out infinite alternate;
+}
+
+@keyframes nf-drift {
+  from { transform: translateX(-4%); }
+  to { transform: translateX(4%); }
+}
+
+@keyframes nf-float {
+  0%, 100% { opacity: 0; transform: translate(0, 0); }
+  18%, 76% { opacity: 0.85; }
+  50% { transform: translate(var(--drift, 20px), -26px); }
+}
+
+.nf-panel {
+  position: relative;
+  z-index: 2;
+  width: min(460px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 22px 24px 24px;
+  border-radius: var(--g-r);
+  background: var(--g-panel);
+  border: 1px solid var(--g-line);
+  backdrop-filter: blur(var(--g-blur)) saturate(1.15);
+  -webkit-backdrop-filter: blur(var(--g-blur)) saturate(1.15);
+  box-shadow: 0 26px 70px rgba(2, 10, 8, 0.6);
+  animation: l3-pop 0.3s ease-out;
+  text-align: center;
+}
+
+.nf-panel::-webkit-scrollbar { width: 6px; }
+.nf-panel::-webkit-scrollbar-thumb { background: var(--g-line); border-radius: 3px; }
+
+/* похилений вказівник */
+.nf-sign {
+  position: relative;
+  height: 96px;
+  margin: 2px 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: rotate(-4deg);
+}
+
+.nf-sign-board {
+  padding: 7px 24px 9px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #6a4a2c, #4a2f18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 160, 0.3),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.4),
+    0 0 0 2px #2a1a0e,
+    0 8px 22px rgba(2, 10, 8, 0.5);
+}
+
+.nf-404 {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #f3d9a8;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.nf-sign-post {
+  width: 10px;
+  flex: 1;
+  background: linear-gradient(90deg, #3a2512, #5d3f22 40%, #35210f);
+  box-shadow: 0 0 0 1px #24160a;
+  border-radius: 0 0 2px 2px;
+}
+
+.nf-title {
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 10px;
+}
+
+.nf-sub {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--g-ink-2);
+  margin-top: 9px;
+}
+
+.nf-path {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--g-line-soft);
+  text-align: left;
+}
+
+.nf-path-cap {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--g-ink-3);
+  margin-bottom: 4px;
+}
+
+.nf-path code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--g-gold);
+  overflow-wrap: anywhere;
+}
+
+.nf-bombom {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  text-align: left;
+}
+
+.nf-bombom > img {
+  width: 76px;
+  height: auto;
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 8px 14px rgba(2, 10, 8, 0.6));
+  animation: nf-bob 4.5s ease-in-out infinite;
+}
+
+@keyframes nf-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.nf-say {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 13px;
+  border-radius: 14px;
+  background: var(--g-card);
+  border: 1px solid var(--g-line-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.nf-who {
+  font-size: 9.5px;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--g-gold);
+  margin-bottom: 4px;
+}
+
+.nf-note {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--g-ink-3);
+  margin-top: 16px;
+}
+
+@media (max-width: 767px) {
+  .nf-panel { padding: 18px 18px 20px; }
+  .nf-sign { height: 84px; }
+  .nf-404 { font-size: 34px; }
+  .nf-title { font-size: 20px; }
+  .nf-bombom > img { width: 62px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-fog,
+  .nf-panel,
+  .nf-bombom > img { animation: none; }
+  /* світлячки зʼявляються саме анімацією, тож без неї їх треба просто
+     лишити видимими, а не згасити назовсім */
+  .nf-bug { animation: none !important; opacity: 0.7 !important; }
+}
