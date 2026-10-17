@@ -2,13 +2,14 @@
 /**
  * Хатина — профіль і налаштування. Спливає над садом, як і решта вкладок.
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGame, type GameState } from "@/lib/store/game";
 import { levelInfo } from "@/lib/utils/xp";
 import { t, LANGS, type Lang } from "@/lib/mock-data/i18n";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import Sheet from "@/components/ui/Sheet";
 import { play } from "@/lib/sound/sound";
+import { disablePush, enablePush, pushState, type PushState } from "@/lib/push/client";
 import { exportSave, exportJournal, exportLogCsv } from "@/lib/utils/export";
 import Icon from "@/components/icons/Icon";
 
@@ -290,28 +291,65 @@ function RemindersSheet({
     typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported",
   );
   const [custom, setCustom] = useState(rem.times[0] || "20:00");
+  const [ps, setPs] = useState<PushState | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Чи дійде нагадування із закритим браузером — залежить не від дозволу,
+  // а від того, чи вдалося підписатись на push.
+  useEffect(() => {
+    let alive = true;
+    void pushState().then((v) => alive && setPs(v));
+    return () => {
+      alive = false;
+    };
+  }, [rem.on, rem.times.join(",")]);
 
   const supported = perm !== "unsupported";
   const granted = perm === "granted";
   const current = rem.times.join(",");
+  const livePush = ps === "subscribed";
+  const canPush = ps === "ready" || ps === "subscribed";
 
-  const ask = async () => {
-    if (!supported) return;
+  /** Увімкнути з дозволом і підпискою. Усе, що не вийшло, видно на екрані. */
+  const turnOn = async (times: string[]) => {
+    setBusy(true);
     try {
-      const r = await Notification.requestPermission();
-      setPerm(r);
-      if (r === "granted") {
+      const res = await enablePush({ times, lang: L });
+      if (res.ok) {
         play("reward");
-        new Notification("Self-Farm", { body: t(L, "rem.granted_body"), tag: "self-farm-test" });
+        setPerm("granted");
+        setPs("subscribed");
+      } else if (res.reason === "no-permission") {
+        setPerm(typeof Notification !== "undefined" ? Notification.permission : "denied");
+      } else {
+        // push не склався — нагадування лишаються, але тільки з
+        // відкритою вкладкою. Чесно скажемо про це нижче.
+        setPs(res.reason === "failed" ? "ready" : res.reason);
+        if (typeof Notification !== "undefined" && Notification.permission !== "granted") {
+          const r = await Notification.requestPermission().catch(() => "denied");
+          setPerm(r);
+        }
       }
-    } catch {
-      setPerm("denied");
+      setReminders({ on: true, times });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const turnOff = async () => {
+    setBusy(true);
+    try {
+      await disablePush();
+      setPs("ready");
+      setReminders({ on: false, times: rem.times });
+    } finally {
+      setBusy(false);
     }
   };
 
   const pick = (times: string[]) => {
     play("select");
-    setReminders({ on: true, times });
+    void turnOn(times);
   };
 
   return (
@@ -320,12 +358,30 @@ function RemindersSheet({
       title={t(L, "rem.title")}
       sub={t(L, "rem.sub")}
       foot={back}
-      note={granted ? t(L, "rem.note") : undefined}
+      note={granted ? t(L, livePush ? "rem.note_push" : "rem.note_tab") : undefined}
     >
       {!supported && (
         <div className="l3-warn" style={{ marginTop: 0, marginBottom: 14 }}>
           <Icon name="warn" size={15} />
           <span>{t(L, "rem.unsupported")}</span>
+        </div>
+      )}
+
+      {ps === "ios-needs-install" && (
+        <div className="l3-warn" style={{ marginTop: 0, marginBottom: 14 }}>
+          <Icon name="warn" size={15} />
+          <span>{t(L, "rem.ios_install")}</span>
+        </div>
+      )}
+
+      {/* Нагадування увімкнені, але живої підписки немає: немає ключів,
+          підписка не вдалась або браузер не вміє push. Для людини це все
+          один і той самий наслідок — працює лише з відкритою вкладкою,
+          і краще сказати це прямо, ніж мовчки не спрацювати ввечері. */}
+      {rem.on && granted && !livePush && ps !== null && ps !== "ios-needs-install" && (
+        <div className="l3-warn" style={{ marginTop: 0, marginBottom: 14 }}>
+          <Icon name="warn" size={15} />
+          <span>{t(L, "rem.tab_only")}</span>
         </div>
       )}
 
@@ -338,8 +394,8 @@ function RemindersSheet({
 
       {supported && perm === "default" && (
         <div style={{ marginBottom: 16 }}>
-          <button className="l3-btn l3-sm" onClick={ask}>
-            {t(L, "rem.allow")}
+          <button className="l3-btn l3-sm" onClick={() => !busy && void turnOn(rem.times)}>
+            {busy ? "…" : t(L, "rem.allow")}
           </button>
           <div style={{ fontSize: 11.5, color: "var(--g-ink-3)", marginTop: 9, lineHeight: 1.5 }}>
             {t(L, "rem.allow_note")}
@@ -350,8 +406,9 @@ function RemindersSheet({
       <div
         className="l3-row"
         onClick={() => {
+          if (busy) return;
           play("select");
-          setReminders({ on: !rem.on, times: rem.times });
+          void (rem.on ? turnOff() : turnOn(rem.times));
         }}
       >
         <span className="l3-ico"><Icon name={rem.on ? "bell" : "bell-off"} size={20} /></span>

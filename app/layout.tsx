@@ -15,6 +15,16 @@ const pixel = Comfortaa({
 export const metadata: Metadata = {
   title: "Self-Farm",
   description: "Одне дерево. Один рух. Маленька гра про повернення до себе.",
+  // Маніфест і ці іконки потрібні не для краси: на iPhone web push працює
+  // ЛИШЕ коли гра додана на головний екран, а без маніфесту її туди не
+  // додати як застосунок.
+  manifest: "/manifest.webmanifest",
+  applicationName: "Self-Farm",
+  appleWebApp: { capable: true, title: "Self-Farm", statusBarStyle: "black-translucent" },
+  icons: {
+    icon: [{ url: "/assets/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/assets/icons/icon-180.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {

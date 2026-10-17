@@ -1,0 +1,19 @@
+{
+  "name": "Self-Farm",
+  "short_name": "Self-Farm",
+  "description": "Одне дерево. Один рух. Маленька гра про повернення до себе.",
+  "start_url": "/garden",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c0a16",
+  "theme_color": "#0c2a24",
+  "lang": "uk",
+  "categories": ["health", "lifestyle"],
+  "icons": [
+    { "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/assets/icons/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -1,18 +1,24 @@
 "use client";
 /**
- * Мʼякі нагадування повернутись у сад.
+ * Нагадування повернутись у сад.
  *
- * Чесно про межі: сервера для push немає, тож це локальні сповіщення
- * браузера. Вони спрацьовують, поки вкладка з грою відкрита (нехай і у
- * фоні). Закрив браузер — нагадування не прийде. Саме так і написано
- * в налаштуваннях, щоб ніхто не чекав дзвінка о восьмій із закритого
- * ноутбука.
+ * Працює у двох режимах, і це не дубль, а запасний варіант:
  *
- * Компонент нічого не малює — лише тримає таймер.
+ *   push     — сервер шле сповіщення через service worker. Приходить
+ *              із закритим браузером. Основний режим.
+ *   таймер   — якщо push недоступний (немає ключів, iPhone у вкладці,
+ *              людина не дала дозвіл серверу), лишається старий таймер
+ *              усередині сторінки. Він працює, поки вкладка відкрита.
+ *
+ * Обидва одночасно не вмикаються: якщо підписка є, таймер мовчить, щоб
+ * одне нагадування не прийшло двічі.
+ *
+ * Компонент нічого не малює.
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/store/game";
 import { t } from "@/lib/mock-data/i18n";
+import { pushState, registerSW } from "@/lib/push/client";
 
 /** "20:00" → хвилини від півночі. Некоректний рядок → null. */
 export function parseTime(hhmm: string): number | null {
@@ -29,14 +35,33 @@ const LINE_KEYS = ["rem.line1", "rem.line2", "rem.line3", "rem.line4", "rem.line
 export default function Reminders() {
   const { state, hydrated, markReminded } = useGame();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pushOn, setPushOn] = useState<boolean | null>(null);
 
   const on = state.reminders?.on;
   const times = (state.reminders?.times || []).join(",");
   const lastRemindAt = state.lastRemindAt || 0;
 
+  // Service worker реєструємо завжди, не лише коли нагадування увімкнені:
+  // так він уже стоїть, коли людина натисне вмикач, і підписка не чекає
+  // зайвий круг.
+  useEffect(() => {
+    if (hydrated) void registerSW();
+  }, [hydrated]);
+
+  // Чи є жива підписка. Якщо є — локальний таймер не потрібен.
+  useEffect(() => {
+    if (!hydrated) return;
+    let alive = true;
+    void pushState().then((s) => alive && setPushOn(s === "subscribed"));
+    return () => {
+      alive = false;
+    };
+  }, [hydrated, on, times]);
+
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     if (!hydrated || !on) return;
+    if (pushOn !== false) return; // ще не знаємо або push працює — не дублюємо
     if (typeof window === "undefined" || !("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
 
@@ -50,7 +75,6 @@ export default function Reminders() {
       const now = new Date();
       const cur = now.getHours() * 60 + now.getMinutes();
 
-      // найближчий слот, що вже настав і ще не показувався сьогодні
       const due = slots.filter((sl) => sl <= cur).pop();
       if (due !== undefined) {
         const slotDate = new Date(now);
@@ -59,7 +83,7 @@ export default function Reminders() {
           try {
             new Notification("Self-Farm", {
               body: t(state.lang, LINE_KEYS[Math.floor(Math.random() * LINE_KEYS.length)]),
-              icon: "/assets/sprites/garden/BomBom.png",
+              icon: "/assets/icons/icon-192.png",
               tag: "self-farm-reminder",
             });
           } catch {}
@@ -67,7 +91,6 @@ export default function Reminders() {
         }
       }
 
-      // наступний слот сьогодні або перший завтра
       const next = slots.find((sl) => sl > cur);
       const waitMin = next !== undefined ? next - cur : 24 * 60 - cur + slots[0];
       // не спимо довше години за раз: так переживаємо зміну дати й сон машини
@@ -79,7 +102,7 @@ export default function Reminders() {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [hydrated, on, times, lastRemindAt, state.reminders, state.lang, markReminded]);
+  }, [hydrated, on, times, pushOn, lastRemindAt, state.reminders, state.lang, markReminded]);
 
   return null;
 }

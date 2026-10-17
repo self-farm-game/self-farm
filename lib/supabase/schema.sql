@@ -71,3 +71,35 @@ insert into quests (id, title, description, icon, duration_minutes, category, ba
   ('shoulders-down','Плечі вниз',        'Підніми плечі до вух і кинь їх вниз з видихом. Тричі.',                '🪶', 1, 'Тіло', 8,  '{"Напружено"}', '{1,2,3,4}'),
   ('tidy-one',      'Прибери один предмет','Постав на місце рівно одну річ. Не кімнату — одну річ.',             '🧹', 3, 'Болото', 10, '{"Порожньо"}', '{2,3}')
 on conflict (id) do nothing;
+
+-- ────────────────────────── push-нагадування ──────────────────────────
+-- Один рядок = одна підписка браузера. У людини їх може бути кілька:
+-- ноутбук, телефон, другий браузер — і це нормально, кожен отримає своє.
+--
+-- Час нагадування зберігається тут, а не лише в стані гри, бо надсилає
+-- його сервер, і йому треба знати і час, і часовий пояс людини.
+create table if not exists push_subs (
+  endpoint    text primary key,
+  user_id     uuid references auth.users(id) on delete cascade,
+  p256dh      text not null,
+  auth        text not null,
+  -- "HH:MM" у місцевому часі людини
+  times       text[] not null default '{"20:00"}',
+  -- IANA, напр. "Europe/Kiev" — за ним сервер рахує, котра в неї зараз
+  tz          text not null default 'Europe/Kiev',
+  lang        text not null default 'uk',
+  enabled     boolean not null default true,
+  last_sent   timestamptz,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+create index if not exists push_subs_enabled_idx on push_subs (enabled) where enabled;
+
+alter table push_subs enable row level security;
+
+-- Людина порядкує лише своїми підписками. Розсилку робить service-role
+-- ключ, який RLS обходить — тож окремої політики на читання всіх не треба.
+drop policy if exists "own push subs" on push_subs;
+create policy "own push subs" on push_subs
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
