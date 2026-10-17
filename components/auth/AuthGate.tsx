@@ -4,6 +4,7 @@ import { useGame } from "@/lib/store/game";
 import { t } from "@/lib/mock-data/i18n";
 import { Stars, WoodButton } from "@/components/ui/primitives";
 import { play } from "@/lib/sound/sound";
+import Icon from "@/components/icons/Icon";
 
 export default function AuthGate() {
   const { state, signUp, signIn, signInGoogle, auth } = useGame();
@@ -72,7 +73,7 @@ export default function AuthGate() {
 
       <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "28px 26px", width: "100%", maxWidth: 460, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 26 }}>
-          <div style={{ fontSize: 60, marginBottom: 10, animation: "sf-float 5s ease-in-out infinite" }}>🌳</div>
+          <div style={{ marginBottom: 10, animation: "sf-float 5s ease-in-out infinite" }}><Icon name="tree" size={62} /></div>
           <div style={{ fontSize: 30, color: "#f4ecd6", fontWeight: 700, textShadow: "0 3px 0 rgba(0,0,0,.35)" }}>Self-Farm</div>
           <div style={{ fontSize: 13.5, color: "#b9aecb", fontStyle: "italic", marginTop: 8, lineHeight: 1.5, maxWidth: 280, marginLeft: "auto", marginRight: "auto" }}>
             {t(L, "auth.intro")}

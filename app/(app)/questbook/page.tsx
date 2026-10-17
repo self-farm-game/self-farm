@@ -12,6 +12,7 @@ import { localizeQuest, moodLabel, outcomeLabel, questById } from "@/lib/mock-da
 import { t } from "@/lib/mock-data/i18n";
 import Sheet from "@/components/ui/Sheet";
 import { play } from "@/lib/sound/sound";
+import Icon from "@/components/icons/Icon";
 
 const OUT_ICON: Record<string, string> = Object.fromEntries(OUTCOMES.map((o) => [o.key, o.icon]));
 
@@ -43,7 +44,13 @@ export default function Questbook() {
         crumb={t(L, "qb.crumb_path")}
         title={detail.title}
         sub={`${detail.intensity} · ${detail.duration} · ${detail.context}`}
-        note={detail.warning ? `⚠ ${detail.warning}` : undefined}
+        note={
+          detail.warning ? (
+            <span style={{ display: "inline-flex", gap: 7, alignItems: "flex-start" }}>
+              <Icon name="warn" size={14} style={{ marginTop: 1 }} /> {detail.warning}
+            </span>
+          ) : undefined
+        }
         foot={
           <>
             <button className="l3-btn l3-sm l3-btn-soft" onClick={() => setDetail(null)}>
@@ -93,7 +100,7 @@ export default function Questbook() {
     >
       {total === 0 ? (
         <div className="l3-empty">
-          <div className="l3-ico">📜</div>
+          <div className="l3-ico"><Icon name="scroll" size={34} /></div>
           <h4>{t(L, "qb.empty_title")}</h4>
           <p>
             {t(L, "qb.empty_desc")}
@@ -124,7 +131,7 @@ export default function Questbook() {
               <div className="l3-section-title">{t(L, "qb.opened")}</div>
               {active.map((q) => (
                 <div key={q.id} className="l3-quest" onClick={() => { play("tap"); setDetail(q); }}>
-                  <div className="l3-quest-ico">{q.icon}</div>
+                  <div className="l3-quest-ico"><Icon name={q.icon} size={26} /></div>
                   <div style={{ minWidth: 0 }}>
                     <h3>{q.title}</h3>
                     <p>{q.intro}</p>
@@ -144,14 +151,14 @@ export default function Questbook() {
               <div className="l3-section-title">{t(L, "qb.done_in_set")}</div>
               {done.map((d, i) => (
                 <div key={d.id + i} className="l3-row l3-static">
-                  <span className="l3-ico">{d.icon}</span>
+                  <span className="l3-ico"><Icon name={questById(L, d.id)?.icon || d.icon} size={20} /></span>
                   <span className="l3-lab">
                     {questById(L, d.id)?.title || d.title}
                     <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>
                       {d.time} · {outcomeLabel(L, d.outcome)}
                     </span>
                   </span>
-                  <span style={{ fontSize: 17 }}>{OUT_ICON[d.outcome] || "·"}</span>
+                  <Icon name={OUT_ICON[d.outcome] || "equal"} size={18} />
                 </div>
               ))}
             </>

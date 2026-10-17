@@ -6,6 +6,7 @@ import { useGame } from "@/lib/store/game";
 import { t } from "@/lib/mock-data/i18n";
 import { WoodButton, Stars } from "@/components/ui/primitives";
 import { play } from "@/lib/sound/sound";
+import Icon from "@/components/icons/Icon";
 
 export default function Onboarding() {
   const router = useRouter();
@@ -63,14 +64,13 @@ export default function Onboarding() {
       >
         <div
           style={{
-            fontSize: 84,
             lineHeight: 1,
             marginBottom: 26,
             filter: "drop-shadow(0 6px 0 rgba(0,0,0,.4))",
             animation: "sf-float 5s ease-in-out infinite",
           }}
         >
-          {ob.icon}
+          <Icon name={ob.icon} size={88} />
         </div>
         <div
           style={{

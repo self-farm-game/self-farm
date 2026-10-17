@@ -6,6 +6,7 @@ import { useGame } from "@/lib/store/game";
 import { t } from "@/lib/mock-data/i18n";
 import { levelInfo } from "@/lib/utils/xp";
 import { play } from "@/lib/sound/sound";
+import Icon from "@/components/icons/Icon";
 
 export default function SideNav() {
   const pathname = usePathname();
@@ -19,7 +20,8 @@ export default function SideNav() {
     <aside className="sf-side">
       <div style={{ padding: "2px 4px 16px", borderBottom: "1px solid var(--g-line-soft)", marginBottom: 16 }}>
         <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: 0.3, color: "var(--g-ink)" }}>
-          🌳 Self-Farm
+          <Icon name="tree" size={22} style={{ marginRight: 7 }} />
+          Self-Farm
         </div>
         <div style={{ fontSize: 10.5, color: "var(--g-ink-3)", letterSpacing: 1.2, marginTop: 4, textTransform: "uppercase" }}>
           {t(L, "side.tagline")}
@@ -51,7 +53,7 @@ export default function SideNav() {
             border: "1px solid var(--g-line-soft)",
           }}
         >
-          🌱
+          <Icon name={lvl.levelNum >= 3 ? "tree" : "sprout"} size={20} />
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.15, color: "var(--g-ink)" }}>{lvl.name}</div>
@@ -74,7 +76,7 @@ export default function SideNav() {
               router.push(n.href);
             }}
           >
-            <span className="g-nav-ico">{n.icon}</span>
+            <span className="g-nav-ico"><Icon name={n.icon} size={19} tone={active === n.id ? "green" : "sage"} /></span>
             {t(L, "tab." + n.id)}
           </div>
         ))}
@@ -82,13 +84,13 @@ export default function SideNav() {
 
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
         <Mini label={t(L, "side.day")} value={String(state.day)} />
-        <Mini label={t(L, "side.streak")} value={`🔥 ${state.streak}`} />
+        <Mini label={t(L, "side.streak")} value={String(state.streak)} icon="flame" />
       </div>
     </aside>
   );
 }
 
-function Mini({ label, value }: { label: string; value: string }) {
+function Mini({ label, value, icon }: { label: string; value: string; icon?: string }) {
   return (
     <div
       style={{
@@ -101,7 +103,10 @@ function Mini({ label, value }: { label: string; value: string }) {
       }}
     >
       <div style={{ fontSize: 9, letterSpacing: 1.4, color: "var(--g-ink-3)", textTransform: "uppercase" }}>{label}</div>
-      <div style={{ fontSize: 15, color: "var(--g-ink)", fontWeight: 700, marginTop: 2 }}>{value}</div>
+      <div style={{ fontSize: 15, color: "var(--g-ink)", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+        {icon && <Icon name={icon} size={15} />}
+        {value}
+      </div>
     </div>
   );
 }

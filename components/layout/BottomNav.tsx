@@ -5,6 +5,7 @@ import { NAV } from "@/lib/mock-data/content";
 import { useGame } from "@/lib/store/game";
 import { t } from "@/lib/mock-data/i18n";
 import { play } from "@/lib/sound/sound";
+import Icon from "@/components/icons/Icon";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -49,7 +50,7 @@ export default function BottomNav() {
                 boxShadow: on ? "0 0 16px rgba(134,198,124,.3)" : "none",
               }}
             >
-              {n.icon}
+              <Icon name={n.icon} size={21} tone={on ? "green" : "sage"} />
             </div>
             <div
               style={{

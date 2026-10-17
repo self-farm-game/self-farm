@@ -34,6 +34,7 @@ import { DROP_POOL } from "@/lib/mock-data/items";
 import { unlockedRunes, runeById, runeShort } from "@/lib/utils/runes";
 import { BOMBOM_LINES, t, type Lang } from "@/lib/mock-data/i18n";
 import { play } from "@/lib/sound/sound";
+import Icon from "@/components/icons/Icon";
 
 const IslandScene = dynamic(() => import("@/components/garden3d/IslandScene"), {
   ssr: false,
@@ -170,7 +171,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       <div className="l3-ui">
         <div className="l3-top">
           <div className="l3-panel l3-player">
-            <div className="l3-avatar">🌳</div>
+            <div className="l3-avatar"><Icon name={lvl.levelNum >= 3 ? "tree" : "sprout"} size={26} /></div>
             <div className="l3-player-meta">
               <div className="l3-name">{lvl.name}</div>
               <div className="l3-sub">{lvl.sub}</div>
@@ -184,19 +185,19 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
           </div>
 
           <div className="l3-pills">
-            <div className="l3-pill">📅 {t(L, "garden.day")} <b>{state.day}</b></div>
-            <div className="l3-pill">🔥 <b>{state.streak}</b></div>
+            <div className="l3-pill"><Icon name="calendar" size={14} /> {t(L, "garden.day")} <b>{state.day}</b></div>
+            <div className="l3-pill"><Icon name="flame" size={14} /> <b>{state.streak}</b></div>
           </div>
         </div>
 
         <div className="l3-rail">
           <div className="l3-tile" onClick={() => { play("select"); setScreen("finds"); }}>
-            <div className="l3-ico">🎒</div>
+            <div className="l3-ico"><Icon name="bag" size={22} /></div>
             <div className="l3-cap">{t(L, "garden.finds")}</div>
             {state.ownedItems.length > 0 && <div className="l3-badge">{state.ownedItems.length}</div>}
           </div>
           <div className="l3-tile" onClick={() => { play("select"); setScreen("stats"); }}>
-            <div className="l3-ico">📊</div>
+            <div className="l3-ico"><Icon name="chart" size={22} /></div>
             <div className="l3-cap">{t(L, "garden.what_works")}</div>
           </div>
         </div>
@@ -246,7 +247,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
           <div className="l3-grid">
             {moods.map((m) => (
               <div key={m.key} className="l3-choice" onClick={() => chooseMood(m.key)}>
-                <div className="l3-ico">{m.icon}</div>
+                <div className="l3-ico"><Icon name={m.icon} size={26} /></div>
                 <div className="l3-lbl">{m.label}</div>
               </div>
             ))}
@@ -273,7 +274,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
           ) : (
             active.map((q) => (
               <div key={q.id} className="l3-quest" onClick={() => startQuest(q)}>
-                <div className="l3-quest-ico">{q.icon}</div>
+                <div className="l3-quest-ico"><Icon name={q.icon} size={26} /></div>
                 <div style={{ minWidth: 0 }}>
                   <h3>{q.title}</h3>
                   <p>{q.intro}</p>
@@ -311,7 +312,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
           }
         >
           <div className="l3-run-top">
-            <div className="l3-run-ico">{quest.icon}</div>
+            <div className="l3-run-ico"><Icon name={quest.icon} size={26} /></div>
             <div style={{ minWidth: 0 }}>
               <h3>{quest.title}</h3>
               <p>{quest.intensity} · {quest.duration} · {quest.context}</p>
@@ -336,7 +337,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
 
           {quest.warning && (
             <div className="l3-warn">
-              <span>⚠</span>
+              <Icon name="warn" size={15} />
               <span>{quest.warning}</span>
             </div>
           )}
@@ -372,7 +373,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
           <div className="l3-outcomes">
             {outcomes.map((o) => (
               <div key={o.key} className="l3-outcome" onClick={() => finish(o.key)}>
-                <div className="l3-ico">{o.icon}</div>
+                <div className="l3-ico"><Icon name={o.icon} size={24} /></div>
                 <div>
                   <b>{o.label}</b>
                   <small>{o.note}</small>
@@ -403,14 +404,18 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
           }
         >
           <div className="l3-reward">
-            <div className="l3-trophy">🏆</div>
+            <div className="l3-trophy"><Icon name="trophy" size={38} /></div>
             <h3>«{quest.reward}»</h3>
             <p>{quest.rewardNote}</p>
             <div className="l3-gain">
               <span className="l3-tag l3-tag-green">
                 {gain && gain.xp > 0 ? t(L, "reward.xp", { n: gain.xp }) : t(L, "open.noxp")}
               </span>
-              {gain?.item && <span className="l3-tag">{gain.item.icon} {gain.item.name}</span>}
+              {gain?.item && (
+                <span className="l3-tag" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <Icon name={gain.item.icon} size={15} /> {gain.item.name}
+                </span>
+              )}
             </div>
           </div>
         </Modal>
@@ -427,7 +432,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
                 const it = DROP_POOL.find((d) => d.name === name);
                 return (
                   <div key={name} className="l3-choice">
-                    <div className="l3-ico">{it?.icon || "✦"}</div>
+                    <div className="l3-ico"><Icon name={it?.icon || "spark"} size={26} /></div>
                     <div className="l3-lbl">{it && L === "en" ? it.nameEn : name}</div>
                   </div>
                 );
@@ -482,7 +487,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
           ) : (
             insights.map((i) => (
               <div key={i.mood} className="l3-insight">
-                <div className="l3-ico">{i.icon}</div>
+                <div className="l3-ico"><Icon name={i.icon} size={20} /></div>
                 <div style={{ minWidth: 92 }}>
                   <b>{moodLabel(L, i.mood)}</b>
                   <small>{runsLabel(L, i.runs)}</small>

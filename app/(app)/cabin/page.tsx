@@ -10,6 +10,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/client";
 import Sheet from "@/components/ui/Sheet";
 import { play } from "@/lib/sound/sound";
 import { exportSave, exportJournal, exportLogCsv } from "@/lib/utils/export";
+import Icon from "@/components/icons/Icon";
 
 function Row({
   icon,
@@ -24,7 +25,7 @@ function Row({
 }) {
   return (
     <div className={"l3-row" + (onClick ? "" : " l3-static")} onClick={onClick}>
-      <span className="l3-ico">{icon}</span>
+      <span className="l3-ico"><Icon name={icon} size={20} /></span>
       <span className="l3-lab">{label}</span>
       <span className="l3-val">{val}</span>
       {onClick && <span style={{ color: "var(--g-ink-3)", fontSize: 16 }}>›</span>}
@@ -60,7 +61,7 @@ function AuthBlock() {
   if (!auth.isAnonymous) {
     return (
       <>
-        <Row icon="✦" label={t(L, "cabin.account")} val={auth.email || t(L, "cabin.signed_in")} />
+        <Row icon="spark" label={t(L, "cabin.account")} val={auth.email || t(L, "cabin.signed_in")} />
         <div style={{ marginTop: 10, display: "flex", justifyContent: "center" }}>
           <button
             className="l3-btn l3-sm l3-btn-soft"
@@ -160,7 +161,7 @@ export default function Cabin() {
                 setView(null);
               }}
             >
-              <span className="l3-ico">{lg.flag}</span>
+              <span className="l3-ico" style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: "var(--g-ink-3)" }}>{lg.flag}</span>
               <span className="l3-lab">
                 {lg.label}
                 <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>{t(L, lg.noteKey)}</span>
@@ -192,7 +193,7 @@ export default function Cabin() {
     <Sheet crumb={t(L, "cabin.crumb")} title={t(L, "cabin.title")} sub={t(L, "cabin.sub")} note={t(L, "cabin.tagline")}>
       {/* профіль */}
       <div className="l3-row l3-static" style={{ padding: "16px 18px" }}>
-        <span className="l3-ico" style={{ fontSize: 28 }}>🌱</span>
+        <span className="l3-ico"><Icon name="sprout" size={28} /></span>
         <span className="l3-lab" style={{ fontSize: 17 }}>
           {t(L, "cabin.traveller")}
           <span style={{ display: "block", fontSize: 12, color: "var(--g-ink-3)", fontWeight: 400, marginTop: 2 }}>
@@ -200,7 +201,7 @@ export default function Cabin() {
           </span>
           {!auth.isAnonymous && auth.email && (
             <span style={{ display: "block", fontSize: 11.5, color: "var(--g-green)", fontWeight: 400, marginTop: 2 }}>
-              ✦ {auth.email}
+              <Icon name="spark" size={11} /> {auth.email}
             </span>
           )}
         </span>
@@ -222,43 +223,43 @@ export default function Cabin() {
 
       <div className="l3-section-title">{t(L, "cabin.sec_settings")}</div>
       <Row
-        icon="🌐"
+        icon="globe"
         label={t(L, "cabin.language")}
         val={t(L, "cabin.language_val")}
         onClick={() => { play("select"); setView("lang"); }}
       />
       <Row
-        icon="🔈"
+        icon={state.muted ? "sound-off" : "sound"}
         label={t(L, "cabin.sound")}
         val={state.muted ? t(L, "cabin.sound_off") : t(L, "cabin.sound_on")}
         onClick={() => { toggleMute(); if (state.muted) play("select"); }}
       />
       <Row
-        icon="🔔"
+        icon={rem.on ? "bell" : "bell-off"}
         label={t(L, "cabin.reminders")}
         val={rem.on ? rem.times.join(" · ") : t(L, "cabin.reminders_off")}
         onClick={() => { play("select"); setView("reminders"); }}
       />
       <Row
-        icon="📤"
+        icon="export"
         label={t(L, "cabin.export")}
         val={t(L, "cabin.export_val")}
         onClick={() => { play("select"); setView("export"); }}
       />
       <Row
-        icon="🌱"
+        icon="sprout"
         label={t(L, "cabin.about")}
         val={t(L, "cabin.about_val")}
         onClick={() => { play("select"); setView("about"); }}
       />
       <Row
-        icon="🖼️"
+        icon="picture"
         label={t(L, "cabin.classic")}
         val={t(L, "cabin.classic_val")}
         onClick={() => { play("select"); window.location.href = "/garden2d"; }}
       />
       <Row
-        icon="♻️"
+        icon="reset"
         label={t(L, "cabin.reset")}
         onClick={() => { if (confirm(t(L, "cabin.reset_confirm"))) reset(); }}
       />
@@ -323,14 +324,14 @@ function RemindersSheet({
     >
       {!supported && (
         <div className="l3-warn" style={{ marginTop: 0, marginBottom: 14 }}>
-          <span>⚠</span>
+          <Icon name="warn" size={15} />
           <span>{t(L, "rem.unsupported")}</span>
         </div>
       )}
 
       {supported && perm === "denied" && (
         <div className="l3-warn" style={{ marginTop: 0, marginBottom: 14 }}>
-          <span>⚠</span>
+          <Icon name="warn" size={15} />
           <span>{t(L, "rem.denied")}</span>
         </div>
       )}
@@ -353,7 +354,7 @@ function RemindersSheet({
           setReminders({ on: !rem.on, times: rem.times });
         }}
       >
-        <span className="l3-ico">{rem.on ? "🔔" : "🔕"}</span>
+        <span className="l3-ico"><Icon name={rem.on ? "bell" : "bell-off"} size={20} /></span>
         <span className="l3-lab">
           {t(L, "rem.toggle")}
           <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>
@@ -399,7 +400,7 @@ function RemindersSheet({
                 style={on ? { background: "var(--g-green-dim)", borderColor: "rgba(134,198,124,.35)" } : undefined}
                 onClick={() => pick(p.times)}
               >
-                <span className="l3-ico">{p.key === "morning" ? "🌅" : p.key === "both" ? "🔁" : "🌙"}</span>
+                <span className="l3-ico"><Icon name={p.key === "morning" ? "sunrise" : p.key === "both" ? "reset" : "moon"} size={20} /></span>
                 <span className="l3-lab">
                   {t(L, p.lk)}
                   <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>{t(L, p.nk)}</span>
@@ -483,7 +484,7 @@ function ExportSheet({
       note={t(L, "exp.note")}
     >
       <div className="l3-row l3-static">
-        <span className="l3-ico">📦</span>
+        <span className="l3-ico"><Icon name="box" size={20} /></span>
         <span className="l3-lab">
           {t(L, "exp.inside")}
           <span style={{ display: "block", fontSize: 11, color: "var(--g-ink-3)", fontWeight: 400 }}>
@@ -494,7 +495,7 @@ function ExportSheet({
 
       <div className="l3-section-title">{t(L, "exp.sec_save")}</div>
       <Row
-        icon="💾"
+        icon="disk"
         label={t(L, "exp.full")}
         val=".json"
         onClick={() => {
@@ -504,7 +505,7 @@ function ExportSheet({
         }}
       />
       <Row
-        icon="📖"
+        icon="book"
         label={t(L, "exp.journal")}
         val=".md"
         onClick={() => {
@@ -514,7 +515,7 @@ function ExportSheet({
         }}
       />
       <Row
-        icon="📊"
+        icon="table"
         label={t(L, "exp.log")}
         val=".csv"
         onClick={() => {
@@ -533,7 +534,7 @@ function ExportSheet({
         onChange={(e) => onFile(e.target.files?.[0])}
       />
       <Row
-        icon="📥"
+        icon="import"
         label={t(L, "exp.restore")}
         val={t(L, "exp.restore_val")}
         onClick={() => {
@@ -551,7 +552,7 @@ function ExportSheet({
             color: msg.ok ? "var(--g-green)" : "var(--g-rose)",
           }}
         >
-          {msg.ok ? "✓ " : "⚠ "}
+          <Icon name={msg.ok ? "sprout" : "warn"} size={13} style={{ marginRight: 6 }} />
           {msg.text}
         </div>
       )}
@@ -573,19 +574,19 @@ function AboutSheet({ L, back }: { L: Lang; back: React.ReactNode }) {
       <P>{t(L, "ab.p1")}</P>
 
       <div className="l3-section-title">{t(L, "ab.sec_how")}</div>
-      <Row2 icon="🫧" title={t(L, "ab.h1")}>{t(L, "ab.d1")}</Row2>
-      <Row2 icon="👣" title={t(L, "ab.h2")}>{t(L, "ab.d2")}</Row2>
-      <Row2 icon="🌳" title={t(L, "ab.h3")}>{t(L, "ab.d3")}</Row2>
-      <Row2 icon="📊" title={t(L, "ab.h4")}>{t(L, "ab.d4")}</Row2>
+      <Row2 icon="bubble" title={t(L, "ab.h1")}>{t(L, "ab.d1")}</Row2>
+      <Row2 icon="steps" title={t(L, "ab.h2")}>{t(L, "ab.d2")}</Row2>
+      <Row2 icon="tree" title={t(L, "ab.h3")}>{t(L, "ab.d3")}</Row2>
+      <Row2 icon="chart" title={t(L, "ab.h4")}>{t(L, "ab.d4")}</Row2>
 
       <div className="l3-section-title">{t(L, "ab.sec_not")}</div>
       <P>{t(L, "ab.p2")}</P>
       <P>{t(L, "ab.p3")}</P>
 
       <div className="l3-section-title">{t(L, "ab.sec_bits")}</div>
-      <Row icon="🧙" label={t(L, "ab.bombom")} val={t(L, "ab.bombom_val")} />
-      <Row icon="🔒" label={t(L, "ab.data")} val={t(L, "ab.data_val")} />
-      <Row icon="📦" label={t(L, "ab.version")} val={t(L, "ab.version_val")} />
+      <Row icon="gnome" label={t(L, "ab.bombom")} val={t(L, "ab.bombom_val")} />
+      <Row icon="lock" label={t(L, "ab.data")} val={t(L, "ab.data_val")} />
+      <Row icon="box" label={t(L, "ab.version")} val={t(L, "ab.version_val")} />
     </Sheet>
   );
 }
@@ -599,7 +600,7 @@ function P({ children }: { children: React.ReactNode }) {
 function Row2({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
   return (
     <div className="l3-row l3-static" style={{ alignItems: "flex-start" }}>
-      <span className="l3-ico" style={{ marginTop: 1 }}>{icon}</span>
+      <span className="l3-ico" style={{ marginTop: 1 }}><Icon name={icon} size={20} /></span>
       <span className="l3-lab">
         {title}
         <span

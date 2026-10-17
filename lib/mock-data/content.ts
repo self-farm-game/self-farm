@@ -43,7 +43,7 @@ export interface OnboardingStep {
 }
 export const ONBOARDING: OnboardingStep[] = [
   {
-    icon: "🕳️",
+    icon: "cave",
     bg: "linear-gradient(180deg,#1a1226,#2a1d3e)",
     kicker: "крок 1",
     title: "Ти вийшов із печери блиску.",
@@ -55,7 +55,7 @@ export const ONBOARDING: OnboardingStep[] = [
     btnEn: "Next",
   },
   {
-    icon: "🌫️",
+    icon: "fog",
     bg: "linear-gradient(180deg,#2a2435,#3a3142)",
     kicker: "крок 2",
     title: "Зовні — не ліс. Просто пусте поле.",
@@ -67,7 +67,7 @@ export const ONBOARDING: OnboardingStep[] = [
     btnEn: "Next",
   },
   {
-    icon: "🧙",
+    icon: "gnome",
     bg: "linear-gradient(180deg,#241a42,#2b1f4d)",
     kicker: "тебе зустрічає бомбом",
     title: "«Ліс садити не будемо. Одне дерево. Один рух.»",
@@ -100,11 +100,11 @@ export const CABIN_ROWS = [
 // `key` points into the dictionary (lib/mock-data/i18n.ts); `label` is the
 // Ukrainian fallback for anything that renders NAV without a language.
 export const NAV = [
-  { id: "garden", icon: "🌳", key: "tab.garden", label: "Сад", href: "/garden" },
-  { id: "questbook", icon: "📜", key: "tab.quests", label: "Квести", href: "/questbook" },
-  { id: "journal", icon: "📖", key: "tab.journal", label: "Журнал", href: "/journal" },
-  { id: "runes", icon: "ᛟ", key: "tab.runes", label: "Руни", href: "/runes" },
-  { id: "cabin", icon: "🏚️", key: "tab.cabin", label: "Хатина", href: "/cabin" },
+  { id: "garden", icon: "tree", key: "tab.garden", label: "Сад", href: "/garden" },
+  { id: "questbook", icon: "scroll", key: "tab.quests", label: "Квести", href: "/questbook" },
+  { id: "journal", icon: "book", key: "tab.journal", label: "Журнал", href: "/journal" },
+  { id: "runes", icon: "rune", key: "tab.runes", label: "Руни", href: "/runes" },
+  { id: "cabin", icon: "hut", key: "tab.cabin", label: "Хатина", href: "/cabin" },
 ];
 
 export const JOURNAL_FILTERS = ["Усе", "Стани", "Квести", "Нотатки", "Знахідки"];

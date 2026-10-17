@@ -6,6 +6,7 @@ import { t } from "@/lib/mock-data/i18n";
 import BottomNav from "./BottomNav";
 import SideNav from "./SideNav";
 import AuthGate from "@/components/auth/AuthGate";
+import Icon from "@/components/icons/Icon";
 
 function WoodPill({ children }: { children: React.ReactNode }) {
   return (
@@ -96,7 +97,7 @@ export default function GameShell({ children }: { children: React.ReactNode }) {
                 <div className="sf-topbar">
                   <WoodPill>{now || "··:··"}</WoodPill>
                   <WoodPill>{t(state.lang, "garden.day")} {state.day}</WoodPill>
-                  <WoodPill>🔥 {state.streak}</WoodPill>
+                  <WoodPill><Icon name="flame" size={13} /> {state.streak}</WoodPill>
                 </div>
 
                 <div className="sf-scroll">

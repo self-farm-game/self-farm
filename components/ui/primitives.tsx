@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Icon from "@/components/icons/Icon";
 
 /* Wooden carved button (primary in-world action) */
 export function WoodButton({
@@ -131,7 +132,7 @@ export function HeartBar({
             "inset 0 0 0 2px #caa24a, inset 0 0 0 4px #3a2410, 0 0 0 2px #2a1a0e",
         }}
       >
-        ❤️
+        <Icon name="tension" size={13} tone="rose" />
       </div>
       <div
         style={{
@@ -232,7 +233,7 @@ export function BombomBanner({ children }: { children: React.ReactNode }) {
         alignItems: "flex-start",
       }}
     >
-      <span style={{ fontSize: 30 }}>🧙</span>
+      <Icon name="gnome" size={30} tone="rose" />
       <div
         style={{
           fontSize: 14,

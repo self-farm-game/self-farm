@@ -1120,3 +1120,31 @@
      лишити видимими, а не згасити назовсім */
   .nf-bug { animation: none !important; opacity: 0.7 !important; }
 }
+
+/* ─────────────────────── іконки ───────────────────────
+   Три тони на іконку: освітлена грань, основна площина й тіньова.
+   Палітру задає клас, геометрію — SVG, тож одна форма може бути
+   камʼяною, зеленою чи золотою без дублювання шляхів.          */
+
+.sf-ico {
+  display: inline-block;
+  flex: 0 0 auto;
+  vertical-align: middle;
+  overflow: visible;
+}
+
+.sf-ico-sage  { --i1: #d2e6cd; --i2: #96c096; --i3: #557f5d; --ia: #e9c178; }
+.sf-ico-green { --i1: #d3f0c8; --i2: #86c67c; --i3: #437c42; --ia: #f0e4a8; }
+.sf-ico-gold  { --i1: #f8e6bd; --i2: #e9c178; --i3: #9d7733; --ia: #fff8e2; }
+.sf-ico-stone { --i1: #d3d8d1; --i2: #9aa49c; --i3: #5a665e; --ia: #e9c178; }
+.sf-ico-water { --i1: #d3edf6; --i2: #85c1da; --i3: #3b7089; --ia: #f2fbff; }
+.sf-ico-flame { --i1: #ffe7b4; --i2: #f0a24e; --i3: #ab5326; --ia: #ffd27a; }
+.sf-ico-plum  { --i1: #e3d6f6; --i2: #a98bff; --i3: #63489f; --ia: #f6edff; }
+.sf-ico-rose  { --i1: #f8d8d4; --i2: #d98a84; --i3: #8e4642; --ia: #ffece8; }
+
+/* У рядках налаштувань і в навігації іконка стоїть поруч із текстом,
+   тож їй потрібне те саме оптичне вирівнювання, що мали емодзі. */
+.l3-row .sf-ico,
+.l3-choice .sf-ico,
+.l3-outcome .sf-ico,
+.l3-insight .sf-ico { display: block; }

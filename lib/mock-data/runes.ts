@@ -45,7 +45,7 @@ export const RUNE_BRANCHES: RuneBranch[] = [
     nameEn: "Returning",
     color: "#a98bff",
     runes: [
-      { id: "sprout", sym: "🌱", name: "Перший Паросток", nameEn: "First Sprout" },
+      { id: "sprout", sym: "ᛊ", name: "Перший Паросток", nameEn: "First Sprout" },
       { id: "return", sym: "ᚱ", name: "Руна Повернення", nameEn: "Rune of Return" },
       { id: "notmonday", sym: "ᛞ", name: "Не з Понеділка", nameEn: "Not From Monday" },
       { id: "afterpit", sym: "ᚷ", name: "Після Прірви", nameEn: "After the Pit" },

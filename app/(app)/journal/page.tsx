@@ -6,6 +6,7 @@
 import { useGame } from "@/lib/store/game";
 import { t } from "@/lib/mock-data/i18n";
 import Sheet from "@/components/ui/Sheet";
+import Icon from "@/components/icons/Icon";
 
 export default function Journal() {
   const { state } = useGame();
@@ -22,7 +23,7 @@ export default function Journal() {
     >
       {days.length === 0 ? (
         <div className="l3-empty">
-          <div className="l3-ico">📖</div>
+          <div className="l3-ico"><Icon name="book" size={34} /></div>
           <h4>{t(L, "jr.empty_title")}</h4>
           <p>
             {t(L, "jr.empty_1")}
@@ -41,18 +42,20 @@ export default function Journal() {
                   <span>{e.time}</span>
                 </div>
                 <div className="l3-chips">
-                  {e.energy && e.energy !== "—" && <span className="l3-tag l3-tag-blue">⚡ {e.energy}</span>}
-                  {e.tension && <span className="l3-tag">💢 {e.tension}</span>}
+                  {e.energy && e.energy !== "—" && <span className="l3-tag l3-tag-blue" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Icon name="bolt" size={13} /> {e.energy}</span>}
+                  {e.tension && <span className="l3-tag" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Icon name="tension" size={13} /> {e.tension}</span>}
                 </div>
                 {e.quest && (
                   <div style={{ fontSize: 14, marginTop: 10, display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
-                    <span>🪶</span>
+                    <Icon name="feather" size={16} />
                     <span>{e.quest}</span>
                     {e.after && <span style={{ color: "var(--g-green)", fontWeight: 700 }}>· {e.after}</span>}
                   </div>
                 )}
                 {e.reward && (
-                  <div style={{ fontSize: 12.5, color: "var(--g-gold)", marginTop: 7 }}>✦ {e.reward}</div>
+                  <div style={{ fontSize: 12.5, color: "var(--g-gold)", marginTop: 7, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Icon name="spark" size={13} /> {e.reward}
+                  </div>
                 )}
                 {e.note && <div className="l3-entry-note">«{e.note}»</div>}
                 {!e.quest && (
