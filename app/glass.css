@@ -183,11 +183,18 @@
   gap: 10px;
 }
 .l3-tile {
-  width: 58px;
-  height: 58px;
+  /* Іконка й підпис мають центруватись як одне ціле. Grid із place-items
+     центрував кожне у своєму ряду окремо, і підпис з'їжджав до нижнього
+     краю; ширший за одне слово («Що працює») ще й упирався в боки. */
+  width: 66px;
+  min-height: 62px;
   border-radius: 17px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 5px;
   cursor: pointer;
   position: relative;
   background: var(--g-panel);
@@ -200,7 +207,16 @@
 .l3-tile:hover { border-color: var(--g-line-hi); background: var(--g-panel-hi); }
 .l3-tile:active { transform: scale(0.95); }
 .l3-tile .l3-ico { font-size: 21px; line-height: 1; filter: saturate(0.9); }
-.l3-tile .l3-cap { font-size: 8.5px; font-weight: 600; color: var(--g-ink-3); margin-top: 3px; letter-spacing: 0.4px; }
+.l3-tile .l3-cap {
+  font-size: 8.5px;
+  font-weight: 600;
+  color: var(--g-ink-3);
+  letter-spacing: 0.2px;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+  max-width: 100%;
+}
 .l3-tile .l3-badge {
   position: absolute;
   top: -6px;
@@ -808,7 +824,7 @@
   .l3-pills { flex-direction: column; align-items: flex-end; gap: 6px; }
   .l3-pill { padding: 6px 11px; font-size: 11.5px; }
   .l3-rail { right: 12px; top: auto; bottom: 208px; transform: none; gap: 8px; }
-  .l3-tile { width: 48px; height: 48px; border-radius: 15px; }
+  .l3-tile { width: 48px; height: 48px; min-height: 0; padding: 0; gap: 0; border-radius: 15px; }
   .l3-tile .l3-ico { font-size: 18px; }
   .l3-tile .l3-cap { display: none; }
   .l3-bombom-panel { left: 12px; right: 12px; bottom: 132px; padding: 0; gap: 8px; }
