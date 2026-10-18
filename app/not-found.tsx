@@ -15,6 +15,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useGame } from "@/lib/store/game";
 import { t } from "@/lib/mock-data/i18n";
 import { play } from "@/lib/sound/sound";
+import Bombom from "@/components/garden3d/Bombom";
 
 const LINE_KEYS = ["nf.line1", "nf.line2", "nf.line3", "nf.line4", "nf.line5"];
 
@@ -106,8 +107,7 @@ export default function NotFound() {
         </div>
 
         <div className="nf-bombom">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/sprites/garden/BomBom.png" alt={t(L, "bombom.name")} />
+          <Bombom size={76} />
           <div className="nf-say">
             <div className="nf-who">{t(L, "bombom.name")}</div>
             {t(L, lineKey)}

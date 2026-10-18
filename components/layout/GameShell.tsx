@@ -42,25 +42,34 @@ export default function GameShell({ children }: { children: React.ReactNode }) {
     return () => clearInterval(id);
   }, []);
 
-  // Lock the game window to a fixed design size and scale it uniformly to fit
-  // the viewport. Resizing the browser only changes the scale — the layout,
-  // proportions and every element stay pixel-locked in place.
+  // Гра живе у фіксованому «полотні» й масштабується рівномірно: змінюючи
+  // розмір вікна, ти міняєш лише масштаб — верстка, пропорції й кожен
+  // елемент лишаються на місці. Це й далі так.
+  //
+  // Змінилось інше: на компʼютері висота полотна фіксована (800), а ширина
+  // береться з пропорції екрана. Доти, доки ширина була теж фіксована,
+  // рівномірний масштаб неминуче лишав темні смуги з боків — бо 3:2 рідко
+  // збігається з 16:9. Тепер полотно саме стає таким завширшки, як треба,
+  // і гра заповнює екран без жодного розтягування.
+  //
+  // Межі потрібні, щоб на ультраширокому моніторі острів не поплив у
+  // нескінченність, а на вузькому вікні верстка не здавилась.
   const frameRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const fit = () => {
       const el = frameRef.current;
       if (!el) return;
       const isPhone = window.matchMedia("(max-width: 767px)").matches;
-      const DW = isPhone ? 390 : 1200;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
       const DH = isPhone ? 844 : 800;
-      const margin = isPhone ? 0 : 24;
-      const scale = Math.min(
-        (window.innerWidth - margin * 2) / DW,
-        (window.innerHeight - margin * 2) / DH,
-      );
+      const DW = isPhone
+        ? 390
+        : Math.round(Math.min(2000, Math.max(1120, (vw / vh) * DH)));
+      const scale = Math.min(vw / DW, vh / DH);
       el.style.setProperty("--sf-dw", DW + "px");
       el.style.setProperty("--sf-dh", DH + "px");
-      el.style.setProperty("--sf-scale", String(isPhone ? Math.max(scale, 1e-3) : scale));
+      el.style.setProperty("--sf-scale", String(Math.max(scale, 1e-3)));
     };
     fit();
     window.addEventListener("resize", fit);

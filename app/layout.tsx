@@ -1,15 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Comfortaa } from "next/font/google";
+import { Exo_2 } from "next/font/google";
 import "./globals.css";
 import "./glass.css";
 import { GameProvider } from "@/lib/store/game";
 import GameShell from "@/components/layout/GameShell";
 
-const pixel = Comfortaa({
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600", "700"],
+const ui = Exo_2({
+  subsets: ["latin", "latin-ext", "cyrillic", "cyrillic-ext"],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
-  variable: "--font-pixel",
+  variable: "--font-ui",
 });
 
 export const metadata: Metadata = {
@@ -36,7 +36,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="uk" className={pixel.variable}>
+    <html lang="uk" className={ui.variable}>
       <body>
         <GameProvider>
           <GameShell>{children}</GameShell>

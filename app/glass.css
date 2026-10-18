@@ -39,7 +39,7 @@
   position: absolute; /* усередині .sf-scroll — рівно видима площа */
   inset: 0;
   overflow: hidden;
-  font-family: var(--font-pixel), "Comfortaa", system-ui, sans-serif;
+  font-family: var(--font-ui), "Exo 2", system-ui, sans-serif;
   color: var(--g-ink);
   background: linear-gradient(180deg, #6bb6e4 0%, #93d1ef 34%, #bde5f6 58%, #dcf0e2 78%, #e9f2d8 100%);
   user-select: none;
@@ -306,10 +306,11 @@
   animation: l3-slide-in 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
 }
-.l3-bombom-panel > img {
+.l3-bombom-panel > img,
+.l3-bombom-panel > svg {
   width: clamp(64px, 9vw, 104px);
+  height: auto;
   flex: 0 0 auto;
-  image-rendering: pixelated;
   filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
 }
 .l3-say {
@@ -1080,11 +1081,11 @@
   text-align: left;
 }
 
-.nf-bombom > img {
+.nf-bombom > img,
+.nf-bombom > svg {
   width: 76px;
   height: auto;
   flex: 0 0 auto;
-  image-rendering: pixelated;
   filter: drop-shadow(0 8px 14px rgba(2, 10, 8, 0.6));
   animation: nf-bob 4.5s ease-in-out infinite;
 }
@@ -1125,13 +1126,15 @@
   .nf-sign { height: 84px; }
   .nf-404 { font-size: 34px; }
   .nf-title { font-size: 20px; }
-  .nf-bombom > img { width: 62px; }
+  .nf-bombom > img,
+  .nf-bombom > svg { width: 62px; height: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .nf-fog,
   .nf-panel,
-  .nf-bombom > img { animation: none; }
+  .nf-bombom > img,
+  .nf-bombom > svg { animation: none; }
   /* світлячки зʼявляються саме анімацією, тож без неї їх треба просто
      лишити видимими, а не згасити назовсім */
   .nf-bug { animation: none !important; opacity: 0.7 !important; }
@@ -1164,3 +1167,73 @@
 .l3-choice .sf-ico,
 .l3-outcome .sf-ico,
 .l3-insight .sf-ico { display: block; }
+
+/* ─────────────── інструменти кроку ───────────────
+   Коли крок просить щось записати або відміряти час — гра дає це
+   просто тут, а не відсилає у блокнот на телефоні. Нічого з цього
+   не блокує кнопку «Зробив»: писати завжди необовʼязково.        */
+
+.l3-tool {
+  margin-top: 12px;
+  padding: 12px 14px 13px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--g-line-soft);
+}
+
+.l3-tool-cap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 9.5px;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--g-ink-3);
+  margin-bottom: 9px;
+}
+
+.l3-tool-area {
+  width: 100%;
+  resize: vertical;
+  min-height: 62px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--g-ink);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--g-line);
+}
+.l3-tool-area:focus { border-color: var(--g-line-hi); }
+.l3-tool-area::placeholder { color: var(--g-ink-3); }
+
+.l3-tool-note {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--g-ink-3);
+  margin-top: 8px;
+}
+
+.l3-timer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.l3-timer-num {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--g-ink);
+  font-variant-numeric: tabular-nums;
+  min-width: 86px;
+}
+.l3-timer-num.l3-on { color: var(--g-green); }
+.l3-timer .l3-btn { flex: 1; }
+
+@media (max-width: 767px) {
+  .l3-timer-num { font-size: 26px; min-width: 74px; }
+}

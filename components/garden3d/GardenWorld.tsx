@@ -35,6 +35,9 @@ import { unlockedRunes, runeById, runeShort } from "@/lib/utils/runes";
 import { BOMBOM_LINES, t, type Lang } from "@/lib/mock-data/i18n";
 import { play } from "@/lib/sound/sound";
 import Icon from "@/components/icons/Icon";
+import { StepTimer, StepWrite } from "@/components/garden3d/StepTools";
+import { stepKind } from "@/lib/utils/quest-steps";
+import Bombom from "@/components/garden3d/Bombom";
 
 const IslandScene = dynamic(() => import("@/components/garden3d/IslandScene"), {
   ssr: false,
@@ -54,6 +57,9 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
   const [mood, setMood] = useState<MoodKey | null>(null);
   const [quest, setQuest] = useState<Quest | null>(null);
   const [stepIdx, setStepIdx] = useState(0);
+  // Те, що людина написала на кроках. Ключ — індекс кроку; наприкінці
+  // все це склеюється в один запис журналу, щоб написане не пропало.
+  const [stepNotes, setStepNotes] = useState<Record<number, string>>({});
   const [say, setSay] = useState<string | null>(null);
   const [gain, setGain] = useState<{ xp: number; item: { icon: string; name: string } | null } | null>(null);
   const startedAt = useRef(0);
@@ -105,6 +111,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
     play("select");
     setQuest(q);
     setStepIdx(0);
+    setStepNotes({});
     startedAt.current = Date.now();
     setScreen("run");
   };
@@ -137,6 +144,12 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       template: quest.template,
       outcome,
       seconds: secs,
+      reflection: Object.keys(stepNotes)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .map((i) => stepNotes[i].trim())
+        .filter(Boolean)
+        .join(" · ") || undefined,
     });
     play(outcome === "helped" ? "reward" : "select");
     setGain({
@@ -223,8 +236,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       {/* ── Бомбом вийшов з хатинки ── */}
       {say && (
         <div className="l3-bombom-panel">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/sprites/garden/BomBom.png" alt={t(L, "bombom.name")} />
+          <Bombom size={112} />
           <div className="l3-say">
             <div className="l3-say-x" onClick={() => setSay(null)}>✕</div>
             <div className="l3-who">{t(L, "bombom.name")}</div>
@@ -334,6 +346,26 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
             <div className="l3-step-n">{stepIdx + 1}</div>
             <div className="l3-step-t">{quest.steps[stepIdx]}</div>
           </div>
+
+          {/* Крок просить відміряти час або щось записати — даємо це тут,
+              а не відсилаємо людину в нотатки на телефоні. */}
+          {(() => {
+            const k = stepKind(quest.id, stepIdx);
+            return (
+              <>
+                {k.timerSec !== null && (
+                  <StepTimer key={`t${stepIdx}`} L={L} seconds={k.timerSec} />
+                )}
+                {k.write && (
+                  <StepWrite
+                    L={L}
+                    value={stepNotes[stepIdx] || ""}
+                    onChange={(v) => setStepNotes((m) => ({ ...m, [stepIdx]: v }))}
+                  />
+                )}
+              </>
+            );
+          })()}
 
           {quest.warning && (
             <div className="l3-warn">
