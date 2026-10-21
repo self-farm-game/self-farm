@@ -37,7 +37,10 @@ import { play } from "@/lib/sound/sound";
 import Icon from "@/components/icons/Icon";
 import { StepTimer, StepWrite } from "@/components/garden3d/StepTools";
 import { stepKind } from "@/lib/utils/quest-steps";
-import Bombom from "@/components/garden3d/Bombom";
+const BombomScene = dynamic(() => import("@/components/garden3d/BombomScene"), {
+  ssr: false,
+  loading: () => <div className="sf-bombom3d" />,
+});
 
 const IslandScene = dynamic(() => import("@/components/garden3d/IslandScene"), {
   ssr: false,
@@ -236,7 +239,7 @@ export default function GardenWorld({ children }: { children?: React.ReactNode }
       {/* ── Бомбом вийшов з хатинки ── */}
       {say && (
         <div className="l3-bombom-panel">
-          <Bombom size={112} />
+          <BombomScene />
           <div className="l3-say">
             <div className="l3-say-x" onClick={() => setSay(null)}>✕</div>
             <div className="l3-who">{t(L, "bombom.name")}</div>

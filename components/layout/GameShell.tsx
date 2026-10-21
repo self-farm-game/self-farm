@@ -31,6 +31,8 @@ function WoodPill({ children }: { children: React.ReactNode }) {
   );
 }
 
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
 export default function GameShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { state, auth } = useGame();
@@ -62,10 +64,12 @@ export default function GameShell({ children }: { children: React.ReactNode }) {
       const isPhone = window.matchMedia("(max-width: 767px)").matches;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const DH = isPhone ? 844 : 800;
-      const DW = isPhone
-        ? 390
-        : Math.round(Math.min(2000, Math.max(1120, (vw / vh) * DH)));
+      // Один і той самий прийом на обох: одна сторона полотна фіксована,
+      // друга береться з пропорції екрана — тоді рівномірний масштаб
+      // заповнює екран і не лишає смуг. На компʼютері фіксуємо висоту й
+      // тягнемо ширину, на телефоні навпаки: там вузьке місце — ширина.
+      const DW = isPhone ? 390 : Math.round(clamp((vw / vh) * 800, 1120, 2000));
+      const DH = isPhone ? Math.round(clamp((vh / vw) * 390, 660, 1100)) : 800;
       const scale = Math.min(vw / DW, vh / DH);
       el.style.setProperty("--sf-dw", DW + "px");
       el.style.setProperty("--sf-dh", DH + "px");

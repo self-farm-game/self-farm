@@ -306,12 +306,22 @@
   animation: l3-slide-in 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
 }
+/* Базовий розмір 3D-Бомбома. Саме тут, а не inline: inline-стиль
+   перебив би правила панелі, і гном не вліз би в репліку. */
+.sf-bombom3d { width: 100%; aspect-ratio: 1 / 1.18; flex: 0 0 auto; }
+
 .l3-bombom-panel > img,
-.l3-bombom-panel > svg {
+.l3-bombom-panel > svg,
+.l3-bombom-panel > .sf-bombom3d {
   width: clamp(64px, 9vw, 104px);
   height: auto;
   flex: 0 0 auto;
   filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
+}
+.nf-bombom > .sf-bombom3d {
+  width: 76px;
+  filter: drop-shadow(0 8px 14px rgba(2, 10, 8, 0.6));
+  animation: nf-bob 4.5s ease-in-out infinite;
 }
 .l3-say {
   position: relative;
@@ -1128,13 +1138,15 @@
   .nf-title { font-size: 20px; }
   .nf-bombom > img,
   .nf-bombom > svg { width: 62px; height: auto; }
+  .nf-bombom > .sf-bombom3d { width: 62px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .nf-fog,
   .nf-panel,
   .nf-bombom > img,
-  .nf-bombom > svg { animation: none; }
+  .nf-bombom > svg,
+  .nf-bombom > .sf-bombom3d { animation: none; }
   /* світлячки зʼявляються саме анімацією, тож без неї їх треба просто
      лишити видимими, а не згасити назовсім */
   .nf-bug { animation: none !important; opacity: 0.7 !important; }
